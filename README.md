@@ -1,71 +1,130 @@
 # Notalock - European Door Hardware Store
 
 ## Project Overview
-Notalock is an e-commerce platform specializing in high-end European door hardware. The store offers sophisticated products including:
-- Locks
-- Handles
-- Hinges
-- Pocket door rails
+Notalock is an e-commerce platform specializing in high-end European door hardware. We offer sophisticated products including:
+- Premium locks and locking mechanisms
+- Designer door handles and levers
+- Heavy-duty hinges and pivot systems
+- Pocket door rails and sliding systems
 - Special opening systems (folding, invisible)
 
 ## Tech Stack
 - Frontend: Remix.js with Tailwind CSS
-- Backend: Supabase (Authentication, Database)
+- Backend: Supabase (Authentication, Database, Storage)
 - Payments: Square (planned)
+- Image Storage: Supabase Storage
 
-## Current Implementation Status
+## Latest Updates (As of Feb 1, 2025)
 
-### Completed Features
-1. **Basic Project Setup**
-   - Remix.js project structure
-   - Tailwind CSS integration
-   - Supabase connection
-   - Environmental variables configuration
+### Recently Completed
+1. **Admin Product Management**
+   - ✅ Basic CRUD interface for products
+   - ✅ Product form with validation
+   - ✅ Image upload capability
+   - ✅ Role-based access control
+   - ✅ Integration with Supabase Storage
 
-2. **Authentication System**
-   - User login functionality
-   - Admin role implementation
-   - Session management
-   - Protected routes
+### Known Issues
+1. **UI/UX**
+   - React hydration warnings in development (non-blocking)
+   - Admin dashboard navigation needs styling improvements
 
-3. **Database Structure**
-   - Categories table
-   - Products table
-   - User profiles
-   - Row Level Security (RLS) policies
+2. **Authentication**
+   - RLS policies need refinement for product management
+   - Need better error handling for unauthorized actions
 
-4. **Admin Features**
-   - Category management (Create, Read)
-   - Admin dashboard prototype
-   - Role-based access control
+### Next Steps
+1. **Immediate Priorities**
+   - Fix RLS policies for product management
+   - Complete image upload functionality
+   - Add product variant management
+   - Implement product categorization
 
-### In Progress
-- Product catalog implementation
-- Shopping cart functionality
-- User profile management
+2. **Short-term Goals**
+   - Add product search and filtering
+   - Implement product list pagination
+   - Add product preview functionality
+   - Enhance form validation and error handling
+
+## Database Schema
+
+### Core Tables
+1. **profiles**
+   - User profile management
+   - Role-based access (customer, business, admin)
+   - Default shipping and billing addresses
+   - Business account information
+
+2. **categories**
+   - Hierarchical category structure
+   - SEO-friendly slugs
+   - Category ordering and visibility control
+   - Row Level Security implemented
+   - Full CRUD operations via admin interface
+
+3. **products**
+   - Comprehensive product information
+   - Multiple pricing tiers (retail/business)
+   - Image management through Supabase Storage
+   - Technical specifications (JSONB)
+   - Inventory tracking
+   - Row Level Security implemented
+   - Full CRUD operations via admin interface
+
+4. **product_images**
+   - Image management for products
+   - Support for multiple images per product
+   - Primary image designation
+   - Sort order management
+   - Automatic storage handling
+
+5. **product_variants**
+   - Support for different finishes/colors
+   - Independent SKU management
+   - Price adjustments for variants
+   - Separate inventory tracking
+   - Active/inactive status
+
+6. **orders**
+   - Order processing and tracking
+   - Multiple status states
+   - Shipping and billing information
+   - Business order handling
+
+7. **order_items**
+   - Individual order items
+   - Price tracking
+   - Quantity management
 
 ## Development Roadmap
 
-### Phase 1: Core E-commerce Features
-1. **Product Management**
-   - Complete product CRUD operations
-   - Image upload and management
-   - Product categorization
-   - Search and filtering
+### Phase 1: Core E-commerce (Q1 2025)
+1. **Product Management (Sprint 1) - IN PROGRESS**
+   - ✅ Basic product CRUD
+   - 🔄 Image management
+   - Product variants
+   - Advanced search/filter
+   - Bulk operations
 
-2. **Shopping Experience**
-   - Shopping cart implementation
+2. **Category Management (Sprint 2)**
+   - Category CRUD
+   - Hierarchical structure
+   - Category-product relations
+   - Category-based navigation
+
+3. **Shopping Experience (Sprint 3)**
+   - Product listing page
+   - Product detail page
+   - Shopping cart
    - Checkout process
-   - Square payment integration
-   - Order management system
 
-3. **User Features**
-   - User registration
-   - Profile management
+4. **Order Management (Sprint 4)**
+   - Order processing
+   - Order status tracking
+   - Email notifications
    - Order history
-   - Wishlist functionality
 
-### Phase 2: Enhanced Features
+### Phase 2: Enhanced Features (Q2 2025)
 1. **Business Accounts**
    - Bulk ordering system
    - Special pricing
@@ -84,7 +143,7 @@ Notalock is an e-commerce platform specializing in high-end European door hardwa
    - Returns management
    - FAQ system
 
-### Phase 3: Optimization
+### Phase 3: Optimization (Q3 2025)
 1. **Performance**
    - Image optimization
    - Caching implementation
@@ -97,151 +156,77 @@ Notalock is an e-commerce platform specializing in high-end European door hardwa
    - Customer behavior tracking
    - Performance metrics
 
-## Project Structure
+## Project Setup
 
-```
-notalock-store/
-├── app/                      # Main application directory
-│   ├── routes/              # All route components
-│   │   ├── _index.tsx      # Homepage route
-│   │   ├── admin.test.tsx  # Admin testing/dashboard route
-│   │   ├── login.tsx       # Authentication route
-│   │   └── unauthorized.tsx # Unauthorized access page
-│   ├── services/           # External service integrations
-│   │   └── supabase.server.ts  # Supabase client configuration
-│   ├── styles/             # Style-related files
-│   │   └── tailwind.css    # Tailwind configuration
-│   ├── types/              # TypeScript type definitions
-│   │   └── supabase.ts     # Supabase type definitions
-│   ├── utils/              # Utility functions
-│   │   └── auth.server.js  # Authentication utilities
-│   └── root.tsx            # Root component with layout
-├── public/                 # Static assets
-│   ├── favicon.ico         # Site favicon
-│   └── favicon.svg         # Vector version of favicon
-├── .env                    # Environment variables
-├── package.json           # Project dependencies and scripts
-├── remix.config.js        # Remix configuration
-├── tailwind.config.js     # Tailwind CSS configuration
-└── tsconfig.json         # TypeScript configuration
-```
-
-### Key Directories and Files
-
-- `app/routes/`: Contains all page components and API routes. Each file corresponds to a URL path.
-- `app/services/`: External service configurations and clients, keeping integration logic separate.
-- `app/utils/`: Shared utility functions and helpers, including authentication logic.
-- `app/types/`: TypeScript type definitions, especially important for Supabase database schema.
-- `public/`: Static assets that are served directly by the web server.
-- Configuration files at the root level control various aspects of the build and runtime behavior.
-
-## Getting Started
-
-### Prerequisites
-- Node.js (v18 or higher)
-- npm or yarn
+### Environment Requirements
+- Node.js 18+
+- NPM or Yarn
 - Supabase account
+- Square account (for payments)
 
-### Installation
-1. Clone the repository
+### Local Development
+1. Clone and Install
 ```bash
 git clone [repository-url]
 cd notalock-store
-```
-
-2. Install dependencies
-```bash
 npm install
 ```
 
-3. Set up environment variables
-```bash
-cp .env.example .env
-```
-Fill in the required environment variables:
-- SUPABASE_URL
-- SUPABASE_ANON_KEY
-
-4. Run the development server
-```bash
-npm run dev
-```
-
-## Current Development State and Next Steps
-
-### Database Schema
-Currently implemented tables in Supabase:
-```sql
-- categories
-  - id (uuid)
-  - name (text, not null)
-  - description (text)
-  - created_at (timestamp with timezone)
-
-- profiles
-  - id (uuid, references auth.users)
-  - email (text)
-  - role (enum: 'customer', 'business', 'admin')
-  - created_at (timestamp with timezone)
-```
-
-### Authentication Status
-- Implemented basic authentication with Supabase
-- Created admin role and verification
-- RLS policies are set up for:
-   - Categories (viewable by all, modifiable by admins)
-   - User profiles (viewable by all, modifiable by owners)
-
-### Immediate Next Steps
-1. **Product Management**
-   - Create products table in Supabase
-   - Implement product CRUD operations in admin panel
-   - Set up image upload functionality
-
-2. **UI Enhancements**
-   - Add logout functionality
-   - Implement navigation breadcrumbs
-   - Create proper admin dashboard layout
-
-3. **Security Improvements**
-   - Add CSRF protection
-   - Implement rate limiting
-   - Set up error boundaries
-   - Add input validation
-
-### Known Issues
-1. TypeScript setup needs completion
-2. Form validation needs improvement
-3. Error handling needs to be more robust
-4. Missing proper loading states in UI
-
-### Environment Setup Notes
-Required environment variables:
+2. Environment Configuration
+Create a `.env` file:
 ```bash
 SUPABASE_URL=your_project_url
 SUPABASE_ANON_KEY=your_anon_key
+SQUARE_ACCESS_TOKEN=your_square_token
 ```
 
-To get these values:
-1. Go to Supabase dashboard
-2. Select your project
-3. Go to Project Settings > API
-4. Copy the URL and anon key
-
-### Development Commands
+3. Start Development Server
 ```bash
-# Start development server
 npm run dev
+```
 
-# Build for production
-npm run build
-
-# Type checking
-npm run typecheck
+## Project Structure
+```
+notalock-store/
+├── app/
+│   ├── components/
+│   │   ├── admin/
+│   │   │   ├── ProductForm.tsx
+│   │   │   └── ProductManagement.tsx
+│   │   └── ui/
+│   ├── lib/
+│   ├── routes/
+│   │   ├── _index.tsx
+│   │   ├── admin.tsx
+│   │   ├── admin.products.tsx
+│   │   ├── admin.test.tsx
+│   │   ├── login.tsx
+│   │   └── unauthorized.tsx
+│   ├── services/
+│   ├── styles/
+│   │   └── tailwind.css
+│   ├── types/
+│   ├── utils/
+│   └── root.tsx
+├── docs/
+│   ├── database.md
+│   ├── api.md
+│   └── deployment.md
+├── hooks/
+├── public/
+├── CONTRIBUTING.md
+├── LICENSE.md
+├── README.md
+├── components.json
+├── package.json
+├── postcss.config.cjs
+├── remix.config.js
+├── tailwind.config.cjs
+└── tsconfig.json
 ```
 
 ## Contributing
-[Contributing guidelines to be added]
+Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 ## License
-[License information to be added]
+This project is licensed under the MIT License - see the [LICENSE.md](./LICENSE.md) file for details.
