@@ -1,4 +1,4 @@
-// app/utils/auth.server.js
+// app/utils/auth.server.cjs
 import { redirect } from "@remix-run/node";
 import { createSupabaseServerClient } from "~/services/supabase.server";
 

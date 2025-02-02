@@ -174,7 +174,7 @@ Sentry.init({
 3. Set up automatic certificate renewal
 
 ### Security Headers
-Configure security headers in `remix.config.js`:
+Configure security headers in `remix.config.cjs`:
 ```javascript
 module.exports = {
   headers: {

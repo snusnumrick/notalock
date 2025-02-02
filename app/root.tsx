@@ -7,25 +7,22 @@ import {
     ScrollRestoration,
     useLoaderData,
 } from "@remix-run/react";
-import { json, type LoaderFunction, type V2_MetaFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import stylesheet from "~/styles/tailwind.css";
 import { createSupabaseServerClient } from "~/services/supabase.server";
-import { useEffect, useState } from "react";
 
 export const links = () => [
     { rel: "stylesheet", href: stylesheet },
 ];
 
-// Add proper meta function with title
-export const meta: V2_MetaFunction = () => {
+export const meta = () => {
     return [
-        { title: "Notalock - European Door Hardware" },
-        { charSet: "utf-8" },
+        { title: "Notalock Store" },
         { name: "viewport", content: "width=device-width,initial-scale=1" },
     ];
 };
 
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader = async ({ request }) => {
     const response = new Response();
     const supabase = createSupabaseServerClient({ request, response });
     const { data: { session } } = await supabase.auth.getSession();
@@ -37,7 +34,9 @@ export const loader: LoaderFunction = async ({ request }) => {
             .select('role')
             .eq('id', session.user.id)
             .single();
-        profile = data;
+        if (data) {
+            profile = data;
+        }
     }
 
     return json(
@@ -55,31 +54,28 @@ export const loader: LoaderFunction = async ({ request }) => {
     );
 };
 
-function ClientOnly({ children }: { children: React.ReactNode }) {
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => setMounted(true), []);
-    if (!mounted) return null;
-    return <>{children}</>;
+function ClientOnly({ children }) {
+    const [mounted, setMounted] = React.useState(false);
+    
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+    
+    return mounted ? children : null;
 }
 
 export default function App() {
-    const { session, profile, env } = useLoaderData<typeof loader>();
+    const { env } = useLoaderData();
 
     return (
-        <html lang="en">
+        <html lang="en" className="h-full">
             <head>
+                <meta charSet="utf-8" />
+                <meta name="viewport" content="width=device-width,initial-scale=1" />
                 <Meta />
                 <Links />
             </head>
-            <body>
-                <ClientOnly>
-                    {session && (
-                        <div className="bg-yellow-100 p-2 text-sm">
-                            Logged in as {session.user.email}
-                            {profile?.role && ` - Role: ${profile.role}`}
-                        </div>
-                    )}
-                </ClientOnly>
+            <body className="h-full">
                 <Outlet />
                 <ScrollRestoration />
                 <script

@@ -2,102 +2,130 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { ProductForm } from './ProductForm';
 import { createBrowserClient } from '@supabase/ssr';
+import { useLoaderData } from '@remix-run/react';
+import type { Session } from '@supabase/supabase-js';
 
-export function ProductManagement() {
-  const [products, setProducts] = useState([]);
+interface LoaderData {
+  session: Session | null;
+  profile: { role: string } | null;
+  env: {
+    SUPABASE_URL: string;
+    SUPABASE_ANON_KEY: string;
+  };
+}
+
+interface Product {
+  id: number;
+  name: string;
+  sku: string;
+  description: string | null;
+  retail_price: number;
+  business_price: number;
+  stock: number;
+  is_active: boolean;
+  created_at: string;
+  product_images: ProductImage[];
+}
+
+interface ProductImage {
+  id: number;
+  product_id: number;
+  url: string;
+  is_primary: boolean;
+  created_at: string;
+}
+
+interface ProductFormData {
+  name: string;
+  sku: string;
+  description: string;
+  retail_price: string;
+  business_price: string;
+  stock: string;
+  is_active: boolean;
+  files?: FileList | null;
+}
+
+interface ProductManagementProps {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+}
+
+export function ProductManagement({ supabaseUrl, supabaseAnonKey }: ProductManagementProps) {
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [supabase] = useState(() => 
-    createBrowserClient(
-      window.env.SUPABASE_URL,
-      window.env.SUPABASE_ANON_KEY
-    )
-  );
-  
+  const [mounted, setMounted] = useState(false);
+
+  const supabase = React.useMemo(() => createBrowserClient(
+    supabaseUrl,
+    supabaseAnonKey
+  ), [supabaseUrl, supabaseAnonKey]);
+
   useEffect(() => {
-    fetchProducts();
+    setMounted(true);
   }, []);
 
-  const fetchProducts = async () => {
-    try {
-      // Check auth status
-      const { data: { session }, error: authError } = await supabase.auth.getSession();
-      if (authError) throw authError;
-      
-      console.log('Current session:', session);
+  useEffect(() => {
+    if (!mounted) return;
 
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          product_images (*)
-        `)
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
+    const fetchProducts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*, product_images (*)')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setProducts(data || []);
+      } catch (err) {
+        setError('Failed to load products: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      } finally {
+        setLoading(false);
       }
+    };
 
-      console.log('Products loaded:', data);
-      setProducts(data || []);
-    } catch (err) {
-      console.error('Detailed error:', err);
-      setError('Failed to load products: ' + (err.message || 'Unknown error'));
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchProducts();
+  }, [supabase, mounted]);
 
-  const handleAddProduct = async (formData) => {
+  const filteredProducts = React.useMemo(() => {
+    return products.filter(product =>
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.sku.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [products, searchQuery]);
+
+  const handleAddProduct = async (formData: ProductFormData) => {
     try {
-      console.log('Handling add product:', formData);
-      
-      // Check auth status first
-      const { data: { session }, error: authError } = await supabase.auth.getSession();
-      if (authError) throw authError;
-      
-      console.log('Current session before adding product:', session);
-
-      // First, insert the product
       const { data: productData, error: productError } = await supabase
         .from('products')
         .insert({
           name: formData.name,
           sku: formData.sku,
           description: formData.description,
-          retail_price: formData.retail_price,
-          business_price: formData.business_price,
-          stock: formData.stock,
+          retail_price: parseFloat(formData.retail_price),
+          business_price: parseFloat(formData.business_price),
+          stock: parseInt(formData.stock),
           is_active: formData.is_active
         })
         .select()
         .single();
 
-      if (productError) {
-        console.error('Product insert error:', productError);
-        throw productError;
-      }
-      console.log('Product created:', productData);
+      if (productError) throw productError;
 
-      // If there are files, upload them
       if (formData.files && formData.files.length > 0) {
-        console.log('Uploading files:', formData.files);
         for (const file of formData.files) {
           const fileExt = file.name.split('.').pop();
           const fileName = `${productData.id}/${Date.now()}.${fileExt}`;
-          
-          // Upload to storage
+
           const { error: uploadError } = await supabase.storage
             .from('product-images')
             .upload(fileName, file);
 
           if (uploadError) throw uploadError;
-          console.log('File uploaded:', fileName);
 
-          // Create database record
           const { error: imageError } = await supabase
             .from('product_images')
             .insert({
@@ -107,30 +135,27 @@ export function ProductManagement() {
             });
 
           if (imageError) throw imageError;
-          console.log('Image record created');
         }
       }
 
-      // Fetch the updated product with images
       const { data: updatedProduct, error: fetchError } = await supabase
         .from('products')
-        .select(`
-          *,
-          product_images (*)
-        `)
+        .select('*, product_images (*)')
         .eq('id', productData.id)
         .single();
 
       if (fetchError) throw fetchError;
 
-      setProducts([updatedProduct, ...products]);
+      setProducts([updatedProduct as Product, ...products]);
       setShowForm(false);
-      console.log('Product added successfully');
     } catch (err) {
-      console.error('Error adding product:', err);
       throw err;
     }
   };
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className="p-6">
@@ -185,18 +210,15 @@ export function ProductManagement() {
                 </tr>
               </thead>
               <tbody>
-                {products.filter(product =>
-                  product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  product.sku?.toLowerCase().includes(searchQuery.toLowerCase())
-                ).map((product) => (
+                {filteredProducts.map((product) => (
                   <tr key={product.id} className="border-b hover:bg-gray-50">
                     <td className="p-4">{product.sku}</td>
                     <td className="p-4">{product.name}</td>
                     <td className="p-4 text-right">
-                      ${product.retail_price?.toFixed(2)}
+                      ${product.retail_price.toFixed(2)}
                     </td>
                     <td className="p-4 text-right">
-                      ${product.business_price?.toFixed(2)}
+                      ${product.business_price.toFixed(2)}
                     </td>
                     <td className="p-4 text-right">{product.stock}</td>
                     <td className="p-4">
@@ -228,7 +250,7 @@ export function ProductManagement() {
       </div>
 
       {showForm && (
-        <ProductForm 
+        <ProductForm
           isOpen={showForm}
           onClose={() => setShowForm(false)}
           onSubmit={handleAddProduct}

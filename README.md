@@ -220,7 +220,7 @@ notalock-store/
 ├── components.json
 ├── package.json
 ├── postcss.config.cjs
-├── remix.config.js
+├── remix.config.cjs
 ├── tailwind.config.cjs
 └── tsconfig.json
 ```

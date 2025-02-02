@@ -17,15 +17,22 @@ export default function Login() {
         window.env.SUPABASE_ANON_KEY
       );
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
 
-      // Redirect to admin page on successful login
-      navigate('/admin/products');
+      if (!data?.session) {
+        throw new Error('No session after login');
+      }
+
+      console.log('Login successful:', data);
+
+      // Force a full page reload to ensure session is properly set
+      window.location.href = '/admin/products';
+
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message);
