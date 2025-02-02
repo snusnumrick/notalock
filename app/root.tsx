@@ -7,9 +7,10 @@ import {
     ScrollRestoration,
     useLoaderData,
 } from "@remix-run/react";
-import { json } from "@remix-run/node";
+import * as build from "@remix-run/node";
 import stylesheet from "~/styles/tailwind.css";
-import { createSupabaseServerClient } from "~/services/supabase.server";
+import { createSupabaseServerClient } from "~/server/services/supabase.server";
+import { getSession } from "~/server/utils/session.server";
 
 export const links = () => [
     { rel: "stylesheet", href: stylesheet },
@@ -23,25 +24,26 @@ export const meta = () => {
 };
 
 export const loader = async ({ request }) => {
+    const session = await getSession(request);
     const response = new Response();
     const supabase = createSupabaseServerClient({ request, response });
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session: supabaseSession } } = await supabase.auth.getSession();
 
     let profile = null;
-    if (session?.user.id) {
+    if (supabaseSession?.user.id) {
         const { data } = await supabase
             .from('profiles')
             .select('role')
-            .eq('id', session.user.id)
+            .eq('id', supabaseSession.user.id)
             .single();
         if (data) {
             profile = data;
         }
     }
 
-    return json(
+    return build.json(
         {
-            session,
+            session: supabaseSession,
             profile,
             env: {
                 SUPABASE_URL: process.env.SUPABASE_URL,
@@ -53,16 +55,6 @@ export const loader = async ({ request }) => {
         }
     );
 };
-
-function ClientOnly({ children }) {
-    const [mounted, setMounted] = React.useState(false);
-    
-    React.useEffect(() => {
-        setMounted(true);
-    }, []);
-    
-    return mounted ? children : null;
-}
 
 export default function App() {
     const { env } = useLoaderData();

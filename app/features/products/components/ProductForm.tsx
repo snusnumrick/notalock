@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -7,28 +7,8 @@ import {
     DialogTitle,
 } from '~/components/ui/dialog';
 import { Alert, AlertDescription } from '~/components/ui/alert';
-
-interface ProductFormData {
-    name: string;
-    sku: string;
-    description: string;
-    retail_price: string;
-    business_price: string;
-    stock: string;
-    is_active: boolean;
-    files?: FileList | null;
-}
-
-interface ValidationErrors {
-    [key: string]: string;
-}
-
-interface ProductFormProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSubmit: (formData: ProductFormData) => Promise<void>;
-    initialData?: Partial<ProductFormData>;
-}
+import { ProductFormProps, ProductFormData, ValidationErrors } from '../types/product.types';
+import { validateProductForm, validateProductFiles } from '../utils/validation';
 
 export function ProductForm({ isOpen, onClose, onSubmit, initialData }: ProductFormProps) {
     const [formData, setFormData] = useState<ProductFormData>({
@@ -46,41 +26,13 @@ export function ProductForm({ isOpen, onClose, onSubmit, initialData }: ProductF
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
     const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
 
-    const validateForm = (): boolean => {
-        const errors: ValidationErrors = {};
-
-        if (!formData.name.trim()) {
-            errors.name = 'Name is required';
-        }
-
-        if (!formData.sku.trim()) {
-            errors.sku = 'SKU is required';
-        }
-
-        const retail = parseFloat(formData.retail_price);
-        if (isNaN(retail) || retail < 0) {
-            errors.retail_price = 'Please enter a valid retail price';
-        }
-
-        const business = parseFloat(formData.business_price);
-        if (isNaN(business) || business < 0) {
-            errors.business_price = 'Please enter a valid business price';
-        }
-
-        const stock = parseInt(formData.stock);
-        if (isNaN(stock) || stock < 0) {
-            errors.stock = 'Please enter a valid stock quantity';
-        }
-
-        setValidationErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
 
-        if (!validateForm()) {
+        const errors = validateProductForm(formData);
+        if (Object.keys(errors).length > 0) {
+            setValidationErrors(errors);
             return;
         }
 
@@ -106,21 +58,26 @@ export function ProductForm({ isOpen, onClose, onSubmit, initialData }: ProductF
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files) {
-            // Validate file types and sizes
-            const validFiles = Array.from(files).every(file => {
-                const isValidType = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
-                const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB limit
-                return isValidType && isValidSize;
-            });
-
-            if (!validFiles) {
-                setError('Please only upload image files (JPG, PNG, WebP) under 5MB');
+            const validationError = validateProductFiles(files);
+            if (validationError) {
+                setError(validationError);
                 e.target.value = ''; // Clear the input
                 return;
             }
 
             setSelectedFiles(files);
             setError(null);
+        }
+    };
+
+    const handleInputChange = (
+        field: keyof ProductFormData,
+        value: string | boolean
+    ) => {
+        setFormData({ ...formData, [field]: value });
+        if (validationErrors[field]) {
+            const { [field]: _, ...rest } = validationErrors;
+            setValidationErrors(rest);
         }
     };
 
@@ -146,20 +103,14 @@ export function ProductForm({ isOpen, onClose, onSubmit, initialData }: ProductF
                                 Name
                                 {validationErrors.name && (
                                     <span className="text-red-500 text-sm ml-2">
-                    {validationErrors.name}
-                  </span>
+                                        {validationErrors.name}
+                                    </span>
                                 )}
                             </label>
                             <input
                                 type="text"
                                 value={formData.name}
-                                onChange={(e) => {
-                                    setFormData({...formData, name: e.target.value});
-                                    if (validationErrors.name) {
-                                        const { name, ...rest } = validationErrors;
-                                        setValidationErrors(rest);
-                                    }
-                                }}
+                                onChange={(e) => handleInputChange('name', e.target.value)}
                                 className={`mt-1 block w-full rounded-md text-sm shadow-sm ${
                                     validationErrors.name
                                         ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -173,20 +124,14 @@ export function ProductForm({ isOpen, onClose, onSubmit, initialData }: ProductF
                                 SKU
                                 {validationErrors.sku && (
                                     <span className="text-red-500 text-sm ml-2">
-                    {validationErrors.sku}
-                  </span>
+                                        {validationErrors.sku}
+                                    </span>
                                 )}
                             </label>
                             <input
                                 type="text"
                                 value={formData.sku}
-                                onChange={(e) => {
-                                    setFormData({...formData, sku: e.target.value});
-                                    if (validationErrors.sku) {
-                                        const { sku, ...rest } = validationErrors;
-                                        setValidationErrors(rest);
-                                    }
-                                }}
+                                onChange={(e) => handleInputChange('sku', e.target.value)}
                                 className={`mt-1 block w-full rounded-md text-sm shadow-sm ${
                                     validationErrors.sku
                                         ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -201,7 +146,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, initialData }: ProductF
                         <label className="text-sm font-medium">Description</label>
                         <textarea
                             value={formData.description}
-                            onChange={(e) => setFormData({...formData, description: e.target.value})}
+                            onChange={(e) => handleInputChange('description', e.target.value)}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                             rows={4}
                         />
@@ -216,9 +161,9 @@ export function ProductForm({ isOpen, onClose, onSubmit, initialData }: ProductF
                                 multiple
                                 accept="image/jpeg,image/png,image/webp"
                                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4
-                  file:rounded-md file:border-0 file:text-sm file:font-medium
-                  file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100
-                  focus:outline-none"
+                                    file:rounded-md file:border-0 file:text-sm file:font-medium
+                                    file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100
+                                    focus:outline-none"
                             />
                             <Upload className="w-5 h-5 text-gray-400" />
                         </div>
@@ -235,20 +180,14 @@ export function ProductForm({ isOpen, onClose, onSubmit, initialData }: ProductF
                                 Retail Price ($)
                                 {validationErrors.retail_price && (
                                     <span className="text-red-500 text-sm ml-2">
-                    {validationErrors.retail_price}
-                  </span>
+                                        {validationErrors.retail_price}
+                                    </span>
                                 )}
                             </label>
                             <input
                                 type="number"
                                 value={formData.retail_price}
-                                onChange={(e) => {
-                                    setFormData({...formData, retail_price: e.target.value});
-                                    if (validationErrors.retail_price) {
-                                        const { retail_price, ...rest } = validationErrors;
-                                        setValidationErrors(rest);
-                                    }
-                                }}
+                                onChange={(e) => handleInputChange('retail_price', e.target.value)}
                                 className={`mt-1 block w-full rounded-md text-sm shadow-sm ${
                                     validationErrors.retail_price
                                         ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -264,20 +203,14 @@ export function ProductForm({ isOpen, onClose, onSubmit, initialData }: ProductF
                                 Business Price ($)
                                 {validationErrors.business_price && (
                                     <span className="text-red-500 text-sm ml-2">
-                    {validationErrors.business_price}
-                  </span>
+                                        {validationErrors.business_price}
+                                    </span>
                                 )}
                             </label>
                             <input
                                 type="number"
                                 value={formData.business_price}
-                                onChange={(e) => {
-                                    setFormData({...formData, business_price: e.target.value});
-                                    if (validationErrors.business_price) {
-                                        const { business_price, ...rest } = validationErrors;
-                                        setValidationErrors(rest);
-                                    }
-                                }}
+                                onChange={(e) => handleInputChange('business_price', e.target.value)}
                                 className={`mt-1 block w-full rounded-md text-sm shadow-sm ${
                                     validationErrors.business_price
                                         ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -293,20 +226,14 @@ export function ProductForm({ isOpen, onClose, onSubmit, initialData }: ProductF
                                 Stock
                                 {validationErrors.stock && (
                                     <span className="text-red-500 text-sm ml-2">
-                    {validationErrors.stock}
-                  </span>
+                                        {validationErrors.stock}
+                                    </span>
                                 )}
                             </label>
                             <input
                                 type="number"
                                 value={formData.stock}
-                                onChange={(e) => {
-                                    setFormData({...formData, stock: e.target.value});
-                                    if (validationErrors.stock) {
-                                        const { stock, ...rest } = validationErrors;
-                                        setValidationErrors(rest);
-                                    }
-                                }}
+                                onChange={(e) => handleInputChange('stock', e.target.value)}
                                 className={`mt-1 block w-full rounded-md text-sm shadow-sm ${
                                     validationErrors.stock
                                         ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -323,7 +250,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, initialData }: ProductF
                             <input
                                 type="checkbox"
                                 checked={formData.is_active}
-                                onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
+                                onChange={(e) => handleInputChange('is_active', e.target.checked)}
                                 className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                             />
                             <span className="text-sm font-medium">Active Product</span>

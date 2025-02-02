@@ -1,7 +1,7 @@
 import { json, redirect } from "@remix-run/node";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData, isRouteErrorResponse, useRouteError } from "@remix-run/react";
-import { ProductManagement } from "~/components/admin/ProductManagement";
+import { ProductManagement } from "~/features/products/components/ProductManagement";
 import { createServerClient } from '@supabase/ssr';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
