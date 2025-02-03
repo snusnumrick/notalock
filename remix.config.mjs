@@ -10,5 +10,6 @@ export default {
     v3_throwAbortReason: true,
     v3_fetcherPersist: true,
     v3_lazyRouteDiscovery: true,
+    v3_singleFetch: true,
   },
 };

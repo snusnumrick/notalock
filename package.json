@@ -4,7 +4,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
-    "dev": "remix dev --manual",
+    "dev": "NODE_NO_WARNINGS=1 remix dev --manual",
     "start": "remix-serve ./build/index.js",
     "typecheck": "tsc",
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
@@ -33,6 +33,7 @@
     "lucide-react": "^0.300.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-dropzone": "^14.3.5",
     "tailwind-merge": "^2.2.0",
     "tailwindcss-animate": "^1.0.7"
   },
