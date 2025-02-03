@@ -2,26 +2,38 @@
 
 ## Project Structure
 ```
-notalock-store/
+notalock/
 ├── app/
 │   ├── components/
-│   │   ├── admin/       # Admin-specific components
 │   │   ├── common/      # Shared components
+│   │   ├── features/    # Feature-specific components
 │   │   └── ui/          # UI components
+│   ├── config/         # Configuration files
 │   ├── features/        # Feature modules
-│   │   ├── products/
-│   │   ├── orders/
-│   │   └── users/
-│   ├── hooks/           # Custom React hooks
+│   │   └── products/    # Product management
+│   │       ├── api/     # Product-specific API
+│   │       ├── components/ # Product components
+│   │       ├── hooks/   # Product-specific hooks
+│   │       ├── types/   # Product types
+│   │       └── utils/   # Product utilities
 │   ├── lib/            # Third-party library configurations
 │   ├── routes/         # Route components
+│   │   ├── admin/      # Admin routes
+│   │   │   └── products/ # Product management routes
+│   │   ├── api/        # API endpoints
+│   │   └── _index.tsx  # Main app route
 │   ├── server/         # Server-side code
-│   │   ├── services/   # Server services
+│   │   ├── middleware/ # Request middleware
+│   │   ├── services/   # Core services (e.g., Supabase)
 │   │   └── utils/      # Server utilities
 │   ├── styles/         # Global styles
 │   ├── types/          # TypeScript types
 │   └── utils/          # Client utilities
+│   ├── entry.client.tsx # Client entry point
+│   ├── entry.server.tsx # Server entry point
+│   └── root.tsx        # Root component
 ├── docs/              # Documentation
+│   └── development/    # Development documentation
 ├── public/           # Static assets
 └── tests/            # Test files
 ```
@@ -30,34 +42,50 @@ notalock-store/
 Each feature module follows this structure:
 ```
 features/[feature-name]/
-├── api/           # API services
-├── components/    # UI components
-├── hooks/         # Custom hooks
-├── types/         # TypeScript types
-└── utils/         # Helper functions
+├── api/           # Feature-specific API calls and data management
+├── components/    # Feature-specific UI components
+├── hooks/         # Feature-specific React hooks
+├── types/         # Feature-specific TypeScript types
+└── utils/         # Feature-specific utilities
 ```
+
+Feature routes are organized in `app/routes/` following the Remix file-based routing convention. For admin features, routes are placed under `app/routes/admin/[feature-name]/`.
+
+Feature-specific components that are shared across multiple routes should be registered in `app/components/features/` for better organization and reusability.
 
 ## Import Guidelines
 
 ### Feature-Specific Imports
 ```typescript
-// Components within the same feature
-import { ProductForm } from '../components/ProductForm';
+// Feature API
+import { createProduct } from "~/features/products/api";
 
-// Types from the same feature
-import { ProductFormData } from '../types/product.types';
+// Feature components
+import { ProductForm } from "~/features/products/components/ProductForm";
 
-// API services from the same feature
-import { ProductService } from '../api/productService';
+// Feature hooks
+import { useProductUpload } from "~/features/products/hooks/useProductUpload";
+
+// Feature types
+import type { Product } from "~/features/products/types";
+
+// Feature utilities
+import { formatProductPrice } from "~/features/products/utils";
+
+// Shared feature components
+import { ProductCard } from "~/components/features/products/ProductCard";
 ```
 
 ### Server-Side Imports
 ```typescript
-// Server services
-import { createSupabaseServerClient } from "~/server/services/supabase.server";
+// Core services
+import { createServerClient } from "~/server/services/supabase.server";
 
 // Server utilities
-import { validateSession } from "~/server/utils/auth";
+import { requireAdmin } from "~/server/utils/auth";
+
+// Server middleware
+import { validateRequest } from "~/server/middleware/validation";
 ```
 
 ### Shared Resources
@@ -68,29 +96,61 @@ import { Button } from "~/components/ui/button";
 // Common components
 import { PageLayout } from "~/components/common/PageLayout";
 
-// Shared hooks
-import { useAuth } from "~/hooks/useAuth";
+// Environment configuration
+import { env } from "~/config/env";
 
 // Global types
-import { User } from "~/types/auth.types";
+import type { User } from "~/types";
 ```
 
 ## Best Practices
 
-### Component Organization
-1. Keep components focused and single-purpose
-2. Use consistent naming conventions
-3. Co-locate related files
-4. Implement proper error boundaries
+### Code Organization
+1. Feature-first organization
+   - Place feature-specific code in `app/features/[feature-name]`
+   - Group related functionality (API, components, hooks, etc.)
+   - Use feature-specific types and utilities
 
-### State Management
-1. Keep state close to where it's used
-2. Use appropriate state management tools
-3. Implement proper data fetching strategies
-4. Handle loading and error states
+2. Route organization
+   - Follow Remix file-based routing conventions
+   - Group admin routes under `app/routes/admin`
+   - Place API endpoints under `app/routes/api`
+   - Keep route components focused on data fetching and layout
 
-### Code Splitting
-1. Use dynamic imports for routes
-2. Implement proper chunking
-3. Optimize bundle sizes
-4. Use proper lazy loading strategies
+3. Component organization
+   - Keep components focused and single-purpose
+   - Place reusable UI components in `components/ui`
+   - Share common layouts and patterns in `components/common`
+   - Register feature components in `components/features` when shared
+
+### Data and State Management
+1. Server-side data flow
+   - Use Remix loaders for data fetching
+   - Handle mutations with Remix actions
+   - Implement proper error handling and validation
+   - Use server middleware where needed
+
+2. Supabase integration
+   - Create server clients in route loaders
+   - Handle authentication in server utils
+   - Manage database operations in API handlers
+   - Follow proper security practices
+
+### Development Practices
+1. TypeScript usage
+   - Define types in feature-specific `types` directories
+   - Use global types for shared interfaces
+   - Leverage TypeScript for API definitions
+   - Run `typecheck` before commits
+
+2. Code quality
+   - Follow ESLint and Prettier configurations
+   - Use Husky pre-commit hooks
+   - Maintain consistent file and directory naming
+   - Keep dependencies updated
+
+3. Styling practices
+   - Use Tailwind CSS core utilities only
+   - Apply `class-variance-authority` for variants
+   - Use `clsx` or `tailwind-merge` for conditions
+   - Follow established component patterns
