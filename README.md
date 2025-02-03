@@ -66,6 +66,7 @@ Detailed documentation is available in the `docs` directory:
 - [API Documentation](./docs/api.md)
 - [Database Schema](./docs/database.md)
 - [Deployment Guide](./docs/deployment.md)
+- [Claude Instructions](./docs/development/claude-instructions.md)
 
 ### Planning
 - [Development Roadmap](./docs/roadmap/development-plan.md)
