@@ -10,85 +10,144 @@ export class ProductImageService {
     this.supabase = supabase;
   }
 
-  // app/features/products/api/productImageService.ts
-
-  // Update the uploadImage method to accept isPrimary parameter:
   async uploadImage(
     file: File,
     productId: string,
     isPrimary: boolean = false
   ): Promise<ProductImage> {
-    // Generate a unique filename
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${nanoid()}.${fileExt}`;
-    const filePath = `${productId}/${fileName}`;
+    try {
+      // Generate a unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${nanoid()}.${fileExt}`;
+      const filePath = `${productId}/${fileName}`;
 
-    // Upload to storage
-    const { error: uploadError } = await this.supabase.storage
-      .from('product-images')
-      .upload(filePath, file);
+      // Convert File to ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer();
 
-    if (uploadError) {
-      throw new Error(`Failed to upload image: ${uploadError.message}`);
-    }
+      // Upload to storage
+      const { error: uploadError } = await this.supabase.storage
+        .from('product-images')
+        .upload(filePath, new Uint8Array(arrayBuffer), {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type,
+        });
 
-    // Get public URL
-    const {
-      data: { publicUrl },
-    } = this.supabase.storage.from('product-images').getPublicUrl(filePath);
+      if (uploadError) {
+        throw new Error(`Failed to upload image: ${uploadError.message}`);
+      }
 
-    // Get current image count for sort order
-    const { data: existingImages } = await this.supabase
-      .from('product_images')
-      .select('id')
-      .eq('product_id', productId);
+      // Get public URL
+      const { data: urlData } = this.supabase.storage.from('product-images').getPublicUrl(filePath);
 
-    const sortOrder = existingImages?.length || 0;
+      if (!urlData || !urlData.publicUrl) {
+        throw new Error('Failed to get public URL');
+      }
 
-    // If this image is to be primary, first remove primary status from other images
-    if (isPrimary) {
-      await this.supabase
+      // Get current image count for sort order
+      const { data: existingImages, error: countError } = await this.supabase
         .from('product_images')
-        .update({ is_primary: false })
+        .select('id')
         .eq('product_id', productId);
+
+      if (countError) {
+        throw new Error(`Failed to get existing images: ${countError.message}`);
+      }
+
+      const sortOrder = existingImages?.length || 0;
+      const isFirstImage = sortOrder === 0;
+      isPrimary = isPrimary || isFirstImage; // Make first image primary if none exists
+
+      // If this image is primary, update product's image_url
+      if (isPrimary) {
+        const { error: productUpdateError } = await this.supabase
+          .from('products')
+          .update({ image_url: urlData.publicUrl })
+          .eq('id', productId);
+
+        if (productUpdateError) {
+          console.error('Error updating product image_url:', productUpdateError);
+        }
+
+        // Remove primary status from other images
+        const { error: updateError } = await this.supabase
+          .from('product_images')
+          .update({ is_primary: false })
+          .eq('product_id', productId);
+
+        if (updateError) {
+          throw new Error(`Failed to update primary status: ${updateError.message}`);
+        }
+      }
+
+      // Create database record
+      const insertData = {
+        product_id: productId,
+        url: urlData.publicUrl,
+        storage_path: filePath,
+        file_name: fileName,
+        is_primary: isPrimary,
+        sort_order: sortOrder,
+      };
+
+      const { data: insertedData, error: dbError } = await this.supabase
+        .from('product_images')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (dbError) {
+        // Try to clean up the uploaded file
+        await this.supabase.storage.from('product-images').remove([filePath]);
+        throw new Error(`Failed to create image record: ${dbError.message}`);
+      }
+
+      return insertedData;
+    } catch (error) {
+      console.error('Upload process error:', error);
+      throw error;
     }
-
-    // Create database record
-    const { data, error: dbError } = await this.supabase
-      .from('product_images')
-      .insert([
-        {
-          product_id: productId,
-          url: publicUrl,
-          storage_path: filePath,
-          file_name: fileName,
-          is_primary: isPrimary,
-          sort_order: sortOrder,
-        },
-      ])
-      .select()
-      .single();
-
-    if (dbError) {
-      // Try to clean up the uploaded file
-      await this.supabase.storage.from('product-images').remove([filePath]);
-
-      throw new Error(`Failed to create image record: ${dbError.message}`);
-    }
-
-    return data;
   }
 
   async deleteImage(imageId: string): Promise<void> {
     // Get image data first
     const { data: image, error: getError } = await this.supabase
       .from('product_images')
-      .select('storage_path, product_id')
+      .select('storage_path, product_id, is_primary, url')
       .eq('id', imageId)
       .single();
 
     if (getError) {
       throw new Error(`Failed to get image data: ${getError.message}`);
+    }
+
+    // If this was the primary image, update product's image_url
+    if (image.is_primary) {
+      // Find another image to make primary
+      const { data: otherImage } = await this.supabase
+        .from('product_images')
+        .select('id, url')
+        .eq('product_id', image.product_id)
+        .neq('id', imageId)
+        .order('sort_order', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (otherImage) {
+        // Update product image_url and make the other image primary
+        await this.supabase
+          .from('products')
+          .update({ image_url: otherImage.url })
+          .eq('id', image.product_id);
+
+        await this.supabase
+          .from('product_images')
+          .update({ is_primary: true })
+          .eq('id', otherImage.id);
+      } else {
+        // No other images, clear product image_url
+        await this.supabase.from('products').update({ image_url: null }).eq('id', image.product_id);
+      }
     }
 
     // Delete from storage
@@ -118,7 +177,7 @@ export class ProductImageService {
     // Get image data first
     const { data: image, error: getError } = await this.supabase
       .from('product_images')
-      .select('product_id')
+      .select('product_id, url')
       .eq('id', imageId)
       .single();
 
@@ -144,6 +203,16 @@ export class ProductImageService {
 
     if (updateError2) {
       throw new Error(`Failed to set primary image: ${updateError2.message}`);
+    }
+
+    // Update product's image_url
+    const { error: productUpdateError } = await this.supabase
+      .from('products')
+      .update({ image_url: image.url })
+      .eq('id', image.product_id);
+
+    if (productUpdateError) {
+      throw new Error(`Failed to update product image URL: ${productUpdateError.message}`);
     }
   }
 

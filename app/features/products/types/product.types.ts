@@ -10,6 +10,7 @@ export interface Product {
   stock: number;
   is_active: boolean;
   created_at: string;
+  image_url: string | null;
   images?: ProductImage[];
 }
 
@@ -30,7 +31,7 @@ export interface ProductManagementProps {
 export interface ProductImage {
   id: string;
   product_id: string;
-  url: string;
+  url: string; // Keep this as url for product_images table
   storage_path: string;
   file_name: string;
   is_primary: boolean;
@@ -53,6 +54,7 @@ export interface ProductFormData {
   business_price: string;
   stock: string;
   is_active: boolean;
+  image_url?: string | null;
   tempImages?: TempImage[];
 }
 

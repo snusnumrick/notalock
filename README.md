@@ -47,6 +47,12 @@ npm run dev
 - Basic CRUD interface for products
 - Product form with validation
 - Image upload capability
+  - Single file upload working
+  - Primary image handling
+  - Image preview
+  - Image deletion
+  - Proper storage integration
+  - RLS policies configured
 - Role-based access control
 - Integration with Supabase Storage
 

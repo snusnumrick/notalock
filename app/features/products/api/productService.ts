@@ -49,6 +49,7 @@ export class ProductService {
       business_price: parseFloat(formData.business_price),
       stock: parseInt(formData.stock),
       is_active: formData.is_active,
+      image_url: null, // Initialize with null
     };
 
     // First create the product
@@ -109,6 +110,7 @@ export class ProductService {
       business_price: parseFloat(formData.business_price),
       stock: parseInt(formData.stock),
       is_active: formData.is_active,
+      image_url: formData.image_url,
     };
 
     const { data, error } = await this.supabase
