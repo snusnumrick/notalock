@@ -1,12 +1,11 @@
-import type { LoaderArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
-import { createServerClient } from "~/utils/supabase.server";
-import { ProductManagement } from "~/components/admin/ProductManagement";
+import type { LoaderArgs } from '@remix-run/node';
+import { json } from '@remix-run/node';
+import { createServerClient } from '~/utils/supabase.server';
+import { ProductManagement } from '~/components/admin/ProductManagement';
 
 export const loader = async ({ request }: LoaderArgs) => {
   const response = new Response();
-  
+
   // Create supabase server client
   const supabase = createServerClient({ request, response });
 
@@ -16,7 +15,7 @@ export const loader = async ({ request }: LoaderArgs) => {
   } = await supabase.auth.getSession();
 
   if (!session) {
-    throw new Response("Unauthorized", { status: 401 });
+    throw new Response('Unauthorized', { status: 401 });
   }
 
   // Get user profile to check role
@@ -27,17 +26,13 @@ export const loader = async ({ request }: LoaderArgs) => {
     .single();
 
   if (!profile || profile.role !== 'admin') {
-    throw new Response("Forbidden", { status: 403 });
+    throw new Response('Forbidden', { status: 403 });
   }
 
-  return json({
-    isAdmin: true
-  });
+  return json({});
 };
 
 export default function Products() {
-  const { isAdmin } = useLoaderData<typeof loader>();
-
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

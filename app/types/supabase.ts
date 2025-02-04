@@ -1,101 +1,89 @@
 // app/types/supabase.ts
 
 // Add this export statement
-export type Json =
-    | string
-    | number
-    | boolean
-    | null
-    | { [key: string]: Json | undefined }
-    | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export interface Database {
-    public: {
-        Tables: {
-            products: {
-                Row: {
-                    id: string;
-                    created_at: string;
-                    name: string;
-                    description: string;
-                    price: number;
-                    category: string;
-                    image_url: string;
-                    stock: number;
-                };
-                Insert: {
-                    id?: string;
-                    created_at?: string;
-                    name: string;
-                    description: string;
-                    price: number;
-                    category: string;
-                    image_url: string;
-                    stock: number;
-                };
-                Update: {
-                    id?: string;
-                    created_at?: string;
-                    name?: string;
-                    description?: string;
-                    price?: number;
-                    category?: string;
-                    image_url?: string;
-                    stock?: number;
-                };
-            };
-            users: {
-                Row: {
-                    id: string;
-                    created_at: string;
-                    email: string;
-                    role: 'customer' | 'business' | 'admin';
-                };
-                Insert: {
-                    id?: string;
-                    created_at?: string;
-                    email: string;
-                    role?: 'customer' | 'business' | 'admin';
-                };
-                Update: {
-                    id?: string;
-                    created_at?: string;
-                    email?: string;
-                    role?: 'customer' | 'business' | 'admin';
-                };
-            };
-            orders: {
-                Row: {
-                    id: string;
-                    created_at: string;
-                    user_id: string;
-                    status: 'pending' | 'processing' | 'shipped' | 'delivered';
-                    total: number;
-                };
-                Insert: {
-                    id?: string;
-                    created_at?: string;
-                    user_id: string;
-                    status?: 'pending' | 'processing' | 'shipped' | 'delivered';
-                    total: number;
-                };
-                Update: {
-                    id?: string;
-                    created_at?: string;
-                    user_id?: string;
-                    status?: 'pending' | 'processing' | 'shipped' | 'delivered';
-                    total?: number;
-                };
-            };
+  public: {
+    Tables: {
+      products: {
+        Row: {
+          id: string;
+          created_at: string;
+          name: string;
+          description: string;
+          price: number;
+          category: string;
+          image_url: string;
+          stock: number;
         };
-        Views: {
-            [_ in never]: never;
+        Insert: {
+          id?: string;
+          created_at?: string;
+          name: string;
+          description: string;
+          price: number;
+          category: string;
+          image_url: string;
+          stock: number;
         };
-        Functions: {
-            [_ in never]: never;
+        Update: {
+          id?: string;
+          created_at?: string;
+          name?: string;
+          description?: string;
+          price?: number;
+          category?: string;
+          image_url?: string;
+          stock?: number;
         };
-        Enums: {
-            [_ in never]: never;
+      };
+      users: {
+        Row: {
+          id: string;
+          created_at: string;
+          email: string;
+          role: 'customer' | 'business' | 'admin';
         };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          email: string;
+          role?: 'customer' | 'business' | 'admin';
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          email?: string;
+          role?: 'customer' | 'business' | 'admin';
+        };
+      };
+      orders: {
+        Row: {
+          id: string;
+          created_at: string;
+          user_id: string;
+          status: 'pending' | 'processing' | 'shipped' | 'delivered';
+          total: number;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          user_id: string;
+          status?: 'pending' | 'processing' | 'shipped' | 'delivered';
+          total: number;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          user_id?: string;
+          status?: 'pending' | 'processing' | 'shipped' | 'delivered';
+          total?: number;
+        };
+      };
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+  };
 }

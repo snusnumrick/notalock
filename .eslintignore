@@ -1,0 +1,9 @@
+# Build output
+build/**/*
+public/build/**/*
+
+# Dependencies
+node_modules/
+
+# Cache
+.cache/

@@ -1,45 +1,101 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { createBrowserClient } from '@supabase/ssr';
 import { ProductForm } from './ProductForm';
 import { ProductService } from '../api/productService';
-import { Product, ProductFormData, ProductManagementProps } from '../types/product.types';
+import {
+  getCookieBrowser,
+  setCookieBrowser,
+  removeCookieBrowser,
+} from '../../../utils/cookieUtils';
+import type { Product, ProductFormData, ProductManagementProps } from '../types/product.types';
 
-export function ProductManagement({ supabaseUrl, supabaseAnonKey }: ProductManagementProps) {
+export function ProductManagement({
+  supabaseUrl,
+  supabaseAnonKey,
+  initialSession,
+}: ProductManagementProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [mounted, setMounted] = useState(false);
 
-  const supabase = React.useMemo(() => createBrowserClient(
-    supabaseUrl,
-    supabaseAnonKey
-  ), [supabaseUrl, supabaseAnonKey]);
+  // Initialize Supabase client with browser-safe cookie handling
+  const supabase = React.useMemo(() => {
+    const client = createBrowserClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        get: getCookieBrowser,
+        set: setCookieBrowser,
+        remove: removeCookieBrowser,
+      },
+      auth: {
+        persistSession: true,
+        storageKey: 'sb-session',
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    });
 
+    client.auth.getSession().then(({ data: { session } }) => {
+      console.log('Supabase Client Session:', {
+        hasSession: !!session,
+        sessionId: session?.access_token?.slice(0, 10),
+      });
+    });
+
+    return client;
+  }, [supabaseUrl, supabaseAnonKey]);
+
+  // Initialize ProductService
   const productService = React.useMemo(() => new ProductService(supabase), [supabase]);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    fetchProducts();
-  }, [mounted]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       const data = await productService.fetchProducts();
       setProducts(data);
     } catch (err) {
-      setError('Failed to load products: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      setError(
+        'Failed to load products: ' + (err instanceof Error ? err.message : 'Unknown error')
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [productService]);
+
+  useEffect(() => {
+    if (initialSession?.data?.session) {
+      setSession(initialSession.data.session);
+      supabase.auth.setSession(initialSession.data.session);
+    }
+  }, [initialSession, supabase.auth]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
+
+  useEffect(() => {
+    if (session) {
+      console.log('Session token available:', !!session.access_token);
+    }
+  }, [session]);
 
   const handleAddProduct = async (formData: ProductFormData) => {
     try {
@@ -53,10 +109,10 @@ export function ProductManagement({ supabaseUrl, supabaseAnonKey }: ProductManag
 
   const handleEditProduct = async (formData: ProductFormData) => {
     if (!editingProduct) return;
-    
+
     try {
       const updatedProduct = await productService.updateProduct(editingProduct.id, formData);
-      setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+      setProducts(products.map(p => (p.id === updatedProduct.id ? updatedProduct : p)));
       setShowForm(false);
       setEditingProduct(null);
     } catch (err) {
@@ -64,27 +120,26 @@ export function ProductManagement({ supabaseUrl, supabaseAnonKey }: ProductManag
     }
   };
 
-  const handleDeleteProduct = async (productId: number) => {
+  const handleDeleteProduct = async (productId: string) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
 
     try {
       await productService.deleteProduct(productId);
       setProducts(products.filter(p => p.id !== productId));
     } catch (err) {
-      setError('Failed to delete product: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      setError(
+        'Failed to delete product: ' + (err instanceof Error ? err.message : 'Unknown error')
+      );
     }
   };
 
   const filteredProducts = React.useMemo(() => {
-    return products.filter(product =>
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchQuery.toLowerCase())
+    return products.filter(
+      product =>
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.sku.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [products, searchQuery]);
-
-  if (!mounted) {
-    return null;
-  }
 
   return (
     <div className="p-6">
@@ -109,7 +164,7 @@ export function ProductManagement({ supabaseUrl, supabaseAnonKey }: ProductManag
             type="text"
             placeholder="Search by name or SKU..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
             className="pl-10 pr-4 py-2 w-full border rounded-lg"
           />
         </div>
@@ -125,9 +180,7 @@ export function ProductManagement({ supabaseUrl, supabaseAnonKey }: ProductManag
         {loading ? (
           <div className="text-center py-12">Loading products...</div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            No products found
-          </div>
+          <div className="text-center py-12 text-gray-500">No products found</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
@@ -142,16 +195,12 @@ export function ProductManagement({ supabaseUrl, supabaseAnonKey }: ProductManag
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.map((product) => (
+                {filteredProducts.map(product => (
                   <tr key={product.id} className="border-b hover:bg-gray-50">
                     <td className="p-4">{product.sku}</td>
                     <td className="p-4">{product.name}</td>
-                    <td className="p-4 text-right">
-                      ${product.retail_price.toFixed(2)}
-                    </td>
-                    <td className="p-4 text-right">
-                      ${product.business_price.toFixed(2)}
-                    </td>
+                    <td className="p-4 text-right">${product.retail_price.toFixed(2)}</td>
+                    <td className="p-4 text-right">${product.business_price.toFixed(2)}</td>
                     <td className="p-4 text-right">{product.stock}</td>
                     <td className="p-4">
                       <div className="flex justify-center gap-2">
@@ -188,15 +237,21 @@ export function ProductManagement({ supabaseUrl, supabaseAnonKey }: ProductManag
             setEditingProduct(null);
           }}
           onSubmit={editingProduct ? handleEditProduct : handleAddProduct}
-          initialData={editingProduct ? {
-            name: editingProduct.name,
-            sku: editingProduct.sku,
-            description: editingProduct.description || '',
-            retail_price: editingProduct.retail_price.toString(),
-            business_price: editingProduct.business_price.toString(),
-            stock: editingProduct.stock.toString(),
-            is_active: editingProduct.is_active
-          } : undefined}
+          initialData={
+            editingProduct
+              ? {
+                  id: editingProduct.id,
+                  name: editingProduct.name,
+                  sku: editingProduct.sku,
+                  description: editingProduct.description || '',
+                  retail_price: editingProduct.retail_price.toString(),
+                  business_price: editingProduct.business_price.toString(),
+                  stock: editingProduct.stock.toString(),
+                  is_active: editingProduct.is_active,
+                }
+              : undefined
+          }
+          supabaseClient={supabase}
         />
       )}
     </div>

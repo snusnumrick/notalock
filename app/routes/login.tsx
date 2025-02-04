@@ -1,21 +1,16 @@
-import { useState } from "react";
-import { useNavigate } from "@remix-run/react";
+import React, { useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
-      const supabase = createBrowserClient(
-        window.env.SUPABASE_URL,
-        window.env.SUPABASE_ANON_KEY
-      );
+      const supabase = createBrowserClient(window.env.SUPABASE_URL, window.env.SUPABASE_ANON_KEY);
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -32,7 +27,6 @@ export default function Login() {
 
       // Force a full page reload to ensure session is properly set
       window.location.href = '/admin/products';
-
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message);
@@ -67,7 +61,7 @@ export default function Login() {
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Email address"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
               />
             </div>
             <div>
@@ -83,7 +77,7 @@ export default function Login() {
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={e => setPassword(e.target.value)}
               />
             </div>
           </div>
