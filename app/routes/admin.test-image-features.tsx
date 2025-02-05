@@ -414,7 +414,8 @@ export default function TestImageFeatures() {
     } else if (actionData?.success) {
       switch (actionData.action) {
         case 'delete':
-          setAdminImages(prev => prev.filter(img => img.id !== actionData.imageId));
+          // Force a reload to get fresh data from the loader
+          window.location.reload();
           break;
         case 'setPrimary':
           setAdminImages(prev =>
