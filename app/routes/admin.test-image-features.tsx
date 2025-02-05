@@ -14,24 +14,89 @@ import { ProductImageService } from '~/features/products/api/productImageService
 class FormSubmitImageService extends ProductImageService {
   private submit: ReturnType<typeof useSubmit>;
   private productId: string;
+  private setResults: React.Dispatch<React.SetStateAction<{ [key: string]: ProductImage }>>;
+  private setUploadingCount: React.Dispatch<React.SetStateAction<number>>;
+  private uploadQueue: File[] = [];
+  private isUploading = false;
+  private tempIdCounter = 0;
 
-  constructor(submit: ReturnType<typeof useSubmit>, productId: string) {
+  constructor(
+    submit: ReturnType<typeof useSubmit>,
+    productId: string,
+    _: null,
+    setResults: React.Dispatch<React.SetStateAction<{ [key: string]: ProductImage }>>,
+    setUploadingCount: React.Dispatch<React.SetStateAction<number>>
+  ) {
+    console.log('Creating FormSubmitImageService with productId:', productId);
     super({} as SupabaseClient);
     this.submit = submit;
     this.productId = productId;
+    this.setResults = setResults;
+    this.setUploadingCount = setUploadingCount;
   }
 
-  override async uploadImage(file: File): Promise<ProductImage> {
+  private generateTempId(): string {
+    this.tempIdCounter += 1;
+    return `temp-${Date.now()}-${this.tempIdCounter}`;
+  }
+
+  private async processUploadQueue() {
+    if (this.isUploading || this.uploadQueue.length === 0) return;
+
+    this.isUploading = true;
+    const file = this.uploadQueue.shift()!;
+    const tempId = this.generateTempId();
+
     const formData = new FormData();
     formData.append('image', file);
     formData.append('fileName', file.name);
     formData.append('productId', this.productId);
+    formData.append('tempId', tempId);
 
-    this.submit(formData, { method: 'post', encType: 'multipart/form-data', replace: true });
+    const tempImage = {
+      id: tempId,
+      product_id: this.productId,
+      url: URL.createObjectURL(file),
+      storage_path: '',
+      file_name: file.name,
+      is_primary: false,
+      sort_order: 0,
+      created_at: new Date().toISOString(),
+    };
 
-    // Return a minimal ProductImage object that will be replaced by the server response
+    this.setResults(prev => ({
+      ...prev,
+      [tempId]: tempImage,
+    }));
+
+    try {
+      // Submit and wait for completion
+      await new Promise<void>(resolve => {
+        this.submit(formData, {
+          method: 'post',
+          encType: 'multipart/form-data',
+          preventScrollReset: true,
+        });
+        setTimeout(resolve, 500);
+      });
+    } finally {
+      this.isUploading = false;
+      // Continue with next upload
+      this.processUploadQueue();
+    }
+  }
+
+  override async uploadImage(file: File): Promise<ProductImage> {
+    console.log('Uploading image:', file);
+
+    // Add to queue instead of submitting immediately
+    this.uploadQueue.push(file);
+    this.processUploadQueue();
+
+    // Return a minimal ProductImage object - actual info will come from server
+    const tempId = this.generateTempId();
     return {
-      id: 'temp-' + Date.now(),
+      id: tempId,
       product_id: this.productId,
       url: URL.createObjectURL(file),
       storage_path: '',
@@ -43,6 +108,9 @@ class FormSubmitImageService extends ProductImageService {
   }
 
   override async uploadMultipleImages(files: File[]): Promise<ProductImage[]> {
+    console.log('Uploading multiple images:', files);
+    this.setResults({});
+    this.setUploadingCount(files.length);
     const uploads = files.map(file => this.uploadImage(file));
     return Promise.all(uploads);
   }
@@ -57,6 +125,7 @@ class FormSubmitImageService extends ProductImageService {
   }
 
   override async setPrimaryImage(imageId: string): Promise<void> {
+    console.log('Setting image:', imageId, 'as primary');
     const formData = new FormData();
     formData.append('_action', 'setPrimary');
     formData.append('imageId', imageId);
@@ -65,6 +134,7 @@ class FormSubmitImageService extends ProductImageService {
   }
 
   override async updateImageOrder(imageId: string, newOrder: number): Promise<void> {
+    console.log('Reordering image:', imageId, 'to:', newOrder);
     const formData = new FormData();
     formData.append('_action', 'reorder');
     formData.append('imageId', imageId);
@@ -74,32 +144,36 @@ class FormSubmitImageService extends ProductImageService {
   }
 
   override async getProductImages(): Promise<ProductImage[]> {
+    console.log('Getting product images');
     // This is handled by the loader
     return Promise.resolve([]);
   }
 
-  // Override these methods to do nothing since we're using form submissions
   override async reorderImages(): Promise<void> {
     // No-op - handled by form submission
   }
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  console.log('Loader called');
   const response = new Response();
   const cookies = request.headers.get('Cookie') ?? '';
 
   const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
     cookies: {
       get: key => {
+        console.log('Getting cookie:', key);
         const cookie = cookies.split(';').find(c => c.trim().startsWith(`${key}=`));
         if (!cookie) return null;
         const [, value] = cookie.trim().split('=');
         return decodeURIComponent(value);
       },
       set: (key, value) => {
+        console.log('Setting cookie:', key, value);
         response.headers.append('Set-Cookie', `${key}=${value}; Path=/; HttpOnly; SameSite=Lax`);
       },
       remove: key => {
+        console.log('Removing cookie:', key);
         response.headers.append(
           'Set-Cookie',
           `${key}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
@@ -112,6 +186,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
+  console.log('User:', user);
 
   if (userError || !user) {
     return redirect('/login');
@@ -123,6 +198,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     .select('role')
     .eq('id', user.id)
     .single();
+  console.log('Profile:', profile);
 
   if (profile?.role !== 'admin') {
     return redirect('/unauthorized');
@@ -135,6 +211,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     .select('id')
     .eq('id', testProductId)
     .single();
+  console.log('Existing product:', existingProduct);
 
   if (!existingProduct) {
     // Create test product if it doesn't exist
@@ -180,6 +257,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const response = new Response();
   const formData = await request.formData();
   const action = formData.get('_action');
+  console.log('Action:', action);
 
   const cookies = request.headers.get('Cookie') ?? '';
   const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
@@ -337,6 +415,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const imageData = formData.get('image') as File;
         const fileName = formData.get('fileName') as string;
         const productId = formData.get('productId') as string;
+        const tempId = formData.get('tempId') as string;
 
         if (!imageData || !fileName || !productId) {
           return json({ error: 'Missing required fields' }, { status: 400 });
@@ -416,6 +495,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           {
             success: true,
             image: imageRecord,
+            tempId,
           },
           { headers: response.headers }
         );
@@ -436,15 +516,25 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function TestImageFeatures() {
   const { images, user, testProductId } = useLoaderData<typeof loader>();
   const [adminImages, setAdminImages] = React.useState(images);
+  const [uploadResults, setUploadResults] = React.useState<{ [key: string]: ProductImage }>({});
   const submit = useSubmit();
   const actionData = useActionData<typeof action>();
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
 
+  // Keep track of uploads in progress
+  const [, setUploadingCount] = React.useState(0);
+
   const imageService = React.useMemo(
-    () => new FormSubmitImageService(submit, testProductId),
-    [submit, testProductId]
+    () =>
+      new FormSubmitImageService(submit, testProductId, null, setUploadResults, setUploadingCount),
+    [submit, testProductId, setUploadResults, setUploadingCount]
   );
+
+  // Handle completion of all uploads
+  const handleUploadsComplete = React.useCallback(() => {
+    window.location.reload();
+  }, []);
 
   // Handle submission state
   React.useEffect(() => {
@@ -465,9 +555,9 @@ export default function TestImageFeatures() {
       console.log('Action success:', actionData);
       switch (actionData.action) {
         case 'delete':
-          // Force a reload to get fresh data from the loader
           window.location.reload();
           break;
+
         case 'setPrimary':
           setAdminImages(prev =>
             prev.map(img => ({
@@ -477,18 +567,50 @@ export default function TestImageFeatures() {
           );
           window.location.reload();
           break;
+
         case 'reorder':
-          // Reload images after reordering
           window.location.reload();
           break;
+
         default:
-          if (actionData.image) {
-            setAdminImages(prev => [...prev, actionData.image]);
+          if (actionData.image && actionData.tempId) {
+            const { tempId } = actionData;
+            setAdminImages(prev => prev.map(img => (img.id === tempId ? actionData.image : img)));
+            setUploadResults(prev => {
+              const next = { ...prev };
+              delete next[tempId];
+              return next;
+            });
+            setUploadingCount(count => {
+              const newCount = count - 1;
+              if (newCount === 0) {
+                setTimeout(handleUploadsComplete, 100);
+              }
+              return newCount;
+            });
             window.location.reload();
           }
       }
     }
-  }, [actionData]);
+  }, [actionData, handleUploadsComplete]);
+
+  // Handle upload results changes
+  React.useEffect(() => {
+    const resultValues = Object.values(uploadResults);
+    if (resultValues.length > 0) {
+      setAdminImages(prev => {
+        // First remove any temp images that were replaced
+        const withoutTemp = prev.filter(
+          img => !img.id.startsWith('temp-') || uploadResults[img.id]
+        );
+        // Then add any new temp images
+        const newImages = resultValues.filter(
+          tempImg => !withoutTemp.some(img => img.id === tempImg.id)
+        );
+        return [...withoutTemp, ...newImages];
+      });
+    }
+  }, [uploadResults]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
