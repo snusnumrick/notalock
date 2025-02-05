@@ -16,23 +16,23 @@ class FormSubmitImageService extends ProductImageService {
   private productId: string;
 
   constructor(submit: ReturnType<typeof useSubmit>, productId: string) {
-    super({} as any); // We don't need Supabase client for this implementation
+    super({} as SupabaseClient);
     this.submit = submit;
     this.productId = productId;
   }
 
-  async uploadImage(file: File, productId: string = this.productId): Promise<ProductImage> {
+  override async uploadImage(file: File): Promise<ProductImage> {
     const formData = new FormData();
     formData.append('image', file);
     formData.append('fileName', file.name);
-    formData.append('productId', productId);
+    formData.append('productId', this.productId);
 
     this.submit(formData, { method: 'post', encType: 'multipart/form-data', replace: true });
 
     // Return a minimal ProductImage object that will be replaced by the server response
     return {
       id: 'temp-' + Date.now(),
-      product_id: productId,
+      product_id: this.productId,
       url: URL.createObjectURL(file),
       storage_path: '',
       file_name: file.name,
@@ -42,15 +42,12 @@ class FormSubmitImageService extends ProductImageService {
     };
   }
 
-  async uploadMultipleImages(
-    files: File[],
-    productId: string = this.productId
-  ): Promise<ProductImage[]> {
-    const uploads = files.map(file => this.uploadImage(file, productId));
+  override async uploadMultipleImages(files: File[]): Promise<ProductImage[]> {
+    const uploads = files.map(file => this.uploadImage(file));
     return Promise.all(uploads);
   }
 
-  async deleteImage(imageId: string): Promise<void> {
+  override async deleteImage(imageId: string): Promise<void> {
     console.log('Attempting to delete image:', imageId);
     const formData = new FormData();
     formData.append('_action', 'delete');
@@ -59,7 +56,7 @@ class FormSubmitImageService extends ProductImageService {
     this.submit(formData, { method: 'post', replace: true });
   }
 
-  async setPrimaryImage(imageId: string): Promise<void> {
+  override async setPrimaryImage(imageId: string): Promise<void> {
     const formData = new FormData();
     formData.append('_action', 'setPrimary');
     formData.append('imageId', imageId);
@@ -67,7 +64,7 @@ class FormSubmitImageService extends ProductImageService {
     this.submit(formData, { method: 'post', replace: true });
   }
 
-  async updateImageOrder(imageId: string, newOrder: number): Promise<void> {
+  override async updateImageOrder(imageId: string, newOrder: number): Promise<void> {
     const formData = new FormData();
     formData.append('_action', 'reorder');
     formData.append('imageId', imageId);
@@ -76,17 +73,13 @@ class FormSubmitImageService extends ProductImageService {
     this.submit(formData, { method: 'post', replace: true });
   }
 
-  async getProductImages(productId: string): Promise<ProductImage[]> {
+  override async getProductImages(): Promise<ProductImage[]> {
     // This is handled by the loader
     return Promise.resolve([]);
   }
 
   // Override these methods to do nothing since we're using form submissions
-  async optimizeImage(file: File): Promise<Blob> {
-    return file;
-  }
-
-  async reorderImages(productId: string): Promise<void> {
+  override async reorderImages(): Promise<void> {
     // No-op - handled by form submission
   }
 }
@@ -103,10 +96,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const [, value] = cookie.trim().split('=');
         return decodeURIComponent(value);
       },
-      set: (key, value, options) => {
+      set: (key, value) => {
         response.headers.append('Set-Cookie', `${key}=${value}; Path=/; HttpOnly; SameSite=Lax`);
       },
-      remove: (key, options) => {
+      remove: key => {
         response.headers.append(
           'Set-Cookie',
           `${key}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
@@ -197,10 +190,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const [, value] = cookie.trim().split('=');
         return decodeURIComponent(value);
       },
-      set: (key, value, options) => {
+      set: (key, value) => {
         response.headers.append('Set-Cookie', `${key}=${value}; Path=/; HttpOnly; SameSite=Lax`);
       },
-      remove: (key, options) => {
+      remove: key => {
         response.headers.append(
           'Set-Cookie',
           `${key}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`

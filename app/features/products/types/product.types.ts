@@ -1,4 +1,4 @@
-import type { Session } from '@supabase/supabase-js';
+import type { Session, SupabaseClient } from '@supabase/supabase-js';
 
 export interface Product {
   id: string;
@@ -23,15 +23,17 @@ export interface LoaderData {
   };
 }
 
-export interface ProductManagementProps {
+export interface ProductManagementBaseProps {
   supabaseUrl: string;
   supabaseAnonKey: string;
+  profile?: { role: string };
+  initialSession?: Session;
 }
 
 export interface ProductImage {
   id: string;
   product_id: string;
-  url: string; // Keep this as url for product_images table
+  url: string;
   storage_path: string;
   file_name: string;
   is_primary: boolean;
@@ -58,19 +60,15 @@ export interface ProductFormData {
   tempImages?: TempImage[];
 }
 
-export interface ProductManagementProps {
-  supabaseUrl: string;
-  supabaseAnonKey: string;
-  profile?: { role: string };
-  initialSession?: any;
-}
+// Use the base props interface
+export type ProductManagementProps = ProductManagementBaseProps;
 
 export interface ProductFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: ProductFormData) => Promise<void>;
   initialData?: ProductFormData;
-  supabaseClient: any;
+  supabaseClient: SupabaseClient;
 }
 
 export interface ValidationErrors {

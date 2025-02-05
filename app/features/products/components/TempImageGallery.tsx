@@ -1,5 +1,5 @@
 // app/features/products/components/TempImageGallery.tsx
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Loader2, X, Star, Upload } from 'lucide-react';
 import type { TempImage } from '../types/product.types';
@@ -28,7 +28,7 @@ export function TempImageGallery({ images, onImagesChange }: TempImageGalleryPro
         );
 
         onImagesChange([...images, ...newImages]);
-      } catch (err) {
+      } catch {
         setError('Failed to process images');
       } finally {
         setIsLoading(false);
@@ -77,11 +77,11 @@ export function TempImageGallery({ images, onImagesChange }: TempImageGalleryPro
   );
 
   // Cleanup object URLs when component unmounts
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       images.forEach(image => URL.revokeObjectURL(image.previewUrl));
     };
-  }, [images]); // Added images as dependency
+  }, [images]);
 
   return (
     <div className="space-y-4">
@@ -91,6 +91,9 @@ export function TempImageGallery({ images, onImagesChange }: TempImageGalleryPro
           border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
           ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-500'}
         `}
+        role="button"
+        tabIndex={0}
+        aria-label="Drag and drop zone for product images"
       >
         <input {...getInputProps()} />
         <div className="flex flex-col items-center gap-2">
@@ -117,15 +120,20 @@ export function TempImageGallery({ images, onImagesChange }: TempImageGalleryPro
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div
+        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+        role="list"
+        aria-label="Product images"
+      >
         {images.map((image, index) => (
           <div
             key={image.previewUrl}
             className="group relative border rounded-lg overflow-hidden bg-white"
+            role="listitem"
           >
             <img
               src={image.previewUrl}
-              alt="Product preview"
+              alt={`Product preview ${index + 1}`}
               className="w-full aspect-square object-contain"
             />
             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity" />
@@ -137,14 +145,14 @@ export function TempImageGallery({ images, onImagesChange }: TempImageGalleryPro
                     ? 'bg-yellow-500 text-white'
                     : 'bg-white text-gray-700 hover:bg-yellow-500 hover:text-white'
                 }`}
-                title={image.isPrimary ? 'Primary image' : 'Set as primary'}
+                aria-label={image.isPrimary ? 'Primary image' : 'Set as primary image'}
               >
                 <Star className="h-4 w-4" />
               </button>
               <button
                 onClick={() => handleRemoveImage(index)}
                 className="p-1.5 rounded-full bg-white text-red-600 hover:bg-red-600 hover:text-white transition-colors"
-                title="Remove image"
+                aria-label="Remove image"
               >
                 <X className="h-4 w-4" />
               </button>

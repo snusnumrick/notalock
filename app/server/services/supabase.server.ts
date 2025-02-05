@@ -28,7 +28,7 @@ export const createSupabaseServerClient = ({
           }`
         );
       },
-      remove: (key, options) => {
+      remove: key => {
         response.headers.append('Set-Cookie', `${key}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
       },
     },

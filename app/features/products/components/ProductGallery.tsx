@@ -60,20 +60,15 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
     setCurrentImageIndex(prev => (prev < sortedImages.length - 1 ? prev + 1 : prev));
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowLeft') handlePrevImage();
-    if (e.key === 'ArrowRight') handleNextImage();
-    if (e.key === 'Escape') setLightboxOpen(false);
-  };
-
   return (
-    <div className="w-full space-y-4" onKeyDown={handleKeyDown} tabIndex={0}>
+    <div className="w-full space-y-4" role="tabpanel" aria-label="Product image gallery">
       {/* Main Image Display */}
       <div
         className="relative w-full aspect-square bg-white rounded-lg overflow-hidden border"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        role="presentation"
       >
         <img
           src={sortedImages[currentImageIndex]?.url}
@@ -87,19 +82,23 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
         <div className="absolute inset-0 flex items-center justify-between p-4">
           <button
             onClick={handlePrevImage}
+            onKeyDown={e => e.key === 'Enter' && handlePrevImage()}
             className={`p-2 rounded-full bg-white/80 text-gray-800 hover:bg-white transition-opacity ${
               currentImageIndex === 0 ? 'opacity-0' : 'opacity-100'
             }`}
             disabled={currentImageIndex === 0}
+            aria-label="Previous image"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
           <button
             onClick={handleNextImage}
+            onKeyDown={e => e.key === 'Enter' && handleNextImage()}
             className={`p-2 rounded-full bg-white/80 text-gray-800 hover:bg-white transition-opacity ${
               currentImageIndex === sortedImages.length - 1 ? 'opacity-0' : 'opacity-100'
             }`}
             disabled={currentImageIndex === sortedImages.length - 1}
+            aria-label="Next image"
           >
             <ChevronRight className="w-6 h-6" />
           </button>
@@ -109,13 +108,17 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
         <div className="absolute top-4 right-4 flex gap-2">
           <button
             onClick={() => setIsZoomed(!isZoomed)}
+            onKeyDown={e => e.key === 'Enter' && setIsZoomed(!isZoomed)}
             className="p-2 rounded-full bg-white/80 text-gray-800 hover:bg-white"
+            aria-label="Toggle zoom"
           >
             <ZoomIn className="w-6 h-6" />
           </button>
           <button
             onClick={() => setLightboxOpen(true)}
+            onKeyDown={e => e.key === 'Enter' && setLightboxOpen(true)}
             className="p-2 rounded-full bg-white/80 text-gray-800 hover:bg-white"
+            aria-label="Open fullscreen view"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -130,7 +133,7 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
       </div>
 
       {/* Thumbnail Navigation */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-5 gap-2" role="tablist" aria-label="Product thumbnails">
         {sortedImages.map((image, index) => (
           <button
             key={image.id}
@@ -140,6 +143,9 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
                 ? 'border-blue-500 ring-2 ring-blue-500'
                 : 'border-gray-200 hover:border-blue-300'
             }`}
+            role="tab"
+            aria-selected={currentImageIndex === index}
+            aria-label={`View product image ${index + 1}`}
           >
             <img
               src={image.url}
@@ -162,6 +168,7 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
             <button
               onClick={() => setLightboxOpen(false)}
               className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70"
+              aria-label="Close fullscreen view"
             >
               <X className="w-6 h-6" />
             </button>

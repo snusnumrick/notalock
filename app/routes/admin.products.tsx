@@ -9,23 +9,25 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const cookies = request.headers.get('Cookie') ?? '';
 
   try {
-    const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
-      cookies: {
-        get: key => {
-          const cookie = cookies.split(';').find(c => c.trim().startsWith(`${key}=`));
-          if (!cookie) return null;
-          return cookie.split('=')[1];
-        },
-        set: (key, value, options) => {
-          response.headers.append('Set-Cookie', `${key}=${value}; Path=/; HttpOnly; SameSite=Lax`);
-        },
-        remove: (key, options) => {
-          response.headers.append(
-            'Set-Cookie',
-            `${key}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
-          );
-        },
+    const cookieHandlers = {
+      get: (key: string) => {
+        const cookie = cookies.split(';').find(c => c.trim().startsWith(`${key}=`));
+        if (!cookie) return null;
+        return cookie.split('=')[1];
       },
+      set: (key: string, value: string) => {
+        response.headers.append('Set-Cookie', `${key}=${value}; Path=/; HttpOnly; SameSite=Lax`);
+      },
+      remove: (key: string) => {
+        response.headers.append(
+          'Set-Cookie',
+          `${key}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+        );
+      },
+    };
+
+    const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
+      cookies: cookieHandlers,
     });
 
     const {
@@ -47,6 +49,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return redirect('/unauthorized');
     }
 
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     return json(
       {
         supabase: {
@@ -55,7 +61,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         },
         user,
         profile,
-        session: await supabase.auth.getSession(), // Add the session
+        session,
       },
       {
         headers: response.headers,
@@ -95,7 +101,6 @@ export function ErrorBoundary() {
 
 export default function Products() {
   const loaderData = useLoaderData<typeof loader>();
-  console.log('loaderData', loaderData);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -104,6 +109,7 @@ export default function Products() {
           supabaseUrl={loaderData.supabase.url!}
           supabaseAnonKey={loaderData.supabase.anonKey!}
           initialSession={loaderData.session}
+          profile={loaderData.profile}
         />
       </div>
     </div>

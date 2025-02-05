@@ -16,10 +16,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         if (!cookie) return null;
         return cookie.split('=')[1];
       },
-      set: (key, value, options) => {
+      set: (key, value) => {
         response.headers.append('Set-Cookie', `${key}=${value}; Path=/; HttpOnly; SameSite=Lax`);
       },
-      remove: (key, options) => {
+      remove: key => {
         response.headers.append(
           'Set-Cookie',
           `${key}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
@@ -88,10 +88,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         if (!cookie) return null;
         return cookie.split('=')[1];
       },
-      set: (key, value, options) => {
+      set: (key, value) => {
         response.headers.append('Set-Cookie', `${key}=${value}; Path=/; HttpOnly; SameSite=Lax`);
       },
-      remove: (key, options) => {
+      remove: key => {
         response.headers.append(
           'Set-Cookie',
           `${key}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
@@ -218,7 +218,7 @@ export default function TestUpload() {
         {isDragActive ? (
           <p>Drop the files here ...</p>
         ) : (
-          <p>Drag 'n' drop some files here, or click to select files</p>
+          <p>Drag &apos;n&apos; drop some files here, or click to select files</p>
         )}
       </div>
 

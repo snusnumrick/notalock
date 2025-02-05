@@ -1,5 +1,5 @@
 // app/features/products/components/ProductImageUpload.tsx
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useFetcher } from '@remix-run/react';
 import { Loader2, X, Star } from 'lucide-react';

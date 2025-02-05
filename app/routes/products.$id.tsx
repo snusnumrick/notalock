@@ -13,10 +13,10 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
         const match = cookies.split(';').find(cookie => cookie.trim().startsWith(`${key}=`));
         return match ? match.split('=')[1] : null;
       },
-      set: (key, value, options) => {
+      set: (key, value) => {
         response.headers.append('Set-Cookie', `${key}=${value}; Path=/; HttpOnly; SameSite=Lax`);
       },
-      remove: (key, options) => {
+      remove: key => {
         response.headers.append(
           'Set-Cookie',
           `${key}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`

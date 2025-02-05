@@ -54,8 +54,9 @@ export function ProductForm({
   const handleInputChange = (field: keyof ProductFormData, value: string | boolean) => {
     setFormData({ ...formData, [field]: value });
     if (validationErrors[field]) {
-      const { [field]: _, ...rest } = validationErrors;
-      setValidationErrors(rest);
+      const errors = { ...validationErrors };
+      delete errors[field];
+      setValidationErrors(errors);
     }
   };
 
@@ -103,13 +104,14 @@ export function ProductForm({
           <div className="grid grid-cols-2 gap-4">
             {/* Name Field */}
             <div>
-              <label className="text-sm font-medium">
+              <label htmlFor="name" className="text-sm font-medium">
                 Name
                 {validationErrors.name && (
                   <span className="text-red-500 text-sm ml-2">{validationErrors.name}</span>
                 )}
               </label>
               <input
+                id="name"
                 type="text"
                 value={formData.name}
                 onChange={e => handleInputChange('name', e.target.value)}
@@ -124,13 +126,14 @@ export function ProductForm({
 
             {/* SKU Field */}
             <div>
-              <label className="text-sm font-medium">
+              <label htmlFor="sku" className="text-sm font-medium">
                 SKU
                 {validationErrors.sku && (
                   <span className="text-red-500 text-sm ml-2">{validationErrors.sku}</span>
                 )}
               </label>
               <input
+                id="sku"
                 type="text"
                 value={formData.sku}
                 onChange={e => handleInputChange('sku', e.target.value)}
@@ -144,10 +147,14 @@ export function ProductForm({
             </div>
           </div>
 
+          {/* Rest of the form fields... */}
           {/* Description Field */}
           <div>
-            <label className="text-sm font-medium">Description</label>
+            <label htmlFor="description" className="text-sm font-medium">
+              Description
+            </label>
             <textarea
+              id="description"
               value={formData.description}
               onChange={e => handleInputChange('description', e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
@@ -158,13 +165,14 @@ export function ProductForm({
           <div className="grid grid-cols-3 gap-4">
             {/* Retail Price Field */}
             <div>
-              <label className="text-sm font-medium">
+              <label htmlFor="retail_price" className="text-sm font-medium">
                 Retail Price ($)
                 {validationErrors.retail_price && (
                   <span className="text-red-500 text-sm ml-2">{validationErrors.retail_price}</span>
                 )}
               </label>
               <input
+                id="retail_price"
                 type="number"
                 value={formData.retail_price}
                 onChange={e => handleInputChange('retail_price', e.target.value)}
@@ -181,7 +189,7 @@ export function ProductForm({
 
             {/* Business Price Field */}
             <div>
-              <label className="text-sm font-medium">
+              <label htmlFor="business_price" className="text-sm font-medium">
                 Business Price ($)
                 {validationErrors.business_price && (
                   <span className="text-red-500 text-sm ml-2">
@@ -190,6 +198,7 @@ export function ProductForm({
                 )}
               </label>
               <input
+                id="business_price"
                 type="number"
                 value={formData.business_price}
                 onChange={e => handleInputChange('business_price', e.target.value)}
@@ -206,13 +215,14 @@ export function ProductForm({
 
             {/* Stock Field */}
             <div>
-              <label className="text-sm font-medium">
+              <label htmlFor="stock" className="text-sm font-medium">
                 Stock
                 {validationErrors.stock && (
                   <span className="text-red-500 text-sm ml-2">{validationErrors.stock}</span>
                 )}
               </label>
               <input
+                id="stock"
                 type="number"
                 value={formData.stock}
                 onChange={e => handleInputChange('stock', e.target.value)}
@@ -229,8 +239,9 @@ export function ProductForm({
 
           {/* Active Status Field */}
           <div>
-            <label className="flex items-center space-x-2">
+            <label htmlFor="is_active" className="flex items-center space-x-2">
               <input
+                id="is_active"
                 type="checkbox"
                 checked={formData.is_active}
                 onChange={e => handleInputChange('is_active', e.target.checked)}
@@ -242,7 +253,9 @@ export function ProductForm({
 
           {/* Image Gallery */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Product Images</label>
+            <label htmlFor="product-images" className="text-sm font-medium">
+              Product Images
+            </label>
             {initialData?.id ? (
               <ReorderableImageGallery
                 productId={initialData.id}

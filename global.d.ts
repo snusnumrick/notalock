@@ -1,14 +1,14 @@
 declare global {
-  var $RefreshReg$: (type: any, id: string) => void;
-  var $RefreshSig$: () => (type: any) => any;
-  var __REACT_DEVTOOLS_GLOBAL_HOOK__: any;
-  var globalThis: typeof global;
-  var MSApp: any;
-  var Deno: any;
-  var assets: any;
-  var __magic__: any;
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-  var __webpack_nonce__: string;
+  const $RefreshReg$: (type: unknown, id: string) => void;
+  const $RefreshSig$: () => (type: unknown) => unknown;
+  const __REACT_DEVTOOLS_GLOBAL_HOOK__: unknown;
+  const globalThis: typeof global;
+  const MSApp: unknown;
+  const Deno: unknown;
+  const assets: unknown;
+  const __magic__: unknown;
+  const IS_REACT_ACT_ENVIRONMENT: boolean;
+  const __webpack_nonce__: string;
 }
 
 export {};

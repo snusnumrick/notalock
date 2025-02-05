@@ -1,7 +1,7 @@
 import type { LoaderArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
-import { createServerClient } from '~/utils/supabase.server';
-import { ProductManagement } from '~/components/admin/ProductManagement';
+import { createServerClient } from '~/server/services/supabase.server';
+import { ProductManagement } from '~/features/products/components/ProductManagement';
 
 export const loader = async ({ request }: LoaderArgs) => {
   const response = new Response();

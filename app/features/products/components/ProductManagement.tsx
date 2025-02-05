@@ -50,6 +50,7 @@ export function ProductManagement({
   const productService = React.useMemo(() => new ProductService(supabase), [supabase]);
 
   const fetchProducts = useCallback(async () => {
+    setLoading(true);
     try {
       const data = await productService.fetchProducts();
       setProducts(data);
@@ -98,8 +99,9 @@ export function ProductManagement({
       const newProduct = await productService.createProduct(formData);
       setProducts([newProduct, ...products]);
       setShowForm(false);
-    } catch (err) {
-      throw err;
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create product');
+      throw error;
     }
   };
 
@@ -111,8 +113,9 @@ export function ProductManagement({
       setProducts(products.map(p => (p.id === updatedProduct.id ? updatedProduct : p)));
       setShowForm(false);
       setEditingProduct(null);
-    } catch (err) {
-      throw err;
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update product');
+      throw error;
     }
   };
 
@@ -206,12 +209,14 @@ export function ProductManagement({
                             setShowForm(true);
                           }}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          aria-label={`Edit ${product.name}`}
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteProduct(product.id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          aria-label={`Delete ${product.name}`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
