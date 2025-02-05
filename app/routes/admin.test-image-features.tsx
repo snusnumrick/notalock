@@ -8,14 +8,15 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import ReorderableImageGallery from '~/features/products/components/ReorderableImageGallery';
 import ProductGallery from '~/features/products/components/ProductGallery';
 import type { ProductImage } from '~/features/products/types/product.types';
-import type { ProductImageService } from '~/features/products/api/productImageService';
+import { ProductImageService } from '~/features/products/api/productImageService';
 
-// Create an adapter that implements the ProductImageService interface
-class FormSubmitImageService implements ProductImageService {
+// Create an adapter that extends the ProductImageService class
+class FormSubmitImageService extends ProductImageService {
   private submit: ReturnType<typeof useSubmit>;
   private productId: string;
 
   constructor(submit: ReturnType<typeof useSubmit>, productId: string) {
+    super({} as any); // We don't need Supabase client for this implementation
     this.submit = submit;
     this.productId = productId;
   }
@@ -28,9 +29,17 @@ class FormSubmitImageService implements ProductImageService {
 
     this.submit(formData, { method: 'post', encType: 'multipart/form-data', replace: true });
 
-    // We don't actually return a ProductImage here because the response
-    // will be handled by Remix's form handling
-    return new Promise(resolve => setTimeout(resolve, 0));
+    // Return a minimal ProductImage object that will be replaced by the server response
+    return {
+      id: 'temp-' + Date.now(),
+      product_id: productId,
+      url: URL.createObjectURL(file),
+      storage_path: '',
+      file_name: file.name,
+      is_primary: false,
+      sort_order: 0,
+      created_at: new Date().toISOString(),
+    };
   }
 
   async uploadMultipleImages(
@@ -70,6 +79,15 @@ class FormSubmitImageService implements ProductImageService {
   async getProductImages(productId: string): Promise<ProductImage[]> {
     // This is handled by the loader
     return Promise.resolve([]);
+  }
+
+  // Override these methods to do nothing since we're using form submissions
+  async optimizeImage(file: File): Promise<Blob> {
+    return file;
+  }
+
+  async reorderImages(productId: string): Promise<void> {
+    // No-op - handled by form submission
   }
 }
 
@@ -117,10 +135,37 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return redirect('/unauthorized');
   }
 
+  // Ensure test product exists
+  const testProductId = '123e4567-e89b-12d3-a456-426614174000';
+  const { data: existingProduct } = await supabase
+    .from('products')
+    .select('id')
+    .eq('id', testProductId)
+    .single();
+
+  if (!existingProduct) {
+    // Create test product if it doesn't exist
+    const { error: createError } = await supabase.from('products').insert({
+      id: testProductId,
+      name: 'Test Product',
+      sku: 'TEST-001',
+      retail_price: 0,
+      business_price: 0,
+      stock: 0,
+      is_active: true,
+    });
+
+    if (createError) {
+      console.error('Error creating test product:', createError);
+      throw new Error('Failed to create test product');
+    }
+  }
+
   // Get test product images
   const { data: images } = await supabase
     .from('product_images')
     .select('*')
+    .eq('product_id', testProductId)
     .order('sort_order', { ascending: true })
     .limit(10);
 
@@ -132,6 +177,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       images: images || [],
       user,
       profile,
+      testProductId,
     },
     { headers: response.headers }
   );
@@ -249,19 +295,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         if (getError) throw getError;
         if (!image) throw new Error('Image not found');
 
-        // First remove primary status from all images of this product
-        const { error: resetError } = await supabase
-          .from('product_images')
-          .update({ is_primary: false })
-          .eq('product_id', image.product_id);
-
-        if (resetError) throw resetError;
-
-        // Then set the selected image as primary
+        // First set the selected image as primary
         const { error: updateError } = await supabase
           .from('product_images')
           .update({ is_primary: true })
           .eq('id', imageId);
+
+        if (updateError) throw updateError;
+
+        // Then remove primary status from all other images of this product
+        const { error: resetError } = await supabase
+          .from('product_images')
+          .update({ is_primary: false })
+          .eq('product_id', image.product_id)
+          .neq('id', imageId);
+
+        if (resetError) throw resetError;
 
         if (updateError) throw updateError;
 
@@ -296,14 +345,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const fileName = formData.get('fileName') as string;
         const productId = formData.get('productId') as string;
 
-        if (!imageData || !fileName) {
-          return json({ error: 'No image provided' }, { status: 400 });
+        if (!imageData || !fileName || !productId) {
+          return json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        // Verify product exists
+        const { data: product } = await supabase
+          .from('products')
+          .select('id')
+          .eq('id', productId)
+          .single();
+
+        if (!product) {
+          return json({ error: 'Product not found' }, { status: 404 });
         }
 
         // Create a unique filename
         const timestamp = new Date().getTime();
         const uniqueFileName = `${timestamp}-${fileName}`;
         const filePath = `${productId}/${uniqueFileName}`;
+        console.log('Uploading image:', filePath);
 
         // Get the ArrayBuffer from the File
         const arrayBuffer = await imageData.arrayBuffer();
@@ -321,6 +382,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
         // Get public URL
         const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(filePath);
+        console.log('Public URL:', urlData);
 
         if (!urlData?.publicUrl) {
           throw new Error('Failed to get public URL');
@@ -329,14 +391,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         // Get current sort order
         const { data: existingImages } = await supabase
           .from('product_images')
-          .select('id')
+          .select('id, sort_order')
           .eq('product_id', productId)
           .order('sort_order', { ascending: false })
           .limit(1);
 
         const nextSortOrder = (existingImages?.[0]?.sort_order ?? -1) + 1;
 
-        // Create database record
+        // Create database record with all required fields
         const { data: imageRecord, error: dbError } = await supabase
           .from('product_images')
           .insert({
@@ -346,8 +408,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             file_name: uniqueFileName,
             is_primary: false,
             sort_order: nextSortOrder,
+            created_at: new Date().toISOString(),
           })
-          .select()
+          .select('*') // Select all fields to ensure we get a complete record
           .single();
 
         if (dbError) {
@@ -378,18 +441,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function TestImageFeatures() {
-  const { images, user } = useLoaderData<typeof loader>();
+  const { images, user, testProductId } = useLoaderData<typeof loader>();
   const [adminImages, setAdminImages] = React.useState(images);
   const submit = useSubmit();
   const actionData = useActionData<typeof action>();
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
-
-  // Create image service adapter
-  const testProductId = React.useMemo(
-    () => adminImages[0]?.product_id || '123e4567-e89b-12d3-a456-426614174000',
-    [adminImages]
-  );
 
   const imageService = React.useMemo(
     () => new FormSubmitImageService(submit, testProductId),
@@ -412,6 +469,7 @@ export default function TestImageFeatures() {
         actionData.details ? `${actionData.error}: ${actionData.details}` : actionData.error
       );
     } else if (actionData?.success) {
+      console.log('Action success:', actionData);
       switch (actionData.action) {
         case 'delete':
           // Force a reload to get fresh data from the loader
@@ -424,6 +482,7 @@ export default function TestImageFeatures() {
               is_primary: img.id === actionData.imageId,
             }))
           );
+          window.location.reload();
           break;
         case 'reorder':
           // Reload images after reordering
@@ -432,6 +491,7 @@ export default function TestImageFeatures() {
         default:
           if (actionData.image) {
             setAdminImages(prev => [...prev, actionData.image]);
+            window.location.reload();
           }
       }
     }
