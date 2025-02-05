@@ -11,7 +11,7 @@ export const createSupabaseServerClient = ({
   if (!process.env.SUPABASE_URL) throw new Error('SUPABASE_URL is required');
   if (!process.env.SUPABASE_ANON_KEY) throw new Error('SUPABASE_ANON_KEY is required');
 
-  const supabase = createServerClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
+  return createServerClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
     cookies: {
       get: key => {
         const cookies = request.headers.get('Cookie');
@@ -33,6 +33,4 @@ export const createSupabaseServerClient = ({
       },
     },
   });
-
-  return supabase;
 };

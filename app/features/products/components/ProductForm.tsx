@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '~/components/ui/dialog';
 import { Alert, AlertDescription } from '~/components/ui/alert';
-import { ProductImageGallery } from './ProductImageGallery';
+import ReorderableImageGallery from './ReorderableImageGallery';
 import { TempImageGallery } from './TempImageGallery';
 import { ProductImageService } from '../api/productImageService';
 import type {
@@ -244,7 +244,7 @@ export function ProductForm({
           <div className="space-y-2">
             <label className="text-sm font-medium">Product Images</label>
             {initialData?.id ? (
-              <ProductImageGallery
+              <ReorderableImageGallery
                 productId={initialData.id}
                 images={images}
                 onImagesChange={setImages}

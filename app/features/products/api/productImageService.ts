@@ -10,24 +10,95 @@ export class ProductImageService {
     this.supabase = supabase;
   }
 
+  private async optimizeImage(file: File): Promise<Blob> {
+    // Create canvas and context
+    const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      throw new Error('Failed to get canvas context');
+    }
+
+    // Create a promise to handle image loading
+    return new Promise((resolve, reject) => {
+      img.onload = () => {
+        try {
+          // Max dimensions for product images
+          const MAX_WIDTH = 2000;
+          const MAX_HEIGHT = 2000;
+
+          let width = img.width;
+          let height = img.height;
+
+          // Calculate new dimensions while maintaining aspect ratio
+          if (width > MAX_WIDTH) {
+            height = (height * MAX_WIDTH) / width;
+            width = MAX_WIDTH;
+          }
+          if (height > MAX_HEIGHT) {
+            width = (width * MAX_HEIGHT) / height;
+            height = MAX_HEIGHT;
+          }
+
+          // Set canvas dimensions
+          canvas.width = width;
+          canvas.height = height;
+
+          // Draw and optimize image
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert to blob with quality optimization
+          canvas.toBlob(
+            blob => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error('Failed to convert image to blob'));
+              }
+            },
+            file.type,
+            0.85 // 85% quality - good balance of quality and file size
+          );
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      img.onerror = () => {
+        reject(new Error('Failed to load image'));
+      };
+
+      // Load image from file
+      const reader = new FileReader();
+      reader.onload = e => {
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => {
+        reject(new Error('Failed to read file'));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   async uploadImage(
     file: File,
     productId: string,
     isPrimary: boolean = false
   ): Promise<ProductImage> {
     try {
+      // Optimize image before upload
+      const optimizedImage = await this.optimizeImage(file);
+
       // Generate a unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `${nanoid()}.${fileExt}`;
       const filePath = `${productId}/${fileName}`;
 
-      // Convert File to ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer();
-
       // Upload to storage
       const { error: uploadError } = await this.supabase.storage
         .from('product-images')
-        .upload(filePath, new Uint8Array(arrayBuffer), {
+        .upload(filePath, optimizedImage, {
           cacheControl: '3600',
           upsert: false,
           contentType: file.type,
@@ -106,6 +177,37 @@ export class ProductImageService {
     } catch (error) {
       console.error('Upload process error:', error);
       throw error;
+    }
+  }
+
+  async uploadMultipleImages(files: File[], productId: string): Promise<ProductImage[]> {
+    const uploadedImages: ProductImage[] = [];
+
+    for (const [index, file] of files.entries()) {
+      try {
+        const image = await this.uploadImage(
+          file,
+          productId,
+          index === 0 && uploadedImages.length === 0
+        );
+        uploadedImages.push(image);
+      } catch (error) {
+        console.error(`Failed to upload image ${file.name}:`, error);
+        // Continue with other uploads even if one fails
+      }
+    }
+
+    return uploadedImages;
+  }
+
+  async updateImageOrder(imageId: string, newOrder: number): Promise<void> {
+    const { error } = await this.supabase
+      .from('product_images')
+      .update({ sort_order: newOrder })
+      .eq('id', imageId);
+
+    if (error) {
+      throw new Error(`Failed to update image order: ${error.message}`);
     }
   }
 

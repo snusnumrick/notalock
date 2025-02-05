@@ -4,11 +4,7 @@ import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { createBrowserClient } from '@supabase/ssr';
 import { ProductForm } from './ProductForm';
 import { ProductService } from '../api/productService';
-import {
-  getCookieBrowser,
-  setCookieBrowser,
-  removeCookieBrowser,
-} from '../../../utils/cookieUtils';
+import { getCookieBrowser, setCookieBrowser, removeCookieBrowser } from '~/utils/cookieUtils';
 import type { Product, ProductFormData, ProductManagementProps } from '../types/product.types';
 
 export function ProductManagement({
