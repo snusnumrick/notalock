@@ -15,7 +15,6 @@ class FormSubmitImageService extends ProductImageService {
   private submit: ReturnType<typeof useSubmit>;
   private productId: string;
   private setResults: React.Dispatch<React.SetStateAction<{ [key: string]: ProductImage }>>;
-  private setUploadingCount: React.Dispatch<React.SetStateAction<number>>;
   private uploadQueue: File[] = [];
   private isUploading = false;
   private tempIdCounter = 0;
@@ -24,15 +23,13 @@ class FormSubmitImageService extends ProductImageService {
     submit: ReturnType<typeof useSubmit>,
     productId: string,
     _: null,
-    setResults: React.Dispatch<React.SetStateAction<{ [key: string]: ProductImage }>>,
-    setUploadingCount: React.Dispatch<React.SetStateAction<number>>
+    setResults: React.Dispatch<React.SetStateAction<{ [key: string]: ProductImage }>>
   ) {
     console.log('Creating FormSubmitImageService with productId:', productId);
     super({} as SupabaseClient);
     this.submit = submit;
     this.productId = productId;
     this.setResults = setResults;
-    this.setUploadingCount = setUploadingCount;
   }
 
   private generateTempId(): string {
@@ -110,7 +107,6 @@ class FormSubmitImageService extends ProductImageService {
   override async uploadMultipleImages(files: File[]): Promise<ProductImage[]> {
     console.log('Uploading multiple images:', files);
     this.setResults({});
-    this.setUploadingCount(files.length);
     const uploads = files.map(file => this.uploadImage(file));
     return Promise.all(uploads);
   }
@@ -470,6 +466,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
         const nextSortOrder = (existingImages?.[0]?.sort_order ?? -1) + 1;
 
+        // Check if any primary image exists for this product
+        const { data: existingPrimary } = await supabase
+          .from('product_images')
+          .select('id')
+          .eq('product_id', productId)
+          .eq('is_primary', true)
+          .maybeSingle();
+
+        const isPrimary = !existingPrimary; // Set primary if no existing primary image
+
         // Create database record with all required fields
         const { data: imageRecord, error: dbError } = await supabase
           .from('product_images')
@@ -478,17 +484,40 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             url: urlData.publicUrl,
             storage_path: filePath,
             file_name: uniqueFileName,
-            is_primary: false,
+            is_primary: isPrimary, // Use the calculated isPrimary value
             sort_order: nextSortOrder,
             created_at: new Date().toISOString(),
           })
-          .select('*') // Select all fields to ensure we get a complete record
+          .select('*')
           .single();
 
         if (dbError) {
-          // Try to clean up the uploaded file
           await supabase.storage.from('product-images').remove([filePath]);
           throw dbError;
+        }
+
+        // If marked as primary, update product and reset others
+        if (isPrimary) {
+          // Update product's primary image URL
+          const { error: productUpdateError } = await supabase
+            .from('products')
+            .update({ image_url: urlData.publicUrl })
+            .eq('id', productId);
+
+          if (productUpdateError) {
+            console.error('Error updating product image URL:', productUpdateError);
+          }
+
+          // Remove primary status from other images
+          const { error: primaryResetError } = await supabase
+            .from('product_images')
+            .update({ is_primary: false })
+            .eq('product_id', productId)
+            .neq('id', imageRecord.id);
+
+          if (primaryResetError) {
+            console.error('Error resetting primary images:', primaryResetError);
+          }
         }
 
         return json(
@@ -522,13 +551,9 @@ export default function TestImageFeatures() {
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  // Keep track of uploads in progress
-  const [, setUploadingCount] = React.useState(0);
-
   const imageService = React.useMemo(
-    () =>
-      new FormSubmitImageService(submit, testProductId, null, setUploadResults, setUploadingCount),
-    [submit, testProductId, setUploadResults, setUploadingCount]
+    () => new FormSubmitImageService(submit, testProductId, null, setUploadResults),
+    [submit, testProductId, setUploadResults]
   );
 
   // Handle completion of all uploads
@@ -552,7 +577,7 @@ export default function TestImageFeatures() {
         actionData.details ? `${actionData.error}: ${actionData.details}` : actionData.error
       );
     } else if (actionData?.success) {
-      console.log('Action success:', actionData);
+      console.log('Action:', actionData.action);
       switch (actionData.action) {
         case 'delete':
           window.location.reload();
@@ -575,20 +600,24 @@ export default function TestImageFeatures() {
         default:
           if (actionData.image && actionData.tempId) {
             const { tempId } = actionData;
-            setAdminImages(prev => prev.map(img => (img.id === tempId ? actionData.image : img)));
+            setAdminImages(prev =>
+              prev.map(img => {
+                console.log(
+                  'setAdminImages - replacing image:',
+                  img.id,
+                  'with:',
+                  actionData.image.id
+                );
+                return img.id === tempId ? actionData.image : img;
+              })
+            );
             setUploadResults(prev => {
+              console.log('setUploadResults - prev:', prev);
               const next = { ...prev };
               delete next[tempId];
               return next;
             });
-            setUploadingCount(count => {
-              const newCount = count - 1;
-              if (newCount === 0) {
-                setTimeout(handleUploadsComplete, 100);
-              }
-              return newCount;
-            });
-            window.location.reload();
+            setTimeout(handleUploadsComplete, 100);
           }
       }
     }
@@ -597,6 +626,7 @@ export default function TestImageFeatures() {
   // Handle upload results changes
   React.useEffect(() => {
     const resultValues = Object.values(uploadResults);
+    console.log('Upload results:', resultValues);
     if (resultValues.length > 0) {
       setAdminImages(prev => {
         // First remove any temp images that were replaced
