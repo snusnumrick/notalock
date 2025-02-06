@@ -25,6 +25,8 @@ The project follows a middleware-first approach for common functionality:
    - Handle response headers properly
    - Follow database access patterns
 
+See  [Middleware Documentation](./middleware.md) for more details.
+
 ## Code Quality Tools
 
 ### TypeScript
