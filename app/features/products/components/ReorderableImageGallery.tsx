@@ -126,6 +126,7 @@ export default function ReorderableImageGallery({
 
   const onDrop = React.useCallback(
     async (acceptedFiles: File[]) => {
+      console.log('React.useCallback :: onDrop');
       setIsUploading(true);
       setUploadError(null);
 

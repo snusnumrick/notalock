@@ -23,6 +23,7 @@ export function ProductImageGallery({
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
+      console.log('ProductImageGallery :: onDrop. Accepted files:', acceptedFiles);
       setIsUploading(true);
       setUploadError(null);
 

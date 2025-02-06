@@ -12,11 +12,13 @@ interface ProductImageUploadProps {
 }
 
 export function ProductImageUpload({ productId, images, onImagesChange }: ProductImageUploadProps) {
+  console.log('ProductImageUpload.props:', { productId, images, onImagesChange });
   const [isUploading, setIsUploading] = useState(false);
   const fetcher = useFetcher();
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
+      console.log('ProductImageUpload :: onDrop. Accepted files:', acceptedFiles);
       setIsUploading(true);
 
       try {
