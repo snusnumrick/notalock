@@ -1,8 +1,8 @@
 /** @type {import('@remix-run/dev').AppConfig} */
 export default {
-  ignoredRouteFiles: ["**/.*"],
-  serverModuleFormat: "cjs",
-  serverPlatform: "node",
+  ignoredRouteFiles: ['**/.*', '**/*.test.{js,jsx,ts,tsx}', '**/*.spec.{js,jsx,ts,tsx}'],
+  serverModuleFormat: 'cjs',
+  serverPlatform: 'node',
   tailwind: true,
   postcss: true,
   future: {

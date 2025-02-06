@@ -2,68 +2,19 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { nanoid } from 'nanoid';
 import type { ProductImage } from '../types/product.types';
+import type { ImageOptimizer } from './optimization';
+import { ClientImageOptimizer } from './optimization';
 
 export class ProductImageService {
   private supabase: SupabaseClient;
+  private imageOptimizer: ImageOptimizer;
 
-  constructor(supabase: SupabaseClient) {
+  constructor(
+    supabase: SupabaseClient,
+    imageOptimizer: ImageOptimizer = new ClientImageOptimizer()
+  ) {
     this.supabase = supabase;
-  }
-
-  private async optimizeImage(file: File): Promise<Blob> {
-    const img = new Image();
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) {
-      throw new Error('Failed to get canvas context');
-    }
-
-    return new Promise((resolve, reject) => {
-      img.onload = () => {
-        try {
-          const MAX_WIDTH = 2000;
-          const MAX_HEIGHT = 2000;
-
-          let width = img.width;
-          let height = img.height;
-
-          if (width > MAX_WIDTH) {
-            height = (height * MAX_WIDTH) / width;
-            width = MAX_WIDTH;
-          }
-          if (height > MAX_HEIGHT) {
-            width = (width * MAX_HEIGHT) / height;
-            height = MAX_HEIGHT;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob(
-            blob => {
-              if (blob) {
-                resolve(blob);
-              } else {
-                reject(new Error('Failed to convert image to blob'));
-              }
-            },
-            file.type,
-            0.85
-          );
-        } catch (error) {
-          reject(error);
-        }
-      };
-
-      img.onerror = () => reject(new Error('Failed to load image'));
-
-      const reader = new FileReader();
-      reader.onload = e => (img.src = e.target?.result as string);
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsDataURL(file);
-    });
+    this.imageOptimizer = imageOptimizer;
   }
 
   async uploadImage(
@@ -97,8 +48,13 @@ export class ProductImageService {
 
       const sortOrder = (lastImage?.sort_order ?? -1) + 1;
 
-      // Optimize and upload image
-      const optimizedImage = await this.optimizeImage(file);
+      // Optimize image using the injected optimizer
+      const optimizedImage = await this.imageOptimizer.optimizeImage(file, {
+        maxWidth: 2000,
+        maxHeight: 2000,
+        quality: 85,
+      });
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${nanoid()}.${fileExt}`;
       const filePath = `${productId}/${fileName}`;

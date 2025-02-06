@@ -1,53 +1,61 @@
 # Image Management System
 
 ## Overview
-The image management system provides comprehensive functionality for handling product images in Notalock. It supports multiple images per product, drag-and-drop reordering, image optimization, and an enhanced customer gallery experience.
-
-## Key Features
-- Multi-file upload with progress feedback
-- Drag-and-drop image reordering
-- Automatic image optimization
-- Enhanced customer gallery with zoom and lightbox
-- Touch-friendly mobile experience
-- Primary image designation
-- Bulk upload support
+The image management system provides comprehensive functionality for handling product images in Notalock. It supports multiple images per product, drag-and-drop reordering, and an enhanced customer gallery experience.
 
 ## Components
 
-### Customer-Facing Components
+### Core Components
 
-#### ProductGallery
-Located at: `/app/features/products/components/ProductGallery.tsx`
+#### ImageGalleryBase
+Located at: `/app/features/products/components/shared/ImageGalleryBase.tsx`
 
-The main product gallery component for customers, featuring:
-- Image zoom functionality
-- Lightbox view
-- Touch swipe navigation
-- Thumbnail navigation
-- Keyboard controls (left/right arrows)
-- Responsive design
+A foundational component that handles common image gallery functionality:
+- Drag-and-drop reordering
+- Primary image selection
+- Image deletion
+- Upload interface
+- Keyboard accessibility
+- Customer preview integration
 
 Usage:
 ```typescript
-<ProductGallery 
-  images={[
-    { id: '1', url: '/image-url', is_primary: true },
-    // ... more images
-  ]} 
+<ImageGalleryBase
+  images={images}
+  onImagesChange={handleImagesChange}
+  onUpload={handleUpload}
+  onDelete={handleDelete}
+  onSetPrimary={handleSetPrimary}
+  showCustomerView={true}
 />
 ```
 
-### Admin Components
+#### TempImageGallery
+Located at: `/app/features/products/components/TempImageGallery.tsx`
+
+Used during product creation/editing for temporary image management:
+- Handles temporary image storage using URLs
+- Auto-assigns first image as primary
+- Provides customer preview
+- No server persistence
+
+Usage:
+```typescript
+<TempImageGallery
+  images={tempImages}
+  onImagesChange={handleTempImagesChange}
+  showCustomerView={true}
+/>
+```
 
 #### ReorderableImageGallery
 Located at: `/app/features/products/components/ReorderableImageGallery.tsx`
 
-Admin interface for managing product images:
-- Drag-and-drop reordering
-- Multi-file upload
-- Primary image selection
-- Image deletion
-- Upload progress feedback
+Used for managing persisted product images:
+- Integrates with ProductImageService for CRUD operations
+- Handles server-side image storage
+- Maintains image order in database
+- Supports primary image designation
 
 Usage:
 ```typescript
@@ -59,6 +67,18 @@ Usage:
 />
 ```
 
+### Customer-Facing Components
+
+#### ProductGallery
+Located at: `/app/features/products/components/ProductGallery.tsx`
+
+The main product gallery component for customers:
+- Image zoom functionality
+- Lightbox view
+- Touch swipe navigation
+- Thumbnail navigation
+- Keyboard controls
+
 ## Services
 
 ### ProductImageService
@@ -66,167 +86,86 @@ Located at: `/app/features/products/api/productImageService.ts`
 
 Handles all image-related operations:
 
-#### Methods
+```typescript
+interface ProductImageService {
+  // Upload multiple images
+  uploadMultipleImages(files: File[], productId: string): Promise<ProductImage[]>;
+
+  // Delete an image
+  deleteImage(imageId: string): Promise<void>;
+
+  // Set primary image
+  setPrimaryImage(imageId: string): Promise<void>;
+}
+```
+
+## Types
+
+### Image Types
+Located at: `/app/features/products/types/product.types.ts`
 
 ```typescript
-// Upload a single image
-uploadImage(file: File, productId: string, isPrimary?: boolean): Promise<ProductImage>
+interface GalleryImage {
+  id: string;
+  url: string;
+  isPrimary: boolean;
+}
 
-// Upload multiple images
-uploadMultipleImages(files: File[], productId: string): Promise<ProductImage[]>
+interface TempImage extends GalleryImage {
+  file: File;
+}
 
-// Update image order
-updateImageOrder(imageId: string, newOrder: number): Promise<void>
-
-// Delete an image
-deleteImage(imageId: string): Promise<void>
-
-// Set primary image
-setPrimaryImage(imageId: string): Promise<void>
-
-// Get all product images
-getProductImages(productId: string): Promise<ProductImage[]>
+interface ProductImage extends GalleryImage {
+  product_id: string;
+  storage_path: string;
+  file_name: string;
+  sort_order: number;
+  created_at: string;
+}
 ```
-
-## Image Optimization
-
-### Client-Side Optimization
-- Automatic resizing of large images before upload
-- Conversion to optimal format
-- Quality optimization (85% quality setting)
-
-### Server-Side Optimization
-Located at: `/app/routes/api/images/optimize.ts`
-
-Provides on-demand image optimization:
-- Resizing for different screen sizes
-- WebP conversion
-- Quality adjustment
-- Caching headers for performance
-
-Usage:
-```
-GET /api/images/optimize?url=image-path&width=800&quality=80
-```
-
-## Custom Hooks
-
-### useImageReorder
-Located at: `/app/features/products/hooks/useImageReorder.ts`
-
-Manages image reordering functionality:
-- Handles drag and drop state
-- Updates image order in the database
-- Provides optimistic UI updates
-- Handles error cases with rollback
-
-Usage:
-```typescript
-const {
-  images,
-  isDragging,
-  moveImage,
-  handleDragStart,
-  handleDragEnd
-} = useImageReorder(initialImages, imageService, onImagesChange);
-```
-
-## Database Schema
-
-### product_images Table
-```sql
-CREATE TABLE product_images (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  product_id UUID NOT NULL REFERENCES products(id),
-  url TEXT NOT NULL,
-  storage_path TEXT NOT NULL,
-  file_name TEXT NOT NULL,
-  is_primary BOOLEAN DEFAULT false,
-  sort_order INTEGER NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-CREATE INDEX idx_product_images_product_id ON product_images(product_id);
-CREATE INDEX idx_product_images_sort_order ON product_images(sort_order);
-```
-
-### Storage Configuration
-- Bucket: `product-images`
-- Path structure: `{productId}/{uniqueId}.{extension}`
-- Cache Control: 3600 seconds
-- Public access enabled for customer viewing
 
 ## Best Practices
 
 ### Image Upload
-- Use WebP format when supported
-- Limit maximum dimensions (2000x2000)
-- Optimize quality (85%)
-- Implement retry logic for failed uploads
-- Clean up storage on failed database inserts
+- Support WebP, JPG, and PNG formats
+- Handle client-side preview generation
+- Clean up object URLs to prevent memory leaks
+- Implement proper error handling
+- Show upload progress feedback
 
-### Performance
-- Preload next/previous images
-- Use appropriate image sizes for different screens
-- Implement proper caching headers
-- Lazy load thumbnails
-- Use optimistic UI updates
+### User Experience
+- Drag-and-drop support
+- Keyboard accessibility
+- Clear visual feedback
+- Mobile-friendly interface
+- Instant preview updates
 
-### Security
-- Validate file types
-- Limit file sizes
-- Implement proper RLS policies
-- Sanitize file names
-- Secure storage bucket configuration
-
-## Error Handling
-- Graceful fallbacks for failed uploads
-- Clear error messages for users
-- Automatic cleanup of orphaned files
-- Optimistic UI updates with rollback
-- Retry mechanisms for network issues
-
-## Mobile Considerations
-- Touch-friendly interfaces
-- Swipe gestures for navigation
-- Responsive image sizing
-- Bandwidth-aware loading
-- Mobile-optimized lightbox
+### Error Handling
+- Clear error messages
+- Graceful fallbacks
+- Loading states
+- Upload validation
+- Network error recovery
 
 ## Future Improvements
 
-### 1. Image Variant Generation
-- Generate multiple sizes on upload
-- Responsive image srcset
-- Automatic format selection
-- Custom crop variants
-- Thumbnail optimization
+### 1. Image Optimization
+- Client-side image compression
+- Automatic format conversion
+- Size restrictions
+- Quality optimization
+- Responsive image generation
 
-### 2. Advanced Optimization
-- AI-powered compression
-- Automatic cropping
-- Background removal options
-- Image enhancement filters
-- Metadata preservation
+### 2. Enhanced Features
+- Multiple selection
+- Batch operations
+- Advanced sorting
+- Image editing
+- Custom cropping
 
-### 3. Enhanced Features
-- Bulk editing capabilities
-- Advanced sorting options
-- Image tagging system
-- AI-powered image search
-- Version history
-
-### 4. Advanced Analytics
-- Image load performance tracking
-- User interaction analytics
-- Storage usage monitoring
-- Optimization effectiveness metrics
-- Error rate tracking
-
-### 5. Integration Capabilities
-- CDN integration
-- Third-party optimization services
-- Social media sharing
-- External image import
-- Backup solutions
+### 3. Performance
+- Lazy loading
+- Progressive loading
+- Caching strategy
+- Bandwidth optimization
+- Upload queue management

@@ -1,76 +1,79 @@
+/** @type {import('eslint').Linter.Config} */
 module.exports = {
   root: true,
+  parser: '@typescript-eslint/parser',
+  plugins: [
+    '@typescript-eslint',
+    'react',
+    'react-hooks',
+    'jsx-a11y',
+    'import',
+    'jest'
+  ],
+  extends: [
+    'eslint:recommended',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:react/recommended',
+    'plugin:react/jsx-runtime',
+    'plugin:react-hooks/recommended',
+    'plugin:jsx-a11y/recommended'
+  ],
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
     ecmaFeatures: {
-      jsx: true,
-    },
+      jsx: true
+    }
   },
   env: {
     browser: true,
-    commonjs: true,
-    es6: true,
+    es2021: true,
+    node: true
   },
-  ignorePatterns: ['!**/.server', '!**/.client'],
-
-  extends: ['eslint:recommended'],
-
+  settings: {
+    react: {
+      version: 'detect'
+    },
+    'import/parsers': {
+      '@typescript-eslint/parser': ['.ts', '.tsx']
+    },
+    'import/resolver': {
+      typescript: {
+        alwaysTryTypes: true
+      }
+    }
+  },
+  rules: {
+    'react/prop-types': 'off',
+    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    'import/no-duplicates': 'warn'
+  },
   overrides: [
-    // React
+    // Test files
     {
-      files: ['**/*.{js,jsx,ts,tsx}'],
-      plugins: ['react', 'jsx-a11y'],
-      extends: [
-        'plugin:react/recommended',
-        'plugin:react/jsx-runtime',
-        'plugin:react-hooks/recommended',
-        'plugin:jsx-a11y/recommended',
+      files: [
+        '**/__tests__/**/*.[jt]s?(x)',
+        '**/?(*.)+(spec|test).[jt]s?(x)',
+        '**/test/**/*.[jt]s?(x)'
       ],
-      settings: {
-        react: {
-          version: 'detect',
-        },
-        formComponents: ['Form'],
-        linkComponents: [
-          { name: 'Link', linkAttribute: 'to' },
-          { name: 'NavLink', linkAttribute: 'to' },
-        ],
-        'import/resolver': {
-          typescript: {},
-        },
-      },
-    },
-
-    // Typescript
-    {
-      files: ['**/*.{ts,tsx}'],
-      plugins: ['@typescript-eslint', 'import'],
-      parser: '@typescript-eslint/parser',
-      settings: {
-        'import/internal-regex': '^~/',
-        'import/resolver': {
-          node: {
-            extensions: ['.ts', '.tsx'],
-          },
-          typescript: {
-            alwaysTryTypes: true,
-          },
-        },
-      },
       extends: [
-        'plugin:@typescript-eslint/recommended',
-        'plugin:import/recommended',
-        'plugin:import/typescript',
+        'plugin:testing-library/react',
+        'plugin:jest/recommended',
+        'plugin:jest/style'
       ],
-    },
-
-    // Node
-    {
-      files: ['.eslintrc.cjs'],
       env: {
-        node: true,
+        'jest/globals': true
       },
-    },
+      rules: {
+        '@typescript-eslint/no-explicit-any': 'off'
+      }
+    }
   ],
+  ignorePatterns: [
+    'node_modules',
+    'build',
+    'public/build',
+    '.cache',
+    'coverage'
+  ]
 };
