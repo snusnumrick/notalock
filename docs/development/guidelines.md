@@ -1,17 +1,42 @@
 # Development Guidelines
 
-## Code Quality Tools
+## Core Development Principles
 
-The project uses several tools to ensure code quality and consistency:
+### Middleware-First Approach
+The project follows a middleware-first approach for common functionality:
+
+1. Authentication & Authorization
+   - Use `requireAuth` for protected routes
+   - Use `requireAdmin` for admin routes
+   - Implement role-based access control
+
+2. Error Handling
+   - Wrap routes with `withErrorHandler`
+   - Use `AppError` for custom errors
+   - Implement proper error boundaries
+
+3. Image Processing
+   - Use `processImage` for uploads
+   - Follow optimization guidelines
+   - Handle image storage properly
+
+4. Supabase Integration
+   - Use `createSupabaseClient` consistently
+   - Handle response headers properly
+   - Follow database access patterns
+
+## Code Quality Tools
 
 ### TypeScript
 - Strict mode enabled
 - Custom path aliases configured (`~/*` maps to `./app/*`)
 - Enhanced type checking with additional compiler options
+- Proper type definitions for all middleware
 
 ### ESLint
 - Run linting: `npm run lint`
 - Fix linting issues: `npm run lint:fix`
+- Additional rules for middleware usage
 - Configured with recommended Remix settings
 
 ### Prettier
@@ -22,56 +47,156 @@ The project uses several tools to ensure code quality and consistency:
 
 ### Git Hooks (Husky)
 - Pre-commit hooks for linting and formatting
+- Type checking before commit
+- Automated tests for critical paths
 - Runs automatically on `git commit`
 
 ## Development Best Practices
 
-### Code Structure
-1. Keep components small and focused
-2. Use TypeScript types for all props and state
-3. Implement error boundaries where appropriate
-4. Follow the feature-first organization pattern
+### Route Implementation
+1. Structure
+   - Follow feature-based organization
+   - Use proper type annotations
+   - Keep components focused
+   - Follow response patterns
 
-### State Management
-1. Use React Query for server state
-2. Implement local state with useState/useReducer
-3. Consider context for shared state
-4. Keep state as close to usage as possible
+2. Error Handling (see [Error Handling Guidelines](./error-handling.md))
+   - Use try/catch in loaders/actions
+   - Implement route error boundaries
+   - Log errors appropriately
+   - Handle redirects correctly
 
-### Performance
-1. Implement proper memoization
-2. Use lazy loading where appropriate
-3. Optimize images and assets
-4. Monitor and optimize bundle size
+2. Authentication
+   - Always use auth middleware
+   - Handle user roles properly
+   - Implement proper redirects
+   - Secure sensitive routes
 
-### Testing
-1. Write unit tests for utilities
-2. Implement integration tests for features
-3. Use E2E tests for critical paths
-4. Maintain good test coverage
+3. Data Handling
+   - Validate input data
+   - Handle edge cases
+   - Implement proper error responses
+   - Follow database patterns
 
-### Security
-1. Implement proper input validation
-2. Use prepared statements for queries
-3. Follow security best practices
-4. Regular security audits
+4. Response Format
+   - Consistent error format
+   - Proper status codes
+   - Handle headers correctly
+   - Follow REST conventions
+
+### Component Development
+1. Structure
+   - Keep components focused
+   - Use TypeScript types
+   - Implement error boundaries
+   - Follow component patterns
+
+2. State Management
+   - Use appropriate hooks
+   - Handle loading states
+   - Implement error states
+   - Follow state patterns
+
+3. Performance
+   - Implement memoization
+   - Use lazy loading
+   - Optimize renders
+   - Monitor bundle size
+
+### Testing Strategy
+1. Unit Tests
+   - Test middleware functions
+   - Test utility functions
+   - Test hooks
+   - Mock external services
+
+2. Integration Tests
+   - Test route handlers
+   - Test authentication flow
+   - Test error handling
+   - Test form submissions
+
+3. End-to-End Tests
+   - Test critical paths
+   - Test user flows
+   - Test error scenarios
+   - Test performance
+
+### Security Practices
+1. Input Validation
+   - Validate all user input
+   - Sanitize data
+   - Handle edge cases
+   - Follow security patterns
+
+2. Authentication
+   - Use middleware consistently
+   - Implement proper sessions
+   - Handle role-based access
+   - Secure sensitive routes
+
+3. Data Protection
+   - Use prepared statements
+   - Implement RLS policies
+   - Handle sensitive data
+   - Regular security audits
 
 ## Development Workflow
 
 ### Branch Strategy
-1. Feature branches from `develop`
-2. Pull requests for all changes
-3. Code review required
-4. Automated testing before merge
+1. Feature Branches
+   - Branch from `develop`
+   - Follow naming convention
+   - Keep changes focused
+   - Regular updates from base
+
+2. Pull Requests
+   - Use PR template
+   - Require reviews
+   - Pass all checks
+   - Clear description
 
 ### Commit Guidelines
-1. Use conventional commits
-2. Keep commits focused
-3. Write clear commit messages
-4. Reference issues when applicable
+1. Structure
+   - Use conventional commits
+   - Clear messages
+   - Reference issues
+   - Atomic commits
+
+2. Quality Checks
+   - Run tests
+   - Check types
+   - Run linting
+   - Verify builds
 
 ### Code Review Process
-1. Review all changes
-2. Use pull request templates
-3. Automated checks must pass
-4. Document review decisions
+1. Review Checklist
+   - Check middleware usage
+   - Verify error handling
+   - Review security
+   - Test coverage
+
+2. Documentation
+   - Update docs
+   - Clear comments
+   - API documentation
+   - Update guidelines
+
+### Deployment Process
+1. Environment Setup
+   - Configure variables
+   - Verify services
+   - Check permissions
+   - Test connections
+
+2. Deployment Steps
+   - Run checks
+   - Build assets
+   - Deploy services
+   - Verify deployment
+
+3. Monitoring
+   - Check logs
+   - Monitor performance
+   - Track errors
+   - User feedback

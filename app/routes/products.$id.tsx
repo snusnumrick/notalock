@@ -1,29 +1,13 @@
 import { json } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import type { LoaderFunctionArgs } from '@remix-run/node';
-import { createServerClient } from '@supabase/ssr';
 import { ProductGallery } from '~/components/features/products/ProductGallery';
+import { createSupabaseClient, withErrorHandler } from '~/server/middleware';
+import { AppError } from '~/server/middleware/error.server';
 
-export const loader = async ({ request, params }: LoaderFunctionArgs) => {
+export const loader = withErrorHandler(async ({ request, params }: LoaderFunctionArgs) => {
   const response = new Response();
-  const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
-    cookies: {
-      get: key => {
-        const cookies = request.headers.get('Cookie') ?? '';
-        const match = cookies.split(';').find(cookie => cookie.trim().startsWith(`${key}=`));
-        return match ? match.split('=')[1] : null;
-      },
-      set: (key, value) => {
-        response.headers.append('Set-Cookie', `${key}=${value}; Path=/; HttpOnly; SameSite=Lax`);
-      },
-      remove: key => {
-        response.headers.append(
-          'Set-Cookie',
-          `${key}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
-        );
-      },
-    },
-  });
+  const supabase = createSupabaseClient(request, response);
 
   const { data: product, error } = await supabase
     .from('products')
@@ -37,11 +21,11 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     .single();
 
   if (error || !product) {
-    throw new Response('Product not found', { status: 404 });
+    throw new AppError('Product not found', 404);
   }
 
   return json({ product }, { headers: response.headers });
-};
+});
 
 export default function ProductPage() {
   const { product } = useLoaderData<typeof loader>();

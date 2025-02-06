@@ -1,37 +1,77 @@
-import React, { useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+import { json, redirect } from '@remix-run/node';
+import type { LoaderFunctionArgs, ActionFunctionArgs } from '@remix-run/node';
+import { createSupabaseClient } from '~/server/middleware';
+import { useState } from 'react';
+
+export const loader = async ({ _request }: LoaderFunctionArgs) => {
+  try {
+    const response = new Response();
+    const supabase = createSupabaseClient(_request, response);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session) {
+      throw redirect('/admin/products');
+    }
+
+    return json(null, {
+      headers: response.headers,
+    });
+  } catch (error) {
+    if (error instanceof Response) {
+      throw error;
+    }
+
+    console.error('Login loader error:', error);
+    throw json({ error: 'Failed to check authentication status' }, { status: 500 });
+  }
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  try {
+    const response = new Response();
+    const supabase = createSupabaseClient(request, response);
+    const formData = await request.formData();
+
+    const email = formData.get('email');
+    const password = formData.get('password');
+
+    if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+      throw json({ error: 'Email and password are required' }, { status: 400 });
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      throw json({ error: error.message }, { status: 401 });
+    }
+
+    return redirect('/admin/products', {
+      headers: response.headers,
+    });
+  } catch (error) {
+    if (error instanceof Response) {
+      throw error;
+    }
+
+    console.error('Login action error:', error);
+    throw json(
+      {
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
+      },
+      { status: 500 }
+    );
+  }
+};
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      const supabase = createBrowserClient(window.env.SUPABASE_URL, window.env.SUPABASE_ANON_KEY);
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (!data?.session) {
-        throw new Error('No session after login');
-      }
-
-      console.log('Login successful:', data);
-
-      // Force a full page reload to ensure session is properly set
-      window.location.href = '/admin/products';
-    } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message);
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -41,12 +81,7 @@ export default function Login() {
             Sign in to your account
           </h2>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-700">{error}</div>
-            </div>
-          )}
+        <form className="mt-8 space-y-6" method="post">
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email-address" className="sr-only">
