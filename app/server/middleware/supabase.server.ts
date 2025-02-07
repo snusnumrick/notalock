@@ -1,5 +1,10 @@
 import { createServerClient } from '@supabase/ssr';
-import type { CookieOptions } from '@supabase/ssr';
+
+type CookieHandler = {
+  get: (key: string) => string | null;
+  set: (key: string, value: string) => void;
+  remove: (key: string) => void;
+};
 
 /**
  * Creates a Supabase client with cookie handling for server-side operations
@@ -9,7 +14,7 @@ export function createSupabaseClient(request: Request, response?: Response) {
   const cookies = request.headers.get('Cookie') ?? '';
   response = response || new Response();
 
-  const cookieHandlers: CookieOptions['cookies'] = {
+  const cookieHandlers: CookieHandler = {
     get: (key: string) => {
       const cookie = cookies.split(';').find(c => c.trim().startsWith(`${key}=`));
       return cookie ? cookie.split('=')[1] : null;

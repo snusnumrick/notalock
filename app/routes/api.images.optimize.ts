@@ -1,12 +1,17 @@
-import { json, type ActionFunctionArgs } from '@remix-run/node';
+import { type ActionFunctionArgs } from '@remix-run/node';
 import { processImage } from '~/server/middleware';
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  try {
-    if (request.method !== 'POST') {
-      throw json({ error: 'Method not allowed' }, { status: 405 });
-    }
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
 
+  try {
     const { buffer, contentType } = await processImage(request);
 
     return new Response(buffer, {
@@ -17,34 +22,48 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       },
     });
   } catch (error) {
-    if (error instanceof Response) {
-      throw error;
-    }
-
     console.error('Image optimization error:', error);
-    throw json(
-      {
+    return new Response(
+      JSON.stringify({
         error: error instanceof Error ? error.message : 'Failed to optimize image',
-      },
-      { status: 500 }
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
   }
 };
 
-// Optional: Health check endpoint
 export const loader = async ({ request }: ActionFunctionArgs) => {
   try {
     if (request.method !== 'GET') {
-      throw json({ error: 'Method not allowed' }, { status: 405 });
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+        status: 405,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
     }
 
-    return json({ status: 'healthy' });
+    return new Response(JSON.stringify({ status: 'healthy' }), {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
   } catch (error) {
     if (error instanceof Response) {
       throw error;
     }
 
     console.error('Health check error:', error);
-    throw json({ error: 'Service unavailable' }, { status: 503 });
+    return new Response(JSON.stringify({ error: 'Service unavailable' }), {
+      status: 503,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
   }
 };

@@ -42,6 +42,8 @@ export interface ProductImage {
 }
 
 export interface TempImage {
+  id: string; // Already using URL.createObjectURL(file) as ID
+  url: string; // Can use previewUrl as url
   file: File;
   previewUrl: string;
   isPrimary: boolean;
