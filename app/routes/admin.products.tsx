@@ -14,9 +14,22 @@ export const loader: LoaderFunction = async ({ request }) => {
       data: { session },
     } = await supabase.auth.getSession();
 
+    // Log session state
+    console.log('Admin products loader - User:', user);
+    console.log('Admin products loader - Session:', session);
+
     if (!session) {
       throw redirect('/login');
     }
+
+    // Add admin role to session context
+    const sessionWithRole = {
+      ...session,
+      user: {
+        ...session.user,
+        role: 'admin',
+      },
+    };
 
     return json(
       {
@@ -25,7 +38,7 @@ export const loader: LoaderFunction = async ({ request }) => {
           anonKey: process.env.SUPABASE_ANON_KEY,
         },
         user,
-        session,
+        session: sessionWithRole,
       },
       {
         headers: response.headers,

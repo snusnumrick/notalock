@@ -3,10 +3,10 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from '@remix-run/node';
 import { createSupabaseClient } from '~/server/middleware';
 import { useState } from 'react';
 
-export const loader = async ({ _request }: LoaderFunctionArgs) => {
+export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const response = new Response();
-    const supabase = createSupabaseClient(_request, response);
+    const supabase = createSupabaseClient(request, response);
 
     const {
       data: { session },

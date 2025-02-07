@@ -4,8 +4,10 @@ import type { CookieOptions } from '@supabase/ssr';
 /**
  * Creates a Supabase client with cookie handling for server-side operations
  */
-export function createSupabaseClient(request: Request, response: Response) {
+export function createSupabaseClient(request: Request, response?: Response) {
+  console.log('Creating Supabase client');
   const cookies = request.headers.get('Cookie') ?? '';
+  response = response || new Response();
 
   const cookieHandlers: CookieOptions['cookies'] = {
     get: (key: string) => {
@@ -13,13 +15,13 @@ export function createSupabaseClient(request: Request, response: Response) {
       return cookie ? cookie.split('=')[1] : null;
     },
     set: (key: string, value: string) => {
-      response.headers.append(
+      response!.headers.append(
         'Set-Cookie',
         `${key}=${value}; Path=/; HttpOnly; SameSite=Lax; Secure`
       );
     },
     remove: (key: string) => {
-      response.headers.append(
+      response!.headers.append(
         'Set-Cookie',
         `${key}=; Path=/; HttpOnly; SameSite=Lax; Secure; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
       );

@@ -15,13 +15,18 @@ export function ProductManagement({
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<Session | null>(initialSession);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Initialize Supabase client with browser-safe cookie handling
+  // Initialize Supabase client with browser-safe cookie handling and session
   const supabase = React.useMemo(() => {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Supabase URL and anon key are required');
+    }
+
     const client = createBrowserClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         get: getCookieBrowser,
@@ -36,18 +41,21 @@ export function ProductManagement({
       },
     });
 
-    client.auth.getSession().then(({ data: { session } }) => {
-      console.log('Supabase Client Session:', {
-        hasSession: !!session,
-        sessionId: session?.access_token?.slice(0, 10),
-      });
-    });
+    if (initialSession) {
+      client.auth.setSession(initialSession);
+    }
 
     return client;
-  }, [supabaseUrl, supabaseAnonKey]);
+  }, [supabaseUrl, supabaseAnonKey, initialSession]);
 
-  // Initialize ProductService
-  const productService = React.useMemo(() => new ProductService(supabase), [supabase]);
+  // Initialize ProductService with the current session
+  const productService = React.useMemo(() => {
+    const service = new ProductService(supabase);
+    if (session) {
+      service.setSession(session);
+    }
+    return service;
+  }, [supabase, session]);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -64,35 +72,38 @@ export function ProductManagement({
   }, [productService]);
 
   useEffect(() => {
-    if (initialSession?.data?.session) {
-      setSession(initialSession.data.session);
-      supabase.auth.setSession(initialSession.data.session);
-    }
-  }, [initialSession, supabase.auth]);
-
-  useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
+    async function initializeSession() {
+      if (initialSession) {
+        console.log('Setting session from initialSession:', initialSession);
+        await supabase.auth.setSession(initialSession);
+        setSession(initialSession);
+      } else {
+        console.log('No initial session, checking current session');
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession();
+        if (currentSession) {
+          console.log('Found current session:', currentSession);
+          setSession(currentSession);
+        }
+      }
+    }
+
+    initializeSession();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', session);
       setSession(session);
     });
 
     return () => subscription.unsubscribe();
-  }, [supabase.auth]);
-
-  useEffect(() => {
-    if (session) {
-      console.log('Session token available:', !!session.access_token);
-    }
-  }, [session]);
+  }, [initialSession, supabase.auth]);
 
   const handleAddProduct = async (formData: ProductFormData) => {
     try {
@@ -120,12 +131,18 @@ export function ProductManagement({
   };
 
   const handleDeleteProduct = async (productId: string) => {
+    if (!session) {
+      setError('You must be logged in to delete products');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to delete this product?')) return;
 
     try {
       await productService.deleteProduct(productId);
       setProducts(products.filter(p => p.id !== productId));
     } catch (err) {
+      console.error('Failed to delete product:', err);
       setError(
         'Failed to delete product: ' + (err instanceof Error ? err.message : 'Unknown error')
       );

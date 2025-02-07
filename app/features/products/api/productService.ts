@@ -1,12 +1,17 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient, Session } from '@supabase/supabase-js';
 import type { Product, ProductFormData } from '../types/product.types';
 import { ProductImageService } from './productImageService';
 
 export class ProductService {
   private supabase: SupabaseClient;
+  private currentSession: Session | null = null;
 
   constructor(supabase: SupabaseClient) {
     this.supabase = supabase;
+  }
+
+  setSession(session: Session) {
+    this.currentSession = session;
   }
 
   async fetchProducts(): Promise<Product[]> {
@@ -24,21 +29,12 @@ export class ProductService {
   }
 
   async createProduct(formData: ProductFormData): Promise<Product> {
-    // Debug log for auth state
-    const authState = await this.supabase.auth.getUser();
-    const sessionState = await this.supabase.auth.getSession();
-    console.log('Auth Debug:', {
-      user: authState.data.user,
-      session: sessionState.data.session,
-      supabaseClient: !!this.supabase,
-    });
-
-    // Get the current session to ensure we have auth
-    const {
-      data: { session },
-    } = await this.supabase.auth.getSession();
-    if (!session) {
-      throw new Error('No active session - please login again');
+    if (!this.currentSession) {
+      const { data } = await this.supabase.auth.getSession();
+      if (!data.session) {
+        throw new Error('No active session found');
+      }
+      this.currentSession = data.session;
     }
 
     const productData = {
@@ -49,10 +45,9 @@ export class ProductService {
       business_price: parseFloat(formData.business_price),
       stock: parseInt(formData.stock),
       is_active: formData.is_active,
-      image_url: null, // Initialize with null
+      image_url: null,
     };
 
-    // First create the product
     const { data: product, error: productError } = await this.supabase
       .from('products')
       .insert([productData])
@@ -64,25 +59,16 @@ export class ProductService {
       throw new Error(`Failed to create product: ${productError.message}`);
     }
 
-    // If there are temporary images, upload them
     if (formData.tempImages && formData.tempImages.length > 0) {
       const imageService = new ProductImageService(this.supabase);
-
       try {
-        // Upload each image
         for (const tempImage of formData.tempImages) {
           await imageService.uploadImage(tempImage.file, product.id, tempImage.isPrimary);
         }
 
-        // Fetch the product again with its images
         const { data: productWithImages, error: fetchError } = await this.supabase
           .from('products')
-          .select(
-            `
-            *,
-            images:product_images(*)
-          `
-          )
+          .select('*, product_images(*)')
           .eq('id', product.id)
           .single();
 
@@ -93,7 +79,6 @@ export class ProductService {
         return productWithImages;
       } catch (imageError) {
         console.error('Error uploading images:', imageError);
-        // If image upload fails, still return the product but log the error
         return product;
       }
     }
@@ -102,6 +87,14 @@ export class ProductService {
   }
 
   async updateProduct(id: string, formData: ProductFormData): Promise<Product> {
+    if (!this.currentSession) {
+      const { data } = await this.supabase.auth.getSession();
+      if (!data.session) {
+        throw new Error('No active session found');
+      }
+      this.currentSession = data.session;
+    }
+
     const productData = {
       name: formData.name,
       sku: formData.sku,
@@ -117,12 +110,7 @@ export class ProductService {
       .from('products')
       .update(productData)
       .eq('id', id)
-      .select(
-        `
-        *,
-        images:product_images(*)
-      `
-      )
+      .select('*, product_images(*)')
       .single();
 
     if (error) {
@@ -134,7 +122,28 @@ export class ProductService {
   }
 
   async deleteProduct(id: string): Promise<void> {
+    if (!this.currentSession) {
+      const { data } = await this.supabase.auth.getSession();
+      if (!data.session) {
+        throw new Error('No active session found');
+      }
+      this.currentSession = data.session;
+    }
+
+    console.log('Current session state:', this.currentSession);
+
     try {
+      // First, check if the user has admin role
+      const { data: profile, error: profileError } = await this.supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', this.currentSession.user.id)
+        .single();
+
+      if (profileError || profile?.role !== 'admin') {
+        throw new Error('User does not have admin permissions');
+      }
+
       // First, delete all associated images
       const { data: images } = await this.supabase
         .from('product_images')
@@ -142,39 +151,49 @@ export class ProductService {
         .eq('product_id', id);
 
       if (images && images.length > 0) {
-        // Delete files from storage
         const { error: storageError } = await this.supabase.storage
           .from('product-images')
           .remove(images.map(img => img.storage_path));
 
         if (storageError) {
           console.error('Error deleting images from storage:', storageError);
+        } else {
+          console.log('Deleted images from storage');
         }
       }
 
-      // Then delete the product (cascade will handle the product_images records)
-      const { error } = await this.supabase.from('products').delete().eq('id', id);
+      // Then delete the product
+      const { error: deleteError } = await this.supabase.from('products').delete().eq('id', id);
 
-      if (error) {
-        throw error;
+      if (deleteError) {
+        throw deleteError;
       }
+
+      // Verify deletion
+      const { data: verifyProduct } = await this.supabase
+        .from('products')
+        .select('id')
+        .eq('id', id)
+        .single();
+
+      if (verifyProduct) {
+        throw new Error('Product deletion failed - record still exists');
+      }
+
+      console.log('Product deleted successfully');
     } catch (error) {
-      console.error('Error deleting product:', error);
-      throw new Error(
-        `Failed to delete product: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      console.error('Error in deleteProduct:', error);
+      if (error instanceof Error) {
+        throw new Error(`Failed to delete product: ${error.message}`);
+      }
+      throw new Error('Failed to delete product: Unknown error');
     }
   }
 
   async getProduct(id: string): Promise<Product> {
     const { data, error } = await this.supabase
       .from('products')
-      .select(
-        `
-        *,
-        images:product_images(*)
-      `
-      )
+      .select('*, product_images(*)')
       .eq('id', id)
       .single();
 
