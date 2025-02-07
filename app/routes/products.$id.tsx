@@ -1,31 +1,60 @@
 import { json } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import type { LoaderFunctionArgs } from '@remix-run/node';
-import { ProductGallery } from '~/components/features/products/ProductGallery';
-import { createSupabaseClient, withErrorHandler } from '~/server/middleware';
+import { createSupabaseClient } from '~/server/middleware/supabase.server';
 import { AppError } from '~/server/middleware/error.server';
+import type { Product, ProductImage } from '~/features/products/types/product.types';
+import ProductGallery from '~/features/products/components/ProductGallery';
 
-export const loader = withErrorHandler(async ({ request, params }: LoaderFunctionArgs) => {
-  const response = new Response();
-  const supabase = createSupabaseClient(request, response);
+interface LoaderData {
+  product: Product & { images: ProductImage[] };
+}
 
-  const { data: product, error } = await supabase
-    .from('products')
-    .select(
+export const loader = async ({ request, params }: LoaderFunctionArgs) => {
+  try {
+    const response = new Response();
+    const supabase = createSupabaseClient(request, response);
+
+    const { data: product, error } = await supabase
+      .from('products')
+      .select(
+        `
+        *,
+        images:product_images(*)
       `
-      *,
-      images:product_images(*)
-    `
-    )
-    .eq('id', params.id)
-    .single();
+      )
+      .eq('id', params.id)
+      .order('sort_order', { referencedTable: 'product_images' })
+      .single();
 
-  if (error || !product) {
-    throw new AppError('Product not found', 404);
+    if (error || !product) {
+      throw new AppError('Product not found', 404);
+    }
+
+    return json<LoaderData>({ product }, { headers: response.headers });
+  } catch (error) {
+    // Always let Remix handle redirects
+    if (error instanceof Response) {
+      throw error;
+    }
+
+    console.error('Loader error:', error);
+
+    if (error instanceof AppError) {
+      return json(
+        {
+          error: {
+            message: error.message,
+          },
+        },
+        { status: error.statusCode }
+      );
+    }
+
+    console.error('Unhandled error:', error);
+    return json({ error: { message: 'An unexpected error occurred' } }, { status: 500 });
   }
-
-  return json({ product }, { headers: response.headers });
-});
+};
 
 export default function ProductPage() {
   const { product } = useLoaderData<typeof loader>();
@@ -36,7 +65,7 @@ export default function ProductPage() {
         <div className="bg-white rounded-lg shadow">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
             {/* Product Gallery */}
-            <div>
+            <div className="w-full">
               <ProductGallery images={product.images} />
             </div>
 
@@ -67,11 +96,11 @@ export default function ProductPage() {
                 </div>
               </div>
 
-              {/* Add to Cart Button - You can add this later */}
+              {/* Add to Cart Button */}
               <button
                 type="button"
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium 
-                         hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium
+                         hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2
                          focus:ring-blue-500"
               >
                 Add to Cart
