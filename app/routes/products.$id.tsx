@@ -1,8 +1,6 @@
-import { json } from '@remix-run/node';
+import { type LoaderFunctionArgs, type TypedResponse } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
-import type { LoaderFunctionArgs } from '@remix-run/node';
 import { createSupabaseClient } from '~/server/middleware/supabase.server';
-import { AppError } from '~/server/middleware/error.server';
 import type { Product, ProductImage } from '~/features/products/types/product.types';
 import ProductGallery from '~/features/products/components/ProductGallery';
 
@@ -10,50 +8,35 @@ interface LoaderData {
   product: Product & { images: ProductImage[] };
 }
 
-export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  try {
-    const response = new Response();
-    const supabase = createSupabaseClient(request, response);
+export const loader = async ({
+  request,
+  params,
+}: LoaderFunctionArgs): Promise<TypedResponse<LoaderData>> => {
+  const response = new Response();
+  const supabase = createSupabaseClient(request, response);
 
-    const { data: product, error } = await supabase
-      .from('products')
-      .select(
-        `
-        *,
-        images:product_images(*)
+  const { data: product, error } = await supabase
+    .from('products')
+    .select(
       `
-      )
-      .eq('id', params.id)
-      .order('sort_order', { referencedTable: 'product_images' })
-      .single();
+      *,
+      images:product_images(*)
+    `
+    )
+    .eq('id', params.id)
+    .order('sort_order', { referencedTable: 'product_images' })
+    .single();
 
-    if (error || !product) {
-      throw new AppError('Product not found', 404);
-    }
-
-    return json<LoaderData>({ product }, { headers: response.headers });
-  } catch (error) {
-    // Always let Remix handle redirects
-    if (error instanceof Response) {
-      throw error;
-    }
-
-    console.error('Loader error:', error);
-
-    if (error instanceof AppError) {
-      return json(
-        {
-          error: {
-            message: error.message,
-          },
-        },
-        { status: error.statusCode }
-      );
-    }
-
-    console.error('Unhandled error:', error);
-    return json({ error: { message: 'An unexpected error occurred' } }, { status: 500 });
+  if (error || !product) {
+    throw new Response('Product not found', { status: 404 });
   }
+
+  return new Response(JSON.stringify({ product }), {
+    headers: {
+      ...response.headers,
+      'Content-Type': 'application/json',
+    },
+  });
 };
 
 export default function ProductPage() {
