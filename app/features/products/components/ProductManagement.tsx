@@ -1,6 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '~/components/ui/alert-dialog';
+
 import { createBrowserClient } from '@supabase/ssr';
 import { ProductForm } from './ProductForm';
 import { ProductService } from '../api/productService';
@@ -20,6 +31,7 @@ export function ProductManagement({
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   // Initialize Supabase client with browser-safe cookie handling and session
   const supabase = React.useMemo(() => {
@@ -130,23 +142,31 @@ export function ProductManagement({
     }
   };
 
-  const handleDeleteProduct = async (productId: string) => {
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
     if (!session) {
       setError('You must be logged in to delete products');
       return;
     }
 
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
-
     try {
-      await productService.deleteProduct(productId);
-      setProducts(products.filter(p => p.id !== productId));
+      await productService.deleteProduct(productToDelete.id);
+      setProducts(products.filter(p => p.id !== productToDelete.id));
+      setProductToDelete(null);
     } catch (err) {
       console.error('Failed to delete product:', err);
       setError(
         'Failed to delete product: ' + (err instanceof Error ? err.message : 'Unknown error')
       );
     }
+  };
+
+  const handleDeleteClick = (product: Product) => {
+    setProductToDelete(product);
+  };
+
+  const handleCancelDelete = () => {
+    setProductToDelete(null);
   };
 
   const filteredProducts = React.useMemo(() => {
@@ -231,7 +251,7 @@ export function ProductManagement({
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteProduct(product.id)}
+                          onClick={() => handleDeleteClick(product)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                           aria-label={`Delete ${product.name}`}
                         >
@@ -272,6 +292,26 @@ export function ProductManagement({
           supabaseClient={supabase}
         />
       )}
+
+      <AlertDialog open={productToDelete !== null} onOpenChange={() => setProductToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {productToDelete?.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProduct}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
