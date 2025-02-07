@@ -7,7 +7,14 @@ import { createSupabaseClient } from '~/server/middleware/supabase.server';
 
 export const loader: LoaderFunction = async ({ request }) => {
   try {
+    console.log('Starting admin products loader');
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!process.env.SUPABASE_URL,
+      hasSupabaseAnonKey: !!process.env.SUPABASE_ANON_KEY,
+    });
+    console.log('Checking admin requirements...');
     const { user, response } = await requireAdmin(request);
+    console.log('Admin check passed, user:', user);
     const supabase = createSupabaseClient(request, response);
 
     const {
@@ -49,7 +56,11 @@ export const loader: LoaderFunction = async ({ request }) => {
       throw error; // Let Remix handle redirects
     }
 
-    console.error('Loader error:', error);
+    console.error('Loader error:', {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     throw json(
       {
         error: error instanceof Error ? error.message : 'An unexpected error occurred',
@@ -97,7 +108,6 @@ export default function Products() {
           supabaseUrl={loaderData.supabase.url!}
           supabaseAnonKey={loaderData.supabase.anonKey!}
           initialSession={loaderData.session}
-          user={loaderData.user}
         />
       </div>
     </div>

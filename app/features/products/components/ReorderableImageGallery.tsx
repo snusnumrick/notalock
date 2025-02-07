@@ -3,12 +3,14 @@ import { useCallback } from 'react';
 import type { ProductImage } from '../types/product.types';
 import type { ProductImageService } from '../api/productImageService';
 import { ImageGalleryBase } from './shared/ImageGalleryBase';
+import { DraggableGalleryWrapper } from './shared/DraggableGalleryWrapper';
 
 interface ReorderableImageGalleryProps {
   productId: string;
   images: ProductImage[];
   onImagesChange: (images: ProductImage[]) => void;
   imageService: ProductImageService;
+  uploading?: boolean;
 }
 
 // Helper function to convert database image to gallery format
@@ -31,8 +33,9 @@ export default function ReorderableImageGallery({
   imageService,
 }: ReorderableImageGalleryProps) {
   const handleUpload = useCallback(
-    async (files: File[]): Promise<ProductImage[]> => {
-      return await imageService.uploadMultipleImages(files, productId);
+    async (files: File[]): Promise<{ id: string; url: string; isPrimary: boolean }[]> => {
+      const uploadedImages = await imageService.uploadMultipleImages(files, productId);
+      return uploadedImages.map(mapToGalleryImage);
     },
     [imageService, productId]
   );
@@ -86,7 +89,8 @@ export default function ReorderableImageGallery({
   };
 
   return (
-    <ImageGalleryBase
+    <DraggableGalleryWrapper
+      BaseGallery={ImageGalleryBase}
       images={galleryImages}
       onImagesChange={handleImagesChange}
       onUpload={handleUpload}

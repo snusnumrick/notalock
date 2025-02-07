@@ -215,11 +215,13 @@ export class ProductImageService {
   }
 
   async setPrimaryImage(imageId: string): Promise<void> {
-    const { data: image } = await this.supabase
+    const { data: image, error } = await this.supabase
       .from('product_images')
       .select('product_id, url')
       .eq('id', imageId)
       .single();
+
+    if (!image || error) throw new Error('Failed to get image');
 
     await Promise.all([
       // Reset all images for this product

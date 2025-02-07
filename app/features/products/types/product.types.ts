@@ -27,7 +27,7 @@ export interface ProductManagementBaseProps {
   supabaseUrl: string;
   supabaseAnonKey: string;
   profile?: { role: string };
-  initialSession?: Session;
+  initialSession: Session | null;
 }
 
 export interface ProductImage {
@@ -57,7 +57,7 @@ export interface ProductFormData {
   stock: string;
   is_active: boolean;
   image_url?: string | null;
-  tempImages?: TempImage[];
+  tempImages?: TempImage[] | undefined;
 }
 
 // Use the base props interface
@@ -71,10 +71,10 @@ export interface ProductFormProps {
   supabaseClient: SupabaseClient;
 }
 
-export interface ValidationErrors {
-  name?: string;
-  sku?: string;
-  retail_price?: string;
-  business_price?: string;
-  stock?: string;
-}
+export type ValidatedFields = 'name' | 'sku' | 'retail_price' | 'business_price' | 'stock';
+
+export type ValidationErrors = {
+  [K in ValidatedFields]?: string;
+};
+
+export type FormFields = ValidatedFields | 'description' | 'is_active';

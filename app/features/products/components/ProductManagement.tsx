@@ -15,7 +15,6 @@ import {
 import { createBrowserClient } from '@supabase/ssr';
 import { ProductForm } from './ProductForm';
 import { ProductService } from '../api/productService';
-import { getCookieBrowser, setCookieBrowser, removeCookieBrowser } from '~/utils/cookieUtils';
 import type { Product, ProductFormData, ProductManagementProps } from '../types/product.types';
 
 export function ProductManagement({
@@ -41,9 +40,19 @@ export function ProductManagement({
 
     const client = createBrowserClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
-        get: getCookieBrowser,
-        set: setCookieBrowser,
-        remove: removeCookieBrowser,
+        getAll: () => {
+          if (typeof document === 'undefined') return [];
+          return document.cookie.split('; ').map(cookie => {
+            const [name, value] = cookie.split('=');
+            return { name, value };
+          });
+        },
+        setAll: cookies => {
+          if (typeof document === 'undefined') return;
+          cookies.forEach(({ name, value }) => {
+            document.cookie = `${name}=${value}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax; Secure`;
+          });
+        },
       },
       auth: {
         persistSession: true,
@@ -275,20 +284,18 @@ export function ProductManagement({
             setEditingProduct(null);
           }}
           onSubmit={editingProduct ? handleEditProduct : handleAddProduct}
-          initialData={
-            editingProduct
-              ? {
-                  id: editingProduct.id,
-                  name: editingProduct.name,
-                  sku: editingProduct.sku,
-                  description: editingProduct.description || '',
-                  retail_price: editingProduct.retail_price.toString(),
-                  business_price: editingProduct.business_price.toString(),
-                  stock: editingProduct.stock.toString(),
-                  is_active: editingProduct.is_active,
-                }
-              : undefined
-          }
+          {...(editingProduct && {
+            initialData: {
+              id: editingProduct.id,
+              name: editingProduct.name,
+              sku: editingProduct.sku,
+              description: editingProduct.description || '',
+              retail_price: editingProduct.retail_price.toString(),
+              business_price: editingProduct.business_price.toString(),
+              stock: editingProduct.stock.toString(),
+              is_active: editingProduct.is_active,
+            },
+          })}
           supabaseClient={supabase}
         />
       )}

@@ -8,8 +8,10 @@ import {
   useLoaderData,
 } from '@remix-run/react';
 import * as build from '@remix-run/node';
+import type { LoaderFunctionArgs } from '@remix-run/node';
 import stylesheet from '~/styles/tailwind.css';
 import { createSupabaseServerClient } from '~/server/services/supabase.server';
+import { Session } from '@supabase/supabase-js';
 
 export const links = () => [{ rel: 'stylesheet', href: stylesheet }];
 
@@ -20,7 +22,7 @@ export const meta = () => {
   ];
 };
 
-export const loader = async ({ request }) => {
+export const loader = async ({ request }: LoaderFunctionArgs) => {
   const response = new Response();
   const supabase = createSupabaseServerClient({ request, response });
   const {
@@ -54,8 +56,17 @@ export const loader = async ({ request }) => {
   );
 };
 
+interface LoaderData {
+  session: Session | null;
+  profile: { role: string } | null;
+  env: {
+    SUPABASE_URL: string | undefined;
+    SUPABASE_ANON_KEY: string | undefined;
+  };
+}
+
 export default function App() {
-  const { env } = useLoaderData();
+  const { env } = useLoaderData<LoaderData>();
 
   return (
     <html lang="en" className="h-full">

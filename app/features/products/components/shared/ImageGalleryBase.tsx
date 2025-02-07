@@ -11,7 +11,7 @@ export interface GalleryImage {
   isPrimary: boolean;
 }
 
-interface ImageGalleryBaseProps<T extends GalleryImage> {
+export interface ImageGalleryBaseProps<T extends GalleryImage> {
   images: T[];
   onImagesChange: (images: T[]) => void;
   onUpload?: (files: File[]) => Promise<T[]>;
@@ -308,7 +308,13 @@ export function ImageGalleryBase<T extends GalleryImage>({
         <div className="border-t pt-8">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Customer Preview</h3>
           <div className="border rounded-lg p-6 bg-gray-50">
-            <ProductGallery images={images} />
+            <ProductGallery
+              images={images.map(img => ({
+                id: img.id,
+                url: img.url,
+                is_primary: img.isPrimary,
+              }))}
+            />
           </div>
         </div>
       )}

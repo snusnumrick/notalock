@@ -17,7 +17,7 @@ export function wrapRemixRoute(routeFn: RemixRouteFunction): RemixRouteFunction 
       }
 
       if (error instanceof AppError) {
-        return json({ error: error.message, details: error.details }, { status: error.status });
+        return json({ error: error.message, details: error.data }, { status: error.statusCode });
       }
 
       if (error instanceof Error) {

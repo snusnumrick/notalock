@@ -9,6 +9,7 @@ import ReorderableImageGallery from '~/features/products/components/ReorderableI
 import ProductGallery from '~/features/products/components/ProductGallery';
 import type { ProductImage } from '~/features/products/types/product.types';
 import { ProductImageService } from '~/features/products/api/productImageService';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 // Create an adapter that extends the ProductImageService class
 class FormSubmitImageService extends ProductImageService {
@@ -586,7 +587,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function TestImageFeatures() {
-  const { productId, images } = useLoaderData<typeof loader>();
+  const { productId, images: initialImages } = useLoaderData<typeof loader>();
+  const [images, setImages] = React.useState<ProductImage[]>(initialImages);
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
   const [results, setResults] = React.useState<{ [key: string]: ProductImage }>({});
@@ -599,7 +601,7 @@ export default function TestImageFeatures() {
 
   // Update results when action data is received
   React.useEffect(() => {
-    if (actionData?.success && actionData.image && actionData.tempId) {
+    if (actionData?.success && 'image' in actionData && actionData.image && actionData.tempId) {
       setResults(prev => {
         const newResults = { ...prev };
         delete newResults[actionData.tempId];
@@ -620,18 +622,14 @@ export default function TestImageFeatures() {
               images={images}
               imageService={imageService}
               uploading={Object.keys(results).length > 0}
-              tempImages={Object.values(results)}
+              productId={productId}
+              onImagesChange={setImages}
             />
           </div>
 
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Standard Gallery</h2>
-            <ProductGallery
-              images={images}
-              imageService={imageService}
-              uploading={Object.keys(results).length > 0}
-              tempImages={Object.values(results)}
-            />
+            <ProductGallery images={images} />
           </div>
         </DndProvider>
       </div>

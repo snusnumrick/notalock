@@ -7,6 +7,8 @@ import { ProductImageService } from '../api/productImageService';
 import type {
   ProductFormProps,
   ProductFormData,
+  ValidatedFields,
+  FormFields,
   ValidationErrors,
   ProductImage,
   TempImage,
@@ -51,11 +53,11 @@ export function ProductForm({
     }
   }, [initialData?.id, imageService]);
 
-  const handleInputChange = (field: keyof ProductFormData, value: string | boolean) => {
+  const handleInputChange = (field: FormFields, value: string | boolean) => {
     setFormData({ ...formData, [field]: value });
-    if (validationErrors[field]) {
+    if (field in validationErrors) {
       const errors = { ...validationErrors };
-      delete errors[field];
+      delete errors[field as ValidatedFields];
       setValidationErrors(errors);
     }
   };

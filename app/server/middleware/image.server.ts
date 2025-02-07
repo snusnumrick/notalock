@@ -1,12 +1,12 @@
-import { parseMultipartFormData, writeAsyncIterableToWritable } from '@remix-run/node';
+import { writeAsyncIterableToWritable, unstable_parseMultipartFormData } from '@remix-run/node';
 import sharp from 'sharp';
 import { PassThrough } from 'stream';
 
 export interface ImageProcessingOptions {
-  maxWidth?: number;
-  maxHeight?: number;
-  quality?: number;
-  format?: 'jpeg' | 'png' | 'webp';
+  maxWidth?: number | undefined;
+  maxHeight?: number | undefined;
+  quality?: number | undefined;
+  format?: 'jpeg' | 'png' | 'webp' | undefined;
 }
 
 interface ProcessedImage {
@@ -30,7 +30,8 @@ async function uploadHandler({ data }: { data: AsyncIterable<Uint8Array> }) {
     stream.on('error', reject);
   });
 
-  return Buffer.concat(chunks);
+  const buffer = Buffer.concat(chunks);
+  return new File([buffer], 'upload.tmp');
 }
 
 /**
@@ -86,10 +87,10 @@ export async function processImage(
     throw new Response('Method not allowed', { status: 405 });
   }
 
-  const formData = await parseMultipartFormData(request, uploadHandler);
+  const formData = await unstable_parseMultipartFormData(request, uploadHandler);
   const file = formData.get('file');
 
-  if (!file || !(file instanceof Buffer)) {
+  if (!file || !(file instanceof File)) {
     throw new Response('No file provided', { status: 400 });
   }
 
@@ -101,7 +102,8 @@ export async function processImage(
     format: formData.get('format') as ImageProcessingOptions['format'],
   };
 
-  const buffer = await optimizeImage(file, processOptions);
+  const fileArrayBuffer = await file.arrayBuffer();
+  const buffer = await optimizeImage(Buffer.from(fileArrayBuffer), processOptions);
   const format = processOptions.format || 'webp';
 
   // Determine content type

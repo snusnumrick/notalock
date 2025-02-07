@@ -14,6 +14,8 @@ notalock/
 │   │   └── products/   # Product management
 │   │       ├── api/    # Product-specific API
 │   │       ├── components/ # Product components
+│   │       │   └── shared/ # Shared product components
+│   │       │       └── DraggableGalleryWrapper.tsx # Draggable gallery component
 │   │       ├── hooks/  # Product-specific hooks
 │   │       ├── types/  # Product types
 │   │       └── utils/  # Product utilities
@@ -34,6 +36,7 @@ notalock/
 │   ├── styles/        # Global styles
 │   ├── test/          # Test utilities and setup
 │   ├── types/         # TypeScript types
+│   │   └── css.d.ts   # CSS type definitions
 │   └── utils/         # Client utilities
 │   ├── entry.client.tsx # Client entry point
 │   ├── entry.server.tsx # Server entry point

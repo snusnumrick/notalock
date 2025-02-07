@@ -16,6 +16,7 @@ interface AuthResult {
  * Throws redirect to login if user is not authenticated
  */
 export async function requireAuth(request: Request): Promise<AuthResult> {
+  console.log('Starting requireAuth check');
   const response = new Response();
   const supabase = createSupabaseClient(request, response);
 
@@ -25,6 +26,7 @@ export async function requireAuth(request: Request): Promise<AuthResult> {
   } = await supabase.auth.getUser();
 
   if (error || !user) {
+    console.log('Auth check failed:', { error, user });
     throw redirect('/login');
   }
 
@@ -36,6 +38,7 @@ export async function requireAuth(request: Request): Promise<AuthResult> {
  * Throws redirect to unauthorized if user is not an admin
  */
 export async function requireAdmin(request: Request): Promise<AuthResult> {
+  console.log('Starting requireAdmin check');
   const { user, response } = await requireAuth(request);
   const supabase = createSupabaseClient(request, response);
 
@@ -46,6 +49,7 @@ export async function requireAdmin(request: Request): Promise<AuthResult> {
     .single();
 
   if (profileError || profile?.role !== 'admin') {
+    console.log('Admin check failed:', { profileError, role: profile?.role });
     throw redirect('/unauthorized');
   }
 

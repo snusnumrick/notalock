@@ -1,5 +1,4 @@
-import type { ActionFunctionArgs } from '@remix-run/node';
-import { json } from '@remix-run/node';
+import { json, type ActionFunctionArgs } from '@remix-run/node';
 import { processImage } from '~/server/middleware';
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -33,7 +32,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 // Optional: Health check endpoint
-export const loader = async ({ request }) => {
+export const loader = async ({ request }: ActionFunctionArgs) => {
   try {
     if (request.method !== 'GET') {
       throw json({ error: 'Method not allowed' }, { status: 405 });

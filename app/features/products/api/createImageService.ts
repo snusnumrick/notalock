@@ -16,11 +16,9 @@ export function createImageService(
   supabase: SupabaseClient,
   options: CreateImageServiceOptions = {}
 ) {
-  const { useServerOptimization = false, optimizationConfig } = options;
+  const { useServerOptimization = false } = options;
 
-  const optimizer = useServerOptimization
-    ? new ServerImageOptimizer(optimizationConfig)
-    : new ClientImageOptimizer(optimizationConfig);
+  const optimizer = useServerOptimization ? new ServerImageOptimizer() : new ClientImageOptimizer();
 
   return new ProductImageService(supabase, optimizer);
 }
