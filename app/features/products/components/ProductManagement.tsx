@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,10 +11,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '~/components/ui/alert-dialog';
-
+import { Checkbox } from '~/components/ui/checkbox';
 import { createBrowserClient } from '@supabase/ssr';
 import { ProductForm } from './ProductForm';
 import { ProductService } from '../api/productService';
+import ProductSearch, { type FilterOptions } from './ProductSearch';
+import BulkOperations from './BulkOperations';
 import type { Product, ProductFormData, ProductManagementProps } from '../types/product.types';
 
 export function ProductManagement({
@@ -27,10 +29,11 @@ export function ProductManagement({
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(initialSession);
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({});
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
   // Initialize Supabase client with browser-safe cookie handling and session
   const supabase = React.useMemo(() => {
@@ -81,8 +84,10 @@ export function ProductManagement({
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await productService.fetchProducts();
+      const data = await productService.fetchProducts(filterOptions);
       setProducts(data);
+      // Clear selected products when the product list changes
+      setSelectedProducts([]);
     } catch (err) {
       setError(
         'Failed to load products: ' + (err instanceof Error ? err.message : 'Unknown error')
@@ -90,7 +95,7 @@ export function ProductManagement({
     } finally {
       setLoading(false);
     }
-  }, [productService]);
+  }, [productService, filterOptions]);
 
   useEffect(() => {
     fetchProducts();
@@ -99,16 +104,13 @@ export function ProductManagement({
   useEffect(() => {
     async function initializeSession() {
       if (initialSession) {
-        console.log('Setting session from initialSession:', initialSession);
         await supabase.auth.setSession(initialSession);
         setSession(initialSession);
       } else {
-        console.log('No initial session, checking current session');
         const {
           data: { session: currentSession },
         } = await supabase.auth.getSession();
         if (currentSession) {
-          console.log('Found current session:', currentSession);
           setSession(currentSession);
         }
       }
@@ -119,7 +121,6 @@ export function ProductManagement({
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', session);
       setSession(session);
     });
 
@@ -170,6 +171,34 @@ export function ProductManagement({
     }
   };
 
+  const handleBulkDelete = async (ids: string[]) => {
+    try {
+      await productService.bulkDeleteProducts(ids);
+      await fetchProducts();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete products');
+      throw error;
+    }
+  };
+
+  const handleBulkUpdate = async (
+    ids: string[],
+    updates: {
+      is_active?: boolean;
+      retail_price_adjustment?: number;
+      business_price_adjustment?: number;
+      stock_adjustment?: number;
+    }
+  ) => {
+    try {
+      await productService.bulkUpdateProducts(ids, updates);
+      await fetchProducts();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update products');
+      throw error;
+    }
+  };
+
   const handleDeleteClick = (product: Product) => {
     setProductToDelete(product);
   };
@@ -178,41 +207,47 @@ export function ProductManagement({
     setProductToDelete(null);
   };
 
-  const filteredProducts = React.useMemo(() => {
-    return products.filter(
-      product =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.sku.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [products, searchQuery]);
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedProducts(products.map(p => p.id));
+    } else {
+      setSelectedProducts([]);
+    }
+  };
+
+  const handleSelectProduct = (productId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedProducts(prev => [...prev, productId]);
+    } else {
+      setSelectedProducts(prev => prev.filter(id => id !== productId));
+    }
+  };
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Product Management</h1>
-        <button
-          onClick={() => {
-            setEditingProduct(null);
-            setShowForm(true);
-          }}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4" />
-          Add Product
-        </button>
+        <div className="flex gap-2">
+          <BulkOperations
+            selectedIds={selectedProducts}
+            onBulkDelete={handleBulkDelete}
+            onBulkUpdate={handleBulkUpdate}
+          />
+          <button
+            onClick={() => {
+              setEditingProduct(null);
+              setShowForm(true);
+            }}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            Add Product
+          </button>
+        </div>
       </div>
 
       <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by name or SKU..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="pl-10 pr-4 py-2 w-full border rounded-lg"
-          />
-        </div>
+        <ProductSearch onFilterChange={setFilterOptions} defaultFilters={filterOptions} />
       </div>
 
       {error && (
@@ -224,29 +259,55 @@ export function ProductManagement({
       <div className="grid gap-6">
         {loading ? (
           <div className="text-center py-12">Loading products...</div>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="text-center py-12 text-gray-500">No products found</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-gray-100">
+                  <th className="p-4">
+                    <Checkbox
+                      checked={selectedProducts.length === products.length && products.length > 0}
+                      onCheckedChange={handleSelectAll}
+                      aria-label="Select all products"
+                    />
+                  </th>
                   <th className="p-4 text-left">SKU</th>
                   <th className="p-4 text-left">Name</th>
                   <th className="p-4 text-right">Retail Price</th>
                   <th className="p-4 text-right">Business Price</th>
                   <th className="p-4 text-right">Stock</th>
+                  <th className="p-4 text-center">Status</th>
                   <th className="p-4 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.map(product => (
+                {products.map(product => (
                   <tr key={product.id} className="border-b hover:bg-gray-50">
+                    <td className="p-4">
+                      <Checkbox
+                        checked={selectedProducts.includes(product.id)}
+                        onCheckedChange={checked => handleSelectProduct(product.id, !!checked)}
+                        aria-label={`Select ${product.name}`}
+                      />
+                    </td>
                     <td className="p-4">{product.sku}</td>
                     <td className="p-4">{product.name}</td>
                     <td className="p-4 text-right">${product.retail_price.toFixed(2)}</td>
                     <td className="p-4 text-right">${product.business_price.toFixed(2)}</td>
                     <td className="p-4 text-right">{product.stock}</td>
+                    <td className="p-4">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                          product.is_active
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {product.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
                     <td className="p-4">
                       <div className="flex justify-center gap-2">
                         <button

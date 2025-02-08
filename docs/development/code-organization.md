@@ -8,17 +8,29 @@ notalock/
 │   ├── components/
 │   │   ├── common/     # Shared components
 │   │   ├── features/   # Feature-specific components
-│   │   └── ui/         # UI components
+│   │   └── ui/         # UI components (shadcn/ui)
 │   ├── config/         # Configuration files
 │   ├── features/       # Feature modules
 │   │   └── products/   # Product management
 │   │       ├── api/    # Product-specific API
-│   │       ├── components/ # Product components
-│   │       │   └── shared/ # Shared product components
+│   │       │   ├── productService.ts     # Core product operations
+│   │       │   ├── productImageService.ts # Image management
+│   │       │   └── variantService.ts     # Variant management
+│   │       ├── components/  # Product components
+│   │       │   ├── shared/  # Shared product components
 │   │       │       └── DraggableGalleryWrapper.tsx # Draggable gallery component
-│   │       ├── hooks/  # Product-specific hooks
-│   │       ├── types/  # Product types
-│   │       └── utils/  # Product utilities
+│   │       │   ├── ProductForm.tsx       # Product editing
+│   │       │   ├── ProductManagement.tsx # Product list view
+│   │       │   ├── ProductSearch.tsx     # Advanced search
+│   │       │   ├── BulkOperations.tsx    # Bulk actions
+│   │       │   ├── VariantForm.tsx       # Variant editing
+│   │       │   └── VariantManagement.tsx # Variant management
+│   │       ├── hooks/   # Product-specific hooks
+│   │       │   └── useVariants.ts   # Variant management hook
+│   │       ├── types/   # Product types
+│   │       │   ├── product.types.ts # Product interfaces
+│   │       │   └── variant.types.ts # Variant interfaces
+│   │       └── utils/   # Product utilities
 │   ├── lib/           # Third-party library configurations
 │   ├── routes/        # Route components
 │   │   ├── _index.tsx # Main app route
@@ -37,13 +49,15 @@ notalock/
 │   ├── test/          # Test utilities and setup
 │   ├── types/         # TypeScript types
 │   │   └── css.d.ts   # CSS type definitions
-│   └── utils/         # Client utilities
+│   ├── utils/         # Client utilities
 │   ├── entry.client.tsx # Client entry point
 │   ├── entry.server.tsx # Server entry point
 │   └── root.tsx       # Root component
 ├── docs/             # Documentation
 │   └── development/  # Development documentation
-└── public/          # Static assets
+├── public/          # Static assets
+└── supabase/        # Supabase configuration
+    └── migrations/  # Database migrations
 ```
 
 ## Server Organization
@@ -104,86 +118,319 @@ export const loader = withErrorHandler(async ({ request }) => {
 });
 ```
 
+## Architecture Patterns
+
+### Service Layer Pattern
+We use a service-based architecture for data management. Services encapsulate all API interactions and business logic.
+
+```typescript
+export class ProductService {
+    private supabase: SupabaseClient;
+    private currentSession: Session | null = null;
+
+    constructor(supabase: SupabaseClient) {
+        this.supabase = supabase;
+    }
+
+    async fetchProducts(filters?: FilterOptions): Promise<Product[]> {
+        let query = this.supabase
+            .from('products')
+            .select('*, images:product_images(*), variants:product_variants(*)');
+
+        if (filters) {
+            this.applyFilters(query, filters);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data;
+    }
+}
+```
+
+### Component Architecture
+
+#### Container Components
+Handle data fetching, state management, and business logic:
+```typescript
+export function ProductManagement() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({});
+  const productService = useProductService();
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      const data = await productService.fetchProducts(filterOptions);
+      setProducts(data);
+    };
+    loadProducts();
+  }, [filterOptions]);
+
+  // Business logic methods
+}
+```
+
+#### Presentational Components
+Focus on UI rendering with minimal logic:
+```typescript
+interface ProductListProps {
+  products: Product[];
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+}
+
+export function ProductList({ products, onEdit, onDelete }: ProductListProps) {
+  return (
+    <div className="grid gap-4">
+      {products.map(product => (
+        <ProductCard
+          key={product.id}
+          product={product}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      ))}
+    </div>
+  );
+}
+```
+
+### Custom Hooks Pattern
+Extract reusable logic into custom hooks:
+```typescript
+export function useVariants(productId: string) {
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const variantService = useVariantService();
+
+  useEffect(() => {
+    const loadVariants = async () => {
+      const data = await variantService.getProductVariants(productId);
+      setVariants(data);
+      setLoading(false);
+    };
+    loadVariants();
+  }, [productId]);
+
+  const addVariant = async (data: VariantFormData) => {
+    const newVariant = await variantService.createVariant(productId, data);
+    setVariants([...variants, newVariant]);
+  };
+
+  return { variants, loading, addVariant };
+}
+```
+
 ## Feature Organization
+
+### Feature Module Structure
 Each feature follows this structure:
 ```
 features/[feature-name]/
-├── api/           # Feature-specific API calls and data management
+├── api/           # Feature-specific services and API calls
+│   ├── services/  # Core service classes
+│   └── utils/     # API utilities
 ├── components/    # Feature-specific UI components
+│   ├── shared/    # Shared components within the feature
+│   └── forms/     # Form components
 ├── hooks/         # Feature-specific React hooks
 ├── types/         # Feature-specific TypeScript types
 └── utils/         # Feature-specific utilities
 ```
 
-## Import Guidelines
-
-### Server-Side Imports
+### Feature Component Example
 ```typescript
-// Middleware
-import { requireAdmin, processImage } from '~/server/middleware';
+// features/products/components/ProductManagement.tsx
+import { ProductService } from '../api/productService';
+import { useVariants } from '../hooks/useVariants';
+import type { Product } from '../types/product.types';
 
-// Core services
-import { createSupabaseClient } from '~/server/services/supabase.server';
-
-// Server utilities
-import { getSession } from '~/server/utils/session.server';
+export function ProductManagement() {
+  // Component implementation
+}
 ```
 
-### Feature Imports
+## State Management Patterns
+
+### Local Component State
+For UI-specific state:
 ```typescript
-// Feature API
-import { createProduct } from '~/features/products/api';
-
-// Feature components
-import { ProductForm } from '~/features/products/components/ProductForm';
-
-// Feature hooks
-import { useProductUpload } from '~/features/products/hooks/useProductUpload';
+const [isOpen, setIsOpen] = useState(false);
+const [activeTab, setActiveTab] = useState('basic');
 ```
 
-### UI Imports
+### Service State
+For data management through services:
 ```typescript
-// UI components
-import { Button } from '~/components/ui/button';
+const productService = useProductService();
+const { products, loading, error } = useProducts(productService);
+```
 
-// Common components
-import { PageLayout } from '~/components/common/PageLayout';
+### Form State
+Using React Hook Form with Zod validation:
+```typescript
+const form = useForm<ProductFormData>({
+  resolver: zodResolver(productFormSchema),
+  defaultValues: {
+    name: '',
+    sku: '',
+    price: '',
+  },
+});
+```
 
-// Feature-specific components
-import { ProductCard } from '~/components/features/products/ProductCard';
+## API Integration Patterns
+
+### Service Class Methods
+```typescript
+export class ProductService {
+  async createProduct(data: ProductFormData): Promise<Product> {
+    const { data: product, error } = await this.supabase
+      .from('products')
+      .insert([data])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return product;
+  }
+}
+```
+
+### Error Handling Pattern
+```typescript
+try {
+  const result = await this.supabase.from('products').select('*');
+  if (result.error) throw result.error;
+  return result.data;
+} catch (error) {
+  console.error('Error in fetchProducts:', error);
+  throw new Error(`Failed to fetch products: ${error.message}`);
+}
+```
+
+## Component Patterns
+
+### Composition Pattern
+```typescript
+export function ProductForm({ onSubmit }: ProductFormProps) {
+  return (
+    <Form {...form}>
+      <BasicInformation />
+      <PriceInformation />
+      <StockInformation />
+      <VariantManagement />
+      <ImageGallery />
+    </Form>
+  );
+}
+```
+
+### Prop Types Pattern
+```typescript
+interface ProductCardProps {
+    product: Product;
+    onEdit?: (id: string) => void;
+    onDelete?: (id: string) => void;
+    variant?: 'default' | 'compact';
+}
+```
+
+## File Naming Conventions
+
+### Component Files
+- PascalCase for component files: `ProductCard.tsx`
+- Use `.tsx` extension for React components
+- Use `.ts` extension for non-React files
+
+### Feature Files
+- camelCase for utility files: `productService.ts`
+- Use descriptive suffixes: `product.types.ts`, `product.utils.ts`
+
+### Test Files
+- Add `.test` suffix: `ProductCard.test.tsx`
+- Match source file name: `productService.test.ts`
+
+## Import Organization
+
+### Import Order
+1. React and third-party libraries
+2. Internal components and utilities
+3. Types and interfaces
+4. Styles
+
+```typescript
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+import { ProductCard } from './ProductCard';
+import { useProductService } from '../hooks/useProductService';
+import { formatPrice } from '../utils/formatters';
+
+import type { Product, ProductFormData } from '../types/product.types';
+
+import './ProductList.css';
 ```
 
 ## Best Practices
 
-### Route Implementation
-1. Use middleware for common functionality
+### Component Development
+1. Use TypeScript for all components
+2. Implement proper prop validation
+3. Handle loading and error states
+4. Follow accessibility guidelines
+5. Use composition over inheritance
+6. Keep components focused and small
+
+### Service Development
+1. Use class-based services for complex features
 2. Implement proper error handling
-3. Validate request methods
-4. Handle authentication appropriately
+3. Use TypeScript for type safety
+4. Document public methods
+5. Follow SOLID principles
+6. Keep services focused on a single responsibility
 
-### Middleware Usage
-1. Wrap routes with `withErrorHandler`
-2. Use appropriate auth middleware
-3. Handle response headers consistently
-4. Follow middleware-specific best practices
+### Hook Development
+1. Follow the Rules of Hooks
+2. Keep hooks focused and reusable
+3. Handle cleanup in useEffect
+4. Memoize callbacks and values appropriately
+5. Document hook parameters and return values
 
-### State Management
-1. Keep state close to where it's used
-2. Use loaders for data fetching
-3. Implement proper error boundaries
-4. Handle loading states appropriately
+### Type Safety
+1. Use TypeScript for all files
+2. Define clear interfaces
+3. Use proper type guards
+4. Avoid any type
+5. Use generics where appropriate
 
-### Error Handling
-We follow a consistent error handling pattern across routes. See [Error Handling Guidelines](./error-handling.md) for details.
+### Testing
+1. Write unit tests for utilities
+2. Write integration tests for components
+3. Test error cases
+4. Mock external dependencies
+5. Use testing library best practices
 
-1. Use try/catch in loaders and actions
-2. Implement error boundaries for each route
-3. Follow status code conventions
-4. Log errors appropriately
-5. Handle redirects correctly
+### Performance
+1. Memoize expensive calculations
+2. Use proper React hooks
+3. Implement proper loading states
+4. Handle pagination for large datasets
+5. Optimize API calls
+
+### Accessibility
+1. Use semantic HTML
+2. Add proper ARIA labels
+3. Handle keyboard navigation
+4. Ensure proper contrast
+5. Test with screen readers
 
 ### Security
 1. Always validate user permissions
 2. Sanitize user input
 3. Implement proper CORS headers
 4. Follow security best practices
+5. Use appropriate Content Security Policy
+6. Implement rate limiting
+7. Validate file uploads

@@ -1,7 +1,7 @@
 import { render as rtlRender, screen, waitFor, fireEvent } from '@testing-library/react';
 import type { RenderOptions } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { BrowserRouter } from '@remix-run/router';
+import { BrowserRouter } from 'react-router-dom';
 
 function customRender(
   ui: ReactElement,

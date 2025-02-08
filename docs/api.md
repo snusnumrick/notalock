@@ -42,32 +42,55 @@ const { data, error } = await supabase.auth.updateUser({
 
 ## Products
 
-### List Products
+### List Products with Advanced Filtering
 ```typescript
-// Basic product listing
-const { data, error } = await supabase
-  .from('products')
-  .select('*')
-  .eq('is_active', true);
+interface FilterOptions {
+  search?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minStock?: number;
+  maxStock?: number;
+  isActive?: boolean;
+  hasVariants?: boolean;
+  sortBy?: 'name' | 'price' | 'stock' | 'created';
+  sortOrder?: 'asc' | 'desc';
+}
 
-// Products with category and images
+// Advanced product listing with filters
 const { data, error } = await supabase
   .from('products')
   .select(`
     *,
     category:categories(*),
-    images:product_images(*)
+    images:product_images(*),
+    variants:product_variants(
+      *,
+      options:product_variant_options(
+        *,
+        option_value:product_option_values(*)
+      )
+    )
   `)
-  .eq('is_active', true);
+  .eq('is_active', true)
+  .gte('retail_price', minPrice)
+  .lte('retail_price', maxPrice)
+  .gte('stock', minStock)
+  .lte('stock', maxStock)
+  .order(sortField, { ascending: sortOrder === 'asc' });
 
-// Products with variants
-const { data, error } = await supabase
-  .from('products')
-  .select(`
-    *,
-    variants:product_variants(*)
-  `)
-  .eq('is_active', true);
+// Text search
+if (search) {
+  query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`);
+}
+
+// Filter by variant status
+if (hasVariants !== undefined) {
+  if (hasVariants) {
+    query = query.not('variants', 'is', null);
+  } else {
+    query = query.is('variants', null);
+  }
+}
 ```
 
 ### Get Single Product
@@ -78,7 +101,13 @@ const { data, error } = await supabase
     *,
     category:categories(*),
     images:product_images(*),
-    variants:product_variants(*)
+    variants:product_variants(
+      *,
+      options:product_variant_options(
+        *,
+        option_value:product_option_values(*)
+      )
+    )
   `)
   .eq('id', productId)
   .single();
@@ -91,12 +120,11 @@ const { data, error } = await supabase
   .insert([{
     name: string,
     sku: string,
-    category_id: string,
     description: string,
     retail_price: number,
     business_price: number,
     stock: number,
-    technical_specs: object
+    is_active: boolean
   }])
   .select();
 ```
@@ -107,11 +135,12 @@ const { data, error } = await supabase
   .from('products')
   .update({
     name: string,
+    sku: string,
     description: string,
     retail_price: number,
     business_price: number,
     stock: number,
-    technical_specs: object
+    is_active: boolean
   })
   .eq('id', productId)
   .select();
@@ -123,6 +152,185 @@ const { error } = await supabase
   .from('products')
   .delete()
   .eq('id', productId);
+```
+
+### Bulk Update Products
+```typescript
+// Update multiple products status
+const { data, error } = await supabase
+  .from('products')
+  .update({ is_active: boolean })
+  .in('id', productIds);
+
+// Adjust retail prices
+const { data, error } = await supabase.rpc('adjust_retail_prices', {
+  product_ids: string[],
+  adjustment: number
+});
+
+// Adjust business prices
+const { data, error } = await supabase.rpc('adjust_business_prices', {
+  product_ids: string[],
+  adjustment: number
+});
+
+// Adjust stock levels
+const { data, error } = await supabase.rpc('adjust_stock', {
+  product_ids: string[],
+  adjustment: number
+});
+```
+
+### Bulk Delete Products
+```typescript
+const { error } = await supabase
+  .from('products')
+  .delete()
+  .in('id', productIds);
+```
+
+## Product Variants
+
+### List Product Options
+```typescript
+// Get all product options
+const { data: options, error: optionsError } = await supabase
+  .from('product_options')
+  .select('*')
+  .order('name');
+
+// Get option values
+const { data: values, error: valuesError } = await supabase
+  .from('product_option_values')
+  .select('*')
+  .order('value');
+```
+
+### Create Product Variant
+```typescript
+// Create variant
+const { data: variant, error: variantError } = await supabase
+  .from('product_variants')
+  .insert({
+    product_id: string,
+    sku: string,
+    retail_price: number,
+    business_price: number,
+    stock: number,
+    is_active: boolean
+  })
+  .select()
+  .single();
+
+// Create variant options
+const { error: optionsError } = await supabase
+  .from('product_variant_options')
+  .insert(
+    variantOptions.map(option => ({
+      variant_id: variant.id,
+      option_value_id: option.valueId
+    }))
+  );
+```
+
+### Get Product Variants
+```typescript
+const { data, error } = await supabase
+  .from('product_variants')
+  .select(`
+    *,
+    options:product_variant_options (
+      *,
+      option_value:product_option_values (*)
+    )
+  `)
+  .eq('product_id', productId)
+  .order('created_at');
+```
+
+### Update Product Variant
+```typescript
+// Update variant
+const { error: variantError } = await supabase
+  .from('product_variants')
+  .update({
+    sku: string,
+    retail_price: number,
+    business_price: number,
+    stock: number,
+    is_active: boolean
+  })
+  .eq('id', variantId);
+
+// Update variant options
+const { error: deleteError } = await supabase
+  .from('product_variant_options')
+  .delete()
+  .eq('variant_id', variantId);
+
+const { error: insertError } = await supabase
+  .from('product_variant_options')
+  .insert(newOptions);
+```
+
+### Delete Product Variant
+```typescript
+const { error } = await supabase
+  .from('product_variants')
+  .delete()
+  .eq('id', variantId);
+```
+
+## Product Images
+
+### Upload Product Image
+```typescript
+// Upload to storage
+const { data: fileData, error: fileError } = await supabase.storage
+  .from('product-images')
+  .upload(filePath, file, {
+    cacheControl: '3600',
+    upsert: false
+  });
+
+// Create database record
+const { data, error } = await supabase
+  .from('product_images')
+  .insert([{
+    product_id: string,
+    url: string,
+    storage_path: string,
+    file_name: string,
+    is_primary: boolean,
+    sort_order: number
+  }])
+  .select();
+```
+
+### Update Image Order
+```typescript
+const { error } = await supabase
+  .from('product_images')
+  .upsert(
+    images.map((image, index) => ({
+      id: image.id,
+      sort_order: index
+    }))
+  );
+```
+
+### Delete Product Image
+```typescript
+// Delete from storage
+const { error: storageError } = await supabase.storage
+  .from('product-images')
+  .remove([image.storage_path]);
+
+// Delete database record
+const { error: dbError } = await supabase
+  .from('product_images')
+  .delete()
+  .eq('id', imageId);
 ```
 
 ## Categories
@@ -250,7 +458,116 @@ try {
   
   // Handle success
 } catch (err) {
-  // Handle error
   console.error('Error:', err.message);
+  throw new Error(`Failed to fetch resource: ${err.message}`);
+}
+```
+
+## Type Definitions
+
+### Product Types
+```typescript
+interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  description: string | null;
+  retail_price: number;
+  business_price: number;
+  stock: number;
+  is_active: boolean;
+  created_at: string;
+  image_url: string | null;
+  images?: ProductImage[];
+  variants?: ProductVariant[];
+}
+
+interface ProductImage {
+  id: string;
+  product_id: string;
+  url: string;
+  storage_path: string;
+  file_name: string;
+  is_primary: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+interface ProductVariant {
+  id: string;
+  product_id: string;
+  sku: string;
+  retail_price: number;
+  business_price: number;
+  stock: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  options?: ProductVariantOption[];
+}
+
+interface ProductVariantOption {
+  id: string;
+  variant_id: string;
+  option_value_id: string;
+  created_at: string;
+  option_value?: ProductOptionValue;
+}
+
+interface ProductOption {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ProductOptionValue {
+  id: string;
+  option_id: string;
+  value: string;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### Order Types
+```typescript
+interface Order {
+  id: string;
+  user_id: string;
+  status: OrderStatus;
+  total_amount: number;
+  shipping_address: Address;
+  billing_address: Address;
+  shipping_method: string;
+  tracking_number: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  items?: OrderItem[];
+}
+
+interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  variant_id: string | null;
+  quantity: number;
+  unit_price: number;
+  created_at: string;
+  product?: Product;
+  variant?: ProductVariant;
+}
+
+type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+
+interface Address {
+  street: string;
+  unit?: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+  phone: string;
 }
 ```

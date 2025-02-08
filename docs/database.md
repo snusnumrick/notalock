@@ -69,19 +69,51 @@ CREATE TABLE product_images (
 );
 ```
 
+### product_options
+```sql
+CREATE TABLE product_options (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+```
+
+### product_option_values
+```sql
+CREATE TABLE product_option_values (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    option_id UUID NOT NULL REFERENCES product_options(id) ON DELETE CASCADE,
+    value TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    UNIQUE(option_id, value)
+);
+```
+
 ### product_variants
 ```sql
 CREATE TABLE product_variants (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    product_id UUID REFERENCES products(id) ON DELETE CASCADE,
-    sku VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(255) NOT NULL,
-    retail_price_adjustment DECIMAL(10,2) DEFAULT 0,
-    business_price_adjustment DECIMAL(10,2) DEFAULT 0,
-    stock INTEGER NOT NULL DEFAULT 0,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    sku TEXT UNIQUE,
+    retail_price DECIMAL(10, 2),
+    business_price DECIMAL(10, 2),
+    stock INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+```
+
+### product_variant_options
+```sql
+CREATE TABLE product_variant_options (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    variant_id UUID NOT NULL REFERENCES product_variants(id) ON DELETE CASCADE,
+    option_value_id UUID NOT NULL REFERENCES product_option_values(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    UNIQUE(variant_id, option_value_id)
 );
 ```
 
@@ -115,6 +147,52 @@ CREATE TABLE order_items (
 );
 ```
 
+## Database Functions
+
+### Price Adjustment Functions
+```sql
+-- Adjust retail prices for multiple products
+CREATE OR REPLACE FUNCTION adjust_retail_prices(
+    product_ids UUID[],
+    adjustment DECIMAL
+) RETURNS void AS $$
+BEGIN
+    UPDATE products
+    SET retail_price = retail_price + adjustment
+    WHERE id = ANY(product_ids)
+    AND retail_price + adjustment >= 0;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Adjust business prices for multiple products
+CREATE OR REPLACE FUNCTION adjust_business_prices(
+    product_ids UUID[],
+    adjustment DECIMAL
+) RETURNS void AS $$
+BEGIN
+    UPDATE products
+    SET business_price = business_price + adjustment
+    WHERE id = ANY(product_ids)
+    AND business_price + adjustment >= 0;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Stock Adjustment Function
+```sql
+CREATE OR REPLACE FUNCTION adjust_stock(
+    product_ids UUID[],
+    adjustment INTEGER
+) RETURNS void AS $$
+BEGIN
+    UPDATE products
+    SET stock = stock + adjustment
+    WHERE id = ANY(product_ids)
+    AND stock + adjustment >= 0;
+END;
+$$ LANGUAGE plpgsql;
+```
+
 ## Row Level Security (RLS) Policies
 
 ### Profiles
@@ -141,8 +219,9 @@ CREATE POLICY "Users can update own profile"
     USING (auth.uid() = id);
 ```
 
-### Products
+### Products and Related Tables
 ```sql
+-- Products
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
 -- Everyone can view active products
@@ -156,6 +235,37 @@ CREATE POLICY "Products are editable by admins"
     USING (
         auth.uid() IN (
             SELECT id FROM profiles WHERE role = 'admin'
+        )
+    );
+
+-- Product Options
+ALTER TABLE product_options ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_option_values ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_variants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_variant_options ENABLE ROW LEVEL SECURITY;
+
+-- Public read access for product-related tables
+CREATE POLICY "Public Read Access" ON product_options FOR SELECT USING (true);
+CREATE POLICY "Public Read Access" ON product_option_values FOR SELECT USING (true);
+CREATE POLICY "Public Read Access" ON product_variants FOR SELECT USING (true);
+CREATE POLICY "Public Read Access" ON product_variant_options FOR SELECT USING (true);
+
+-- Admin write access for product-related tables
+CREATE POLICY "Admin Write Access" ON product_options
+    USING (
+        auth.role() = 'authenticated'
+        AND EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid()
+            AND role = 'admin'
+        )
+    )
+    WITH CHECK (
+        auth.role() = 'authenticated'
+        AND EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid()
+            AND role = 'admin'
         )
     );
 ```
@@ -185,11 +295,9 @@ CREATE POLICY "Admins can update orders"
 ```
 
 ## Indexes
-```sql
--- Categories
-CREATE INDEX idx_categories_parent ON categories(parent_id);
-CREATE INDEX idx_categories_slug ON categories(slug);
 
+### Product Indexes
+```sql
 -- Products
 CREATE INDEX idx_products_category ON products(category_id);
 CREATE INDEX idx_products_sku ON products(sku);
@@ -200,10 +308,31 @@ CREATE INDEX idx_products_active ON products(is_active);
 CREATE INDEX idx_product_images_product ON product_images(product_id);
 CREATE INDEX idx_product_images_primary ON product_images(product_id) WHERE is_primary = true;
 
+-- Product Options
+CREATE INDEX idx_product_options_name ON product_options(name);
+
+-- Product Option Values
+CREATE INDEX idx_product_option_values_option ON product_option_values(option_id);
+CREATE INDEX idx_product_option_values_value ON product_option_values(value);
+
 -- Product Variants
 CREATE INDEX idx_product_variants_product ON product_variants(product_id);
 CREATE INDEX idx_product_variants_sku ON product_variants(sku);
+CREATE INDEX idx_product_variants_active ON product_variants(is_active);
 
+-- Product Variant Options
+CREATE INDEX idx_product_variant_options_variant ON product_variant_options(variant_id);
+CREATE INDEX idx_product_variant_options_value ON product_variant_options(option_value_id);
+```
+
+### Category Indexes
+```sql
+CREATE INDEX idx_categories_parent ON categories(parent_id);
+CREATE INDEX idx_categories_slug ON categories(slug);
+```
+
+### Order Indexes
+```sql
 -- Orders
 CREATE INDEX idx_orders_user ON orders(user_id);
 CREATE INDEX idx_orders_status ON orders(status);
@@ -214,7 +343,9 @@ CREATE INDEX idx_order_items_order ON order_items(order_id);
 CREATE INDEX idx_order_items_product ON order_items(product_id);
 ```
 
-## Technical Specifications Format
+## Field Formats
+
+### Technical Specifications Format
 The `technical_specs` JSONB field in the products table follows this structure:
 ```json
 {
@@ -239,7 +370,7 @@ The `technical_specs` JSONB field in the products table follows this structure:
 }
 ```
 
-## Address Format
+### Address Format
 The `shipping_address` and `billing_address` JSONB fields follow this structure:
 ```json
 {
