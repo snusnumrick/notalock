@@ -1,3 +1,5 @@
+import { jest } from '@jest/globals';
+
 type JsonResponseInit = Omit<ResponseInit, 'headers'> & {
   headers?: HeadersInit;
 };

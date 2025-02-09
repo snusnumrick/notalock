@@ -1,5 +1,5 @@
 import { type ActionFunctionArgs } from '@remix-run/node';
-import { processImage } from '~/server/middleware';
+import { processImage } from '~/server/middleware/image.server';
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method !== 'POST') {
@@ -22,6 +22,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       },
     });
   } catch (error) {
+    // If the error is a Response (like our 400 error), return it directly
+    if (error instanceof Response) {
+      return error;
+    }
+
+    // Otherwise, log and return 500
     console.error('Image optimization error:', error);
     return new Response(
       JSON.stringify({

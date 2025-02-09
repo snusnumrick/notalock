@@ -1,7 +1,8 @@
 # Notalock - European Door Hardware Store
 
 ## Project Overview
-Notalock is an e-commerce platform specializing in high-end European door hardware. We offer sophisticated products including:
+Notalock is an e-commerce platform specializing in high-end European door hardware. 
+We offer sophisticated products including:
 - Premium locks and locking mechanisms
 - Designer door handles and levers
 - Heavy-duty hinges and pivot systems

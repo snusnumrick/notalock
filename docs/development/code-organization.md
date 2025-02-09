@@ -5,6 +5,7 @@
 notalock/
 ├── app/
 │   ├── __mocks__/      # Test mocks
+│   │   └── web-encoding.ts  # Web Encoding API mocks
 │   ├── components/
 │   │   ├── common/     # Shared components
 │   │   ├── features/   # Feature-specific components
@@ -36,6 +37,7 @@ notalock/
 │   │   ├── _index.tsx # Main app route
 │   │   ├── admin/     # Admin routes
 │   │   ├── admin.products/ # Product management routes
+│   │   ├── admin.image-features.tsx # Image feature management
 │   │   ├── api/       # API endpoints
 │   │   │   ├── images/ # Image processing endpoints
 │   │   │   └── products/ # Product management endpoints
@@ -46,9 +48,9 @@ notalock/
 │   │   ├── services/  # Core services (e.g., Supabase)
 │   │   └── utils/     # Server utilities
 │   ├── styles/        # Global styles
-│   ├── test/          # Test utilities and setup
 │   ├── types/         # TypeScript types
-│   │   └── css.d.ts   # CSS type definitions
+│   │   ├── css.d.ts   # CSS type definitions
+│   │   └── web-encoding.d.ts  # Web Encoding API type definitions
 │   ├── utils/         # Client utilities
 │   ├── entry.client.tsx # Client entry point
 │   ├── entry.server.tsx # Server entry point
@@ -56,6 +58,8 @@ notalock/
 ├── docs/             # Documentation
 │   └── development/  # Development documentation
 ├── public/          # Static assets
+├── test/            # Global test configuration
+│   └── setup.ts     # Test setup and configuration
 └── supabase/        # Supabase configuration
     └── migrations/  # Database migrations
 ```

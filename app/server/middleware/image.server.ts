@@ -84,37 +84,74 @@ export async function processImage(
   options?: ImageProcessingOptions
 ): Promise<ProcessedImage> {
   if (request.method !== 'POST') {
-    throw new Response('Method not allowed', { status: 405 });
+    throw new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
   }
 
-  const formData = await unstable_parseMultipartFormData(request, uploadHandler);
-  const file = formData.get('file');
-
-  if (!file || !(file instanceof File)) {
-    throw new Response('No file provided', { status: 400 });
+  // Check if the request has the correct content type
+  const contentType = request.headers.get('content-type');
+  if (!contentType?.includes('multipart/form-data')) {
+    throw new Response(JSON.stringify({ error: 'Invalid form data' }), {
+      status: 400,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
   }
 
-  // Parse options from form data if not provided
-  const processOptions: ImageProcessingOptions = options || {
-    maxWidth: parseNumericParam(formData.get('maxWidth')),
-    maxHeight: parseNumericParam(formData.get('maxHeight')),
-    quality: parseNumericParam(formData.get('quality')),
-    format: formData.get('format') as ImageProcessingOptions['format'],
-  };
+  try {
+    const formData = await unstable_parseMultipartFormData(request, uploadHandler);
+    const file = formData?.get('file');
 
-  const fileArrayBuffer = await file.arrayBuffer();
-  const buffer = await optimizeImage(Buffer.from(fileArrayBuffer), processOptions);
-  const format = processOptions.format || 'webp';
+    if (!file || !(file instanceof File)) {
+      throw new Response(JSON.stringify({ error: 'No file provided' }), {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    }
 
-  // Determine content type
-  const contentType =
-    {
+    // Parse options from form data if not provided
+    const processOptions: ImageProcessingOptions = options || {
+      maxWidth: parseNumericParam(formData.get('maxWidth')),
+      maxHeight: parseNumericParam(formData.get('maxHeight')),
+      quality: parseNumericParam(formData.get('quality')),
+      format: formData.get('format') as ImageProcessingOptions['format'],
+    };
+
+    const fileArrayBuffer = await file.arrayBuffer();
+    const buffer = await optimizeImage(Buffer.from(fileArrayBuffer), processOptions);
+    const format = processOptions.format || 'webp';
+
+    // Determine content type
+    const contentTypeMap = {
       jpeg: 'image/jpeg',
       png: 'image/png',
       webp: 'image/webp',
-    }[format] || 'image/webp';
+    };
+    const outputContentType = contentTypeMap[format as keyof typeof contentTypeMap] || 'image/webp';
 
-  return { buffer, format, contentType };
+    return { buffer, format, contentType: outputContentType };
+  } catch (error) {
+    // If it's already a Response, throw it as is
+    if (error instanceof Response) {
+      throw error;
+    }
+
+    // For multipart parsing errors or other unexpected errors
+    console.error('Failed to process image:', error);
+    throw new Response(JSON.stringify({ error: 'Invalid form data' }), {
+      status: 400,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
 }
 
 /**
