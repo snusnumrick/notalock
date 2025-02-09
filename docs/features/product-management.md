@@ -35,6 +35,66 @@ const variantService = new VariantService(supabaseClient);
 await variantService.createVariant(productId, variantData);
 ```
 
+## Categories Integration
+
+### Category Assignment
+Products can be assigned to categories through the product form:
+```typescript
+interface ProductFormData {
+  category_id?: string;  // Optional category assignment
+  sku: string;
+  name: string;
+  slug?: string;
+  description?: string;
+  retail_price: number;
+  business_price: number;
+  stock: number;
+  technical_specs?: TechnicalSpecs;
+  is_active?: boolean;
+}
+```
+
+### Filtering by Category
+The advanced search includes category filtering:
+```typescript
+interface FilterOptions {
+  search?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minStock?: number;
+  maxStock?: number;
+  isActive?: boolean;
+  hasVariants?: boolean;
+  categoryId?: string;  // Filter by specific category
+  includeCategoryChildren?: boolean;  // Include products from child categories
+  sortBy?: 'name' | 'price' | 'stock' | 'created';
+  sortOrder?: 'asc' | 'desc';
+}
+
+// Using category filters
+const filterOptions = {
+  categoryId: "123e4567-e89b-12d3-a456-426614174000",
+  includeCategoryChildren: true
+};
+
+// Using the product service
+const productService = new ProductService(supabaseClient);
+const products = await productService.fetchProducts(filterOptions);
+```
+
+### Bulk Category Operations
+New bulk operations available for category management:
+```typescript
+// Bulk update category example
+const updates = {
+  category_id: "new-category-id"  // Move selected products to new category
+};
+
+// Using the product service
+const productService = new ProductService(supabaseClient);
+await productService.bulkUpdateProducts(selectedIds, updates);
+```
+
 ## Advanced Search & Filtering
 
 ### Available Filters
@@ -43,6 +103,8 @@ await variantService.createVariant(productId, variantData);
 - Stock level (min/max)
 - Active status
 - Has variants flag
+- Category filter
+- Include subcategories option
 - Sort options (name, price, stock, created date)
 
 ### Using Filters
@@ -98,6 +160,28 @@ await productService.bulkDeleteProducts(selectedIds);
 
 ## Database Structure
 
+### Core Product Table
+```sql
+CREATE TABLE public.products (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    category_id UUID REFERENCES categories(id),
+    sku VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
+    retail_price DECIMAL(10,2) NOT NULL,
+    business_price DECIMAL(10,2) NOT NULL,
+    stock INTEGER NOT NULL DEFAULT 0,
+    technical_specs JSONB DEFAULT '{}',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add index for category lookups
+CREATE INDEX idx_products_category ON products(category_id);
+```
+
 ### Product Variants Tables
 ```sql
 -- Product options (e.g., Size, Color)
@@ -134,6 +218,15 @@ CREATE TABLE public.product_variant_options (
 
 ## Components Reference
 
+### ProductForm
+```typescript
+<ProductForm
+  initialData?: Product
+  categories?: Category[]  // Available categories for assignment
+  onSubmit: (data: ProductFormData) => Promise<void>
+/>
+```
+
 ### ProductSearch
 ```typescript
 <ProductSearch
@@ -166,6 +259,39 @@ CREATE TABLE public.product_variant_options (
 
 ## TypeScript Interfaces
 
+### Product Types
+```typescript
+interface Product {
+  id: string;
+  category_id?: string;
+  category?: Category;
+  sku: string;
+  name: string;
+  slug: string;
+  description?: string;
+  retail_price: number;
+  business_price: number;
+  stock: number;
+  technical_specs: TechnicalSpecs;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ProductFormData {
+  category_id?: string;
+  sku: string;
+  name: string;
+  slug?: string;
+  description?: string;
+  retail_price: number;
+  business_price: number;
+  stock: number;
+  technical_specs?: TechnicalSpecs;
+  is_active?: boolean;
+}
+```
+
 ### Variant Types
 ```typescript
 interface ProductVariant {
@@ -197,6 +323,8 @@ interface FilterOptions {
   maxStock?: number;
   isActive?: boolean;
   hasVariants?: boolean;
+  categoryId?: string;
+  includeCategoryChildren?: boolean;
   sortBy?: 'name' | 'price' | 'stock' | 'created';
   sortOrder?: 'asc' | 'desc';
 }
