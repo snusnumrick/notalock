@@ -12,6 +12,45 @@ notalock/
 │   │   └── ui/         # UI components (shadcn/ui)
 │   ├── config/         # Configuration files
 │   ├── features/       # Feature modules
+│   │   ├── categories/ # Category management
+│   │   │   ├── __tests__/  # Category feature tests
+│   │   │   │   ├── categoryService.test.ts  # Service tests
+│   │   │   │   ├── CategoryForm.test.tsx    # Form tests
+│   │   │   │   ├── CategoryList.test.tsx    # List tests
+│   │   │   │   └── CategoryManagement.test.tsx # Management tests
+│   │   │   ├── api/      # Category-specific API
+│   │   │   │   └── categoryService.ts     # Core category operations
+│   │   │   ├── components/  # Category components
+│   │   │   │   ├── CategoryForm.tsx       # Category editing
+│   │   │   │   ├── CategoryList.tsx       # Category list view
+│   │   │   │   └── CategoryManagement.tsx # Main category view
+│   │   │   ├── hooks/    # Category-specific hooks
+│   │   │   │   └── useCategories.ts # Category management hook
+│   │   │   └── types/    # Category types
+│   │   │       └── category.types.ts # Category interfaces
+│   │   └── products/   # Product management
+```
+notalock/
+├── app/
+│   ├── __mocks__/      # Test mocks
+│   │   └── web-encoding.ts  # Web Encoding API mocks
+│   ├── components/
+│   │   ├── common/     # Shared components
+│   │   ├── features/   # Feature-specific components
+│   │   └── ui/         # UI components (shadcn/ui)
+│   ├── config/         # Configuration files
+│   ├── features/       # Feature modules
+│   │   ├── categories/ # Category management
+│   │   │   ├── api/      # Category-specific API
+│   │   │   │   └── categoryService.ts     # Core category operations
+│   │   │   ├── components/  # Category components
+│   │   │   │   ├── CategoryForm.tsx       # Category editing
+│   │   │   │   ├── CategoryList.tsx       # Category list view
+│   │   │   │   └── CategoryManagement.tsx # Main category view
+│   │   │   ├── hooks/    # Category-specific hooks
+│   │   │   │   └── useCategories.ts # Category management hook
+│   │   │   └── types/    # Category types
+│   │   │       └── category.types.ts # Category interfaces
 │   │   └── products/   # Product management
 │   │       ├── api/    # Product-specific API
 │   │       │   ├── productService.ts     # Core product operations
@@ -37,6 +76,7 @@ notalock/
 │   │   ├── _index.tsx # Main app route
 │   │   ├── admin/     # Admin routes
 │   │   ├── admin.products/ # Product management routes
+│   │   ├── admin.categories.tsx # Category management
 │   │   ├── admin.image-features.tsx # Image feature management
 │   │   ├── api/       # API endpoints
 │   │   │   ├── images/ # Image processing endpoints
@@ -242,7 +282,7 @@ features/[feature-name]/
 └── utils/         # Feature-specific utilities
 ```
 
-### Feature Component Example
+### Feature Component Examples
 ```typescript
 // features/products/components/ProductManagement.tsx
 import { ProductService } from '../api/productService';
@@ -251,6 +291,18 @@ import type { Product } from '../types/product.types';
 
 export function ProductManagement() {
   // Component implementation
+}
+```
+
+```typescript
+// features/categories/components/CategoryManagement.tsx
+import { CategoryService } from '../api/categoryService';
+import { useCategories } from '../hooks/useCategories';
+import type { Category } from '../types/category.types';
+
+export function CategoryManagement({ categoryService }: { categoryService: CategoryService }) {
+  const { categories, loading, error, refresh } = useCategories(categoryService);
+  // Component implementation using the service and hook pattern
 }
 ```
 
@@ -311,6 +363,82 @@ try {
   console.error('Error in fetchProducts:', error);
   throw new Error(`Failed to fetch products: ${error.message}`);
 }
+```
+
+## Test Organization
+
+### Feature Test Structure
+Each feature follows this test organization:
+```
+features/[feature-name]/__tests__/
+├── featureService.test.ts     # Service layer tests
+├── FeatureForm.test.tsx      # Form component tests
+├── FeatureList.test.tsx      # List component tests
+└── FeatureManagement.test.tsx # Main component tests
+```
+
+### Service Tests Pattern
+```typescript
+describe('CategoryService', () => {
+  let service: CategoryService;
+  let mockSupabase: any;
+
+  beforeEach(() => {
+    mockSupabase = createClient('fake-url', 'fake-key');
+    service = new CategoryService(mockSupabase);
+  });
+
+  describe('fetchCategories', () => {
+    it('should fetch categories successfully', async () => {
+      // Test implementation
+    });
+
+    it('should handle fetch error', async () => {
+      // Error handling test
+    });
+  });
+});
+```
+
+### Component Tests Pattern
+```typescript
+describe('CategoryForm', () => {
+  const mockOnSubmit = vi.fn();
+
+  beforeEach(() => {
+    mockOnSubmit.mockClear();
+  });
+
+  it('renders form correctly', () => {
+    render(<CategoryForm onSubmit={mockOnSubmit} />);
+    // Assertions
+  });
+
+  it('handles form submission', async () => {
+    render(<CategoryForm onSubmit={mockOnSubmit} />);
+    // User interactions and assertions
+  });
+});
+```
+
+### Integration Tests Pattern
+```typescript
+describe('CategoryManagement', () => {
+  const mockCategoryService = {
+    fetchCategories: vi.fn(),
+    createCategory: vi.fn(),
+    // Other mocked methods
+  } as unknown as CategoryService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('integrates form and service correctly', async () => {
+    render(<CategoryManagement categoryService={mockCategoryService} />);
+    // Integration test assertions
+  });
+});
 ```
 
 ## Component Patterns
