@@ -24,9 +24,25 @@ These instructions help Claude understand and work with the Notalock project eff
 - Use TypeScript for new code
 - Add appropriate documentation
 - Update tests when modifying functionality
-- Never use placeholders in code comments like '[previous code stays the same]', 
-  '[the rest of the code is unchanged]', or any variations - always show the complete code 
-  or use `edit_file` for targeted changes
+
+## Code and Documentation Completeness Rules
+- Never use placeholder comments in code like:
+  - '[previous code stays the same]'
+  - '[rest of the code is unchanged]'
+  - '// ... rest of the code'
+  - '/* previous implementation */'
+- Never use placeholder text in documentation like:
+  - '[Previous section remains the same]'
+  - '[Rest of content unchanged]'
+  - '[See above section]'
+  - '...'
+  - 'etc.'
+- Instead, always:
+  - Show complete code when writing new files
+  - Use `edit_file` for targeted changes to existing files
+  - Include all relevant content when updating documentation
+  - Copy and modify entire sections when needed
+  - Be explicit about what is being changed or referenced
 
 ## Common Tasks
 - To analyze code: Use the analysis tool with proper imports
@@ -39,10 +55,15 @@ These instructions help Claude understand and work with the Notalock project eff
 - Use step-by-step approach for complex changes
 - Verify file paths before operations
 - Consider impact on existing functionality
+- When showing examples, include complete code
+- When updating documentation, include full context
 
-## Notes
-- The project uses Remix.js, Supabase, and Square for payments
-- Follow TypeScript conventions for type safety
+## Project Stack and Standards
+- Built with Remix.js, Supabase, and Square for payments
+- Use TypeScript for all new code
 - Maintain consistent documentation style
-- When updating files, prefer targeted changes using `edit_file` over complete rewrites
-- For React components, only use Tailwind's core utility classes (avoid arbitrary values)
+- For React components:
+  - Only use Tailwind's core utility classes
+  - Never use arbitrary values (e.g., avoid h-[500px])
+  - Follow component organization patterns
+  - Include proper TypeScript types
