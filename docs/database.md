@@ -25,16 +25,50 @@ CREATE TABLE profiles (
 ### categories
 ```sql
 CREATE TABLE categories (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL UNIQUE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
     description TEXT,
     parent_id UUID REFERENCES categories(id),
-    sort_order INTEGER DEFAULT 0,
-    is_visible BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    position INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
+
+-- Create function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Create trigger to automatically update updated_at
+CREATE TRIGGER update_categories_updated_at
+    BEFORE UPDATE ON categories
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Add RLS policies
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+
+-- Policy for admins (full access)
+CREATE POLICY "Allow full access for admins" ON categories
+    FOR ALL USING (
+        auth.jwt() ->> 'role' = 'admin'
+    );
+
+-- Policy for viewing active categories (public access)
+CREATE POLICY "Allow viewing active categories for all users" ON categories
+    FOR SELECT USING (
+        is_active = true
+    );
+
+-- Create indexes for faster lookups
+CREATE INDEX idx_categories_parent_id ON categories(parent_id);
+CREATE INDEX idx_categories_slug ON categories(slug);
 ```
 
 ### products
