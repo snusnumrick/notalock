@@ -22,9 +22,18 @@
    - ✅ Advanced search/filter
    - ✅ Bulk operations
 
-### Sprint 2: Category Management - NEXT
+### Sprint 2: Category Management - IN PROGRESS
 1. Category Structure
-   - Category CRUD operations
+   - Category CRUD operations - PARTIALLY COMPLETED
+     - ✅ Database schema and migrations
+     - ✅ Type definitions
+     - ✅ Category service with CRUD methods
+     - ✅ Basic UI components (Form, List)
+     - ✅ Admin route setup
+     - ⏳ Drag-and-drop reordering
+     - ⏳ Category tree visualization
+     - ⏳ Bulk operations
+     - ⏳ UI polish and refinements
    - Hierarchical structure
    - Category-product relations
    - Category-based navigation
