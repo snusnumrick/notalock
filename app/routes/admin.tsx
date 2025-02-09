@@ -1,4 +1,15 @@
 import { Outlet, Link, useLocation } from '@remix-run/react';
+import { type LoaderFunction, redirect } from '@remix-run/node';
+import { requireAdmin } from '~/server/middleware/auth.server';
+
+export const loader: LoaderFunction = async ({ request }) => {
+  try {
+    await requireAdmin(request);
+    return null;
+  } catch (error) {
+    throw redirect('/login');
+  }
+};
 
 export default function AdminLayout() {
   const location = useLocation();

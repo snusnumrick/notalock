@@ -1,8 +1,7 @@
-import { CategoryService } from '../api/categoryService';
+import { CategoryService } from '../services/categoryService';
 import { createClient } from '@supabase/supabase-js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-// Mock Supabase client
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
     from: vi.fn(() => ({
@@ -13,8 +12,8 @@ vi.mock('@supabase/supabase-js', () => ({
               id: '1',
               name: 'Test Category',
               slug: 'test-category',
-              position: 0,
-              is_active: true,
+              sort_order: 0,
+              is_visible: true,
             },
           ],
           error: null,
@@ -27,8 +26,8 @@ vi.mock('@supabase/supabase-js', () => ({
               id: '1',
               name: 'New Category',
               slug: 'new-category',
-              position: 0,
-              is_active: true,
+              sort_order: 0,
+              is_visible: true,
             },
             error: null,
           })),
@@ -42,8 +41,8 @@ vi.mock('@supabase/supabase-js', () => ({
                 id: '1',
                 name: 'Updated Category',
                 slug: 'updated-category',
-                position: 1,
-                is_active: true,
+                sort_order: 1,
+                is_visible: true,
               },
               error: null,
             })),
@@ -52,10 +51,12 @@ vi.mock('@supabase/supabase-js', () => ({
       })),
       delete: vi.fn(() => ({
         eq: vi.fn(() => ({
+          data: null,
           error: null,
         })),
       })),
       upsert: vi.fn(() => ({
+        data: null,
         error: null,
       })),
     })),
@@ -79,13 +80,14 @@ describe('CategoryService', () => {
     });
 
     it('should handle fetch error', async () => {
-      const mockError = new Error('Fetch failed');
-      mockSupabase.from().select().order = vi.fn(() => ({
-        data: null,
-        error: mockError,
+      mockSupabase.from().select = vi.fn(() => ({
+        order: vi.fn(() => ({
+          data: null,
+          error: new Error('Failed to load categories'),
+        })),
       }));
 
-      await expect(categoryService.fetchCategories()).rejects.toThrow('Fetch failed');
+      await expect(categoryService.fetchCategories()).rejects.toThrow('Failed to load categories');
     });
   });
 
@@ -93,6 +95,10 @@ describe('CategoryService', () => {
     it('should create category successfully', async () => {
       const newCategory = await categoryService.createCategory({
         name: 'New Category',
+        description: '',
+        parent_id: null,
+        sort_order: 0,
+        is_visible: true,
       });
       expect(newCategory.name).toBe('New Category');
       expect(newCategory.slug).toBe('new-category');
@@ -101,8 +107,12 @@ describe('CategoryService', () => {
     it('should generate slug if not provided', async () => {
       const newCategory = await categoryService.createCategory({
         name: 'Test Category Name',
+        description: '',
+        parent_id: null,
+        sort_order: 0,
+        is_visible: true,
       });
-      expect(newCategory.slug).toBe('new-category');
+      expect(newCategory.slug).toBe('new-category'); // Using mock response
     });
   });
 
@@ -128,9 +138,11 @@ describe('CategoryService', () => {
     });
 
     it('should handle delete error', async () => {
-      const mockError = new Error('Delete failed');
-      mockSupabase.from().delete().eq = vi.fn(() => ({
-        error: mockError,
+      mockSupabase.from().delete = vi.fn(() => ({
+        eq: vi.fn(() => ({
+          data: null,
+          error: new Error('Delete failed'),
+        })),
       }));
 
       await expect(categoryService.deleteCategory('1')).rejects.toThrow('Delete failed');
@@ -148,9 +160,9 @@ describe('CategoryService', () => {
     });
 
     it('should handle update positions error', async () => {
-      const mockError = new Error('Update positions failed');
       mockSupabase.from().upsert = vi.fn(() => ({
-        error: mockError,
+        data: null,
+        error: new Error('Update positions failed'),
       }));
 
       await expect(categoryService.updatePositions([{ id: '1', position: 1 }])).rejects.toThrow(
@@ -166,23 +178,25 @@ describe('CategoryService', () => {
           id: '1',
           name: 'Parent',
           slug: 'parent',
-          position: 0,
-          is_active: true,
+          sort_order: 0,
+          is_visible: true,
           parent_id: null,
         },
         {
           id: '2',
           name: 'Child',
           slug: 'child',
-          position: 0,
-          is_active: true,
+          sort_order: 0,
+          is_visible: true,
           parent_id: '1',
         },
       ];
 
-      mockSupabase.from().select().order = vi.fn(() => ({
-        data: categories,
-        error: null,
+      mockSupabase.from().select = vi.fn(() => ({
+        order: vi.fn(() => ({
+          data: categories,
+          error: null,
+        })),
       }));
 
       const tree = await categoryService.fetchCategoryTree();

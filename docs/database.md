@@ -30,8 +30,8 @@ CREATE TABLE categories (
     slug TEXT NOT NULL UNIQUE,
     description TEXT,
     parent_id UUID REFERENCES categories(id),
-    position INTEGER NOT NULL DEFAULT 0,
-    is_active BOOLEAN NOT NULL DEFAULT true,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_visible BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
@@ -60,15 +60,16 @@ CREATE POLICY "Allow full access for admins" ON categories
         auth.jwt() ->> 'role' = 'admin'
     );
 
--- Policy for viewing active categories (public access)
-CREATE POLICY "Allow viewing active categories for all users" ON categories
+-- Policy for viewing visible categories (public access)
+CREATE POLICY "Allow viewing visible categories for all users" ON categories
     FOR SELECT USING (
-        is_active = true
+        is_visible = true
     );
 
 -- Create indexes for faster lookups
 CREATE INDEX idx_categories_parent_id ON categories(parent_id);
 CREATE INDEX idx_categories_slug ON categories(slug);
+CREATE INDEX idx_categories_sort_order ON categories(sort_order);
 ```
 
 ### products

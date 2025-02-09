@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '~/components/ui/button';
 import { Plus } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '~/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '~/components/ui/dialog';
 import { CategoryForm } from './CategoryForm';
 import { CategoryList } from './CategoryList';
-import { CategoryService } from '../api/categoryService';
+import { CategoryService } from '../services/categoryService';
 import type { Category, CategoryFormData } from '../types/category.types';
-import { useToast } from '~/components/ui/use-toast';
+import { useToast } from '~/hooks/use-toast';
 
 interface CategoryManagementProps {
   categoryService: CategoryService;
@@ -18,7 +24,7 @@ export function CategoryManagement({ categoryService }: CategoryManagementProps)
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     try {
       const data = await categoryService.fetchCategories();
       setCategories(data);
@@ -30,11 +36,11 @@ export function CategoryManagement({ categoryService }: CategoryManagementProps)
         variant: 'destructive',
       });
     }
-  };
+  }, [categoryService, toast]);
 
   useEffect(() => {
     loadCategories();
-  }, []);
+  }, [loadCategories]);
 
   const handleCreate = async (data: CategoryFormData) => {
     try {
@@ -99,7 +105,7 @@ export function CategoryManagement({ categoryService }: CategoryManagementProps)
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
     try {
-      await categoryService.updateCategory(id, { is_active: isActive });
+      await categoryService.updateCategory(id, { is_visible: isActive });
       await loadCategories();
       toast({
         title: 'Success',
@@ -146,9 +152,14 @@ export function CategoryManagement({ categoryService }: CategoryManagementProps)
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{selectedCategory ? 'Edit Category' : 'Create Category'}</DialogTitle>
+            <DialogDescription>
+              {selectedCategory
+                ? 'Edit the details of the existing category.'
+                : 'Create a new category by filling out the form below.'}
+            </DialogDescription>
           </DialogHeader>
           <CategoryForm
-            initialData={selectedCategory || undefined}
+            initialData={selectedCategory ?? undefined}
             onSubmit={selectedCategory ? handleUpdate : handleCreate}
             categories={categories.filter(cat => cat.id !== selectedCategory?.id)}
           />

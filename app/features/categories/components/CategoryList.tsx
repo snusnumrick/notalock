@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Table,
   TableBody,
@@ -16,7 +15,7 @@ interface CategoryListProps {
   categories: Category[];
   onEdit: (category: Category) => void;
   onDelete: (id: string) => void;
-  onToggleActive: (id: string, isActive: boolean) => void;
+  onToggleActive: (id: string, isVisible: boolean) => void;
 }
 
 export function CategoryList({ categories, onEdit, onDelete, onToggleActive }: CategoryListProps) {
@@ -38,16 +37,26 @@ export function CategoryList({ categories, onEdit, onDelete, onToggleActive }: C
               <TableCell>{category.description}</TableCell>
               <TableCell>
                 <Switch
-                  checked={category.is_active}
+                  checked={category.is_visible}
                   onCheckedChange={checked => onToggleActive(category.id, checked)}
                 />
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => onEdit(category)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Edit category"
+                    onClick={() => onEdit(category)}
+                  >
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => onDelete(category.id)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Delete category"
+                    onClick={() => onDelete(category.id)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

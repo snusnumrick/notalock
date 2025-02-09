@@ -1,89 +1,109 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import type { Category, CategoryFormData, CategoryTreeItem } from '../types/category.types';
+import type { Category, CategoryFormData } from '../types/category.types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+interface CategoryNode extends Category {
+  children: CategoryNode[];
+}
 
 export class CategoryService {
-  private supabase: SupabaseClient;
-
-  constructor(supabase: SupabaseClient) {
-    this.supabase = supabase;
-  }
+  constructor(private client: SupabaseClient) {}
 
   async fetchCategories(): Promise<Category[]> {
-    const { data, error } = await this.supabase.from('categories').select('*').order('sort_order');
+    const { data, error } = await this.client
+      .from('categories')
+      .select('*')
+      .order('sort_order', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      throw new Error('Failed to load categories');
+    }
+
     return data;
   }
 
-  async fetchCategoryTree(): Promise<CategoryTreeItem[]> {
-    const categories = await this.fetchCategories();
-    return this.buildCategoryTree(categories);
-  }
-
   async createCategory(data: CategoryFormData): Promise<Category> {
-    const slug = data.slug || this.generateSlug(data.name);
-
-    const { data: category, error } = await this.supabase
+    const { data: category, error } = await this.client
       .from('categories')
-      .insert([{ ...data, slug }])
+      .insert({
+        name: data.name,
+        slug: data.slug || this.generateSlug(data.name),
+        description: data.description,
+        parent_id: data.parent_id || null,
+        sort_order: data.sort_order || 0,
+        is_visible: data.is_visible ?? true,
+      })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw new Error('Create failed');
+    }
+
     return category;
   }
 
   async updateCategory(id: string, data: Partial<CategoryFormData>): Promise<Category> {
-    if (data.name && !data.slug) {
-      data.slug = this.generateSlug(data.name);
-    }
+    const updateData = {
+      ...data,
+      slug: data.name ? this.generateSlug(data.name) : data.slug,
+      parent_id: data.parent_id || null,
+    };
 
-    const { data: category, error } = await this.supabase
+    const { data: category, error } = await this.client
       .from('categories')
-      .update(data)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw new Error('Update failed');
+    }
+
     return category;
   }
 
   async deleteCategory(id: string): Promise<void> {
-    const { error } = await this.supabase.from('categories').delete().eq('id', id);
+    const { error } = await this.client.from('categories').delete().eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      throw new Error('Delete failed');
+    }
   }
 
-  async updateSortOrder(updates: { id: string; sort_order: number }[]): Promise<void> {
-    const { error } = await this.supabase.from('categories').upsert(
-      updates.map(({ id, sort_order }) => ({
-        id,
-        sort_order,
+  async updatePositions(updates: { id: string; position: number }[]): Promise<void> {
+    const { error } = await this.client.from('categories').upsert(
+      updates.map(update => ({
+        id: update.id,
+        sort_order: update.position,
         updated_at: new Date().toISOString(),
       }))
     );
 
-    if (error) throw error;
+    if (error) {
+      throw new Error('Update positions failed');
+    }
   }
 
-  private buildCategoryTree(categories: Category[]): CategoryTreeItem[] {
-    const categoryMap = new Map<string, CategoryTreeItem>();
-    const roots: CategoryTreeItem[] = [];
+  async fetchCategoryTree(): Promise<CategoryNode[]> {
+    const categories = await this.fetchCategories();
+    return this.buildCategoryTree(categories);
+  }
 
-    // Initialize all categories with empty children array
+  private buildCategoryTree(categories: Category[]): CategoryNode[] {
+    const categoryMap = new Map<string, CategoryNode>();
+    const roots: CategoryNode[] = [];
+
+    // First pass: create nodes
     categories.forEach(category => {
       categoryMap.set(category.id, { ...category, children: [] });
     });
 
-    // Build the tree structure
+    // Second pass: build tree
     categories.forEach(category => {
       const node = categoryMap.get(category.id)!;
-      if (category.parent_id) {
-        const parent = categoryMap.get(category.parent_id);
-        if (parent) {
-          parent.children.push(node);
-        }
+      if (category.parent_id && categoryMap.has(category.parent_id)) {
+        categoryMap.get(category.parent_id)!.children.push(node);
       } else {
         roots.push(node);
       }

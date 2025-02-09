@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Category, CategoryFormData } from '../types/category.types';
 import { CategoryService } from '../api/categoryService';
 
@@ -7,7 +7,7 @@ export function useCategories(categoryService: CategoryService) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
       const data = await categoryService.fetchCategories();
@@ -18,7 +18,7 @@ export function useCategories(categoryService: CategoryService) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [categoryService]);
 
   const createCategory = async (data: CategoryFormData): Promise<Category> => {
     const category = await categoryService.createCategory(data);
@@ -39,7 +39,7 @@ export function useCategories(categoryService: CategoryService) {
 
   useEffect(() => {
     loadCategories();
-  }, []);
+  }, [loadCategories]);
 
   return {
     categories,

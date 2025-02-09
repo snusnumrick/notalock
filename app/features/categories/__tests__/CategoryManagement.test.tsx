@@ -1,11 +1,12 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { CategoryManagement } from '../components/CategoryManagement';
-import { CategoryService } from '../api/categoryService';
+import { CategoryService } from '../services/categoryService';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { toast } from '~/components/ui/use-toast';
+import { toast } from '~/hooks/use-toast';
+import userEvent from '@testing-library/user-event';
 
 // Mock the toast component
-vi.mock('~/components/ui/use-toast', () => ({
+vi.mock('~/hooks/use-toast', () => ({
   toast: vi.fn(),
   useToast: () => ({ toast: vi.fn() }),
 }));
@@ -16,9 +17,9 @@ describe('CategoryManagement', () => {
       id: '1',
       name: 'Test Category',
       slug: 'test-category',
-      description: 'Test Description',
-      position: 0,
-      is_active: true,
+      description: '',
+      sort_order: 0,
+      is_visible: true,
       created_at: '2025-02-08T00:00:00Z',
       updated_at: '2025-02-08T00:00:00Z',
     },
@@ -30,7 +31,7 @@ describe('CategoryManagement', () => {
     updateCategory: vi.fn(),
     deleteCategory: vi.fn(),
     updatePositions: vi.fn(),
-  } as unknown as CategoryService;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -41,7 +42,9 @@ describe('CategoryManagement', () => {
   });
 
   it('loads and displays categories on mount', async () => {
-    render(<CategoryManagement categoryService={mockCategoryService} />);
+    render(
+      <CategoryManagement categoryService={mockCategoryService as unknown as CategoryService} />
+    );
 
     await waitFor(() => {
       expect(mockCategoryService.fetchCategories).toHaveBeenCalled();
@@ -51,49 +54,66 @@ describe('CategoryManagement', () => {
   });
 
   it('opens create category dialog', async () => {
-    render(<CategoryManagement categoryService={mockCategoryService} />);
+    render(
+      <CategoryManagement categoryService={mockCategoryService as unknown as CategoryService} />
+    );
 
     const addButton = screen.getByRole('button', { name: /add category/i });
-    fireEvent.click(addButton);
+    await userEvent.click(addButton);
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Create Category')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /create category/i })).toBeInTheDocument();
   });
 
   it('handles category creation successfully', async () => {
-    render(<CategoryManagement categoryService={mockCategoryService} />);
+    render(
+      <CategoryManagement categoryService={mockCategoryService as unknown as CategoryService} />
+    );
 
+    // Open dialog
     const addButton = screen.getByRole('button', { name: /add category/i });
-    fireEvent.click(addButton);
+    await userEvent.click(addButton);
 
+    // Fill form
     const nameInput = screen.getByLabelText(/name/i);
-    fireEvent.change(nameInput, { target: { value: 'New Category' } });
+    await userEvent.type(nameInput, 'New Category');
 
+    // Submit form
     const submitButton = screen.getByRole('button', { name: /create category/i });
-    fireEvent.click(submitButton);
+    await userEvent.click(submitButton);
 
     await waitFor(() => {
       expect(mockCategoryService.createCategory).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'New Category' })
+        expect.objectContaining({
+          name: 'New Category',
+          description: '',
+          is_visible: true,
+          parent_id: '',
+          slug: '',
+          sort_order: 0,
+        })
       );
     });
   });
 
   it('handles category update successfully', async () => {
-    render(<CategoryManagement categoryService={mockCategoryService} />);
+    render(
+      <CategoryManagement categoryService={mockCategoryService as unknown as CategoryService} />
+    );
 
     await waitFor(() => {
       expect(screen.getByText('Test Category')).toBeInTheDocument();
     });
 
-    const editButton = screen.getByRole('button', { name: /edit/i });
-    fireEvent.click(editButton);
+    const editButton = screen.getByLabelText('Edit category');
+    await userEvent.click(editButton);
 
     const nameInput = screen.getByLabelText(/name/i);
-    fireEvent.change(nameInput, { target: { value: 'Updated Category' } });
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, 'Updated Category');
 
     const submitButton = screen.getByRole('button', { name: /update category/i });
-    fireEvent.click(submitButton);
+    await userEvent.click(submitButton);
 
     await waitFor(() => {
       expect(mockCategoryService.updateCategory).toHaveBeenCalledWith(
@@ -106,14 +126,16 @@ describe('CategoryManagement', () => {
   it('handles category deletion successfully', async () => {
     vi.spyOn(window, 'confirm').mockImplementation(() => true);
 
-    render(<CategoryManagement categoryService={mockCategoryService} />);
+    render(
+      <CategoryManagement categoryService={mockCategoryService as unknown as CategoryService} />
+    );
 
     await waitFor(() => {
       expect(screen.getByText('Test Category')).toBeInTheDocument();
     });
 
-    const deleteButton = screen.getByRole('button', { name: /delete/i });
-    fireEvent.click(deleteButton);
+    const deleteButton = screen.getByLabelText('Delete category');
+    await userEvent.click(deleteButton);
 
     await waitFor(() => {
       expect(mockCategoryService.deleteCategory).toHaveBeenCalledWith('1');
@@ -121,28 +143,32 @@ describe('CategoryManagement', () => {
   });
 
   it('handles toggle category active status', async () => {
-    render(<CategoryManagement categoryService={mockCategoryService} />);
+    render(
+      <CategoryManagement categoryService={mockCategoryService as unknown as CategoryService} />
+    );
 
     await waitFor(() => {
       expect(screen.getByText('Test Category')).toBeInTheDocument();
     });
 
     const toggleSwitch = screen.getByRole('switch');
-    fireEvent.click(toggleSwitch);
+    await userEvent.click(toggleSwitch);
 
     await waitFor(() => {
       expect(mockCategoryService.updateCategory).toHaveBeenCalledWith(
         '1',
-        expect.objectContaining({ is_active: false })
+        expect.objectContaining({ is_visible: false })
       );
     });
   });
 
   it('displays error toast on fetch failure', async () => {
-    const error = new Error('Failed to fetch categories');
+    const error = new Error('Failed to load categories');
     mockCategoryService.fetchCategories.mockRejectedValue(error);
 
-    render(<CategoryManagement categoryService={mockCategoryService} />);
+    render(
+      <CategoryManagement categoryService={mockCategoryService as unknown as CategoryService} />
+    );
 
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith(
@@ -156,16 +182,21 @@ describe('CategoryManagement', () => {
   });
 
   it('displays success toast after successful category creation', async () => {
-    render(<CategoryManagement categoryService={mockCategoryService} />);
+    render(
+      <CategoryManagement categoryService={mockCategoryService as unknown as CategoryService} />
+    );
 
+    // Open dialog
     const addButton = screen.getByRole('button', { name: /add category/i });
-    fireEvent.click(addButton);
+    await userEvent.click(addButton);
 
+    // Fill form
     const nameInput = screen.getByLabelText(/name/i);
-    fireEvent.change(nameInput, { target: { value: 'New Category' } });
+    await userEvent.type(nameInput, 'New Category');
 
+    // Submit form
     const submitButton = screen.getByRole('button', { name: /create category/i });
-    fireEvent.click(submitButton);
+    await userEvent.click(submitButton);
 
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith(
@@ -178,16 +209,23 @@ describe('CategoryManagement', () => {
   });
 
   it('closes dialog after successful operations', async () => {
-    render(<CategoryManagement categoryService={mockCategoryService} />);
+    render(
+      <CategoryManagement categoryService={mockCategoryService as unknown as CategoryService} />
+    );
 
+    // Open dialog
     const addButton = screen.getByRole('button', { name: /add category/i });
-    fireEvent.click(addButton);
+    await userEvent.click(addButton);
 
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // Fill form
     const nameInput = screen.getByLabelText(/name/i);
-    fireEvent.change(nameInput, { target: { value: 'New Category' } });
+    await userEvent.type(nameInput, 'New Category');
 
+    // Submit form
     const submitButton = screen.getByRole('button', { name: /create category/i });
-    fireEvent.click(submitButton);
+    await userEvent.click(submitButton);
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

@@ -20,8 +20,8 @@ const categoryFormSchema = z.object({
   slug: z.string().optional(),
   description: z.string().optional(),
   parent_id: z.string().optional(),
-  position: z.number().optional(),
-  is_active: z.boolean().optional(),
+  sort_order: z.number().optional(),
+  is_visible: z.boolean().default(true),
 });
 
 interface CategoryFormProps {
@@ -34,23 +34,33 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
   const form = useForm<CategoryFormData>({
     resolver: zodResolver(categoryFormSchema),
     defaultValues: {
-      name: initialData?.name || '',
-      slug: initialData?.slug || '',
-      description: initialData?.description || '',
-      parent_id: initialData?.parent_id || undefined,
-      position: initialData?.position || 0,
-      is_active: initialData?.is_active ?? true,
+      name: initialData?.name ?? '',
+      slug: initialData?.slug ?? '',
+      description: initialData?.description ?? '',
+      parent_id: initialData?.parent_id ?? '',
+      sort_order: initialData?.sort_order ?? 0,
+      is_visible: initialData?.is_visible ?? true,
     },
   });
 
   const handleSubmit = async (data: CategoryFormData) => {
     try {
-      await onSubmit(data);
+      const formattedData: CategoryFormData = {
+        name: data.name,
+        slug: data.slug || '',
+        description: data.description || '',
+        is_visible: data.is_visible ?? true,
+        parent_id: data.parent_id || '',
+        sort_order: data.sort_order ?? 0,
+      };
+      await onSubmit(formattedData);
       form.reset();
     } catch (error) {
       console.error('Error submitting form:', error);
     }
   };
+
+  const submitButtonText = initialData?.id ? 'Update Category' : 'Create Category';
 
   return (
     <Form {...form}>
@@ -125,20 +135,22 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
 
         <FormField
           control={form.control}
-          name="is_active"
+          name="is_visible"
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
               <div className="space-y-0.5">
                 <FormLabel>Active</FormLabel>
               </div>
               <FormControl>
-                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                <Switch checked={field.value ?? true} onCheckedChange={field.onChange} />
               </FormControl>
             </FormItem>
           )}
         />
 
-        <Button type="submit">{initialData ? 'Update Category' : 'Create Category'}</Button>
+        <Button type="submit" className="w-full">
+          {submitButtonText}
+        </Button>
       </form>
     </Form>
   );

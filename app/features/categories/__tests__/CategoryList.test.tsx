@@ -10,8 +10,8 @@ describe('CategoryList', () => {
       name: 'Test Category',
       slug: 'test-category',
       description: 'Test Description',
-      position: 0,
-      is_active: true,
+      sort_order: 0,
+      is_visible: true,
       created_at: '2025-02-08T00:00:00Z',
       updated_at: '2025-02-08T00:00:00Z',
     },
@@ -20,8 +20,8 @@ describe('CategoryList', () => {
       name: 'Another Category',
       slug: 'another-category',
       description: 'Another Description',
-      position: 1,
-      is_active: false,
+      sort_order: 1,
+      is_visible: false,
       created_at: '2025-02-08T00:00:00Z',
       updated_at: '2025-02-08T00:00:00Z',
     },
@@ -125,13 +125,12 @@ describe('CategoryList', () => {
       />
     );
 
-    const table = screen.getByRole('table');
     const rows = screen.queryAllByRole('row');
     expect(rows.length).toBe(1); // Only header row should be present
   });
 
   it('maintains sort order of categories', () => {
-    const sortedCategories = [...mockCategories].sort((a, b) => a.position - b.position);
+    const sortedCategories = [...mockCategories].sort((a, b) => a.sort_order - b.sort_order);
 
     render(
       <CategoryList

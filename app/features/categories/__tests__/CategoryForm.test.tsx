@@ -11,8 +11,8 @@ describe('CategoryForm', () => {
       id: '1',
       name: 'Test Category',
       slug: 'test-category',
-      position: 0,
-      is_active: true,
+      sort_order: 0,
+      is_visible: true,
       created_at: '2025-02-08T00:00:00Z',
       updated_at: '2025-02-08T00:00:00Z',
     },
@@ -41,7 +41,7 @@ describe('CategoryForm', () => {
   it('validates required fields', async () => {
     render(<CategoryForm onSubmit={mockOnSubmit} />);
 
-    const submitButton = screen.getByRole('button', { name: /create category/i });
+    const submitButton = screen.getByRole('button', { name: 'Create Category' });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -56,14 +56,17 @@ describe('CategoryForm', () => {
     await userEvent.type(screen.getByLabelText(/name/i), 'New Category');
     await userEvent.type(screen.getByLabelText(/slug/i), 'new-category');
 
-    const submitButton = screen.getByRole('button', { name: /create category/i });
+    const submitButton = screen.getByRole('button', { name: 'Create Category' });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
         name: 'New Category',
         slug: 'new-category',
-        is_active: true,
+        description: '',
+        parent_id: '',
+        sort_order: 0,
+        is_visible: true,
       });
     });
   });
@@ -76,14 +79,17 @@ describe('CategoryForm', () => {
 
     await userEvent.type(screen.getByLabelText(/name/i), 'Child Category');
 
-    const submitButton = screen.getByRole('button', { name: /create category/i });
+    const submitButton = screen.getByRole('button', { name: 'Create Category' });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
         name: 'Child Category',
+        slug: '',
+        description: '',
         parent_id: '1',
-        is_active: true,
+        sort_order: 0,
+        is_visible: true,
       });
     });
   });
@@ -96,13 +102,17 @@ describe('CategoryForm', () => {
 
     await userEvent.type(screen.getByLabelText(/name/i), 'Test Category');
 
-    const submitButton = screen.getByRole('button', { name: /create category/i });
+    const submitButton = screen.getByRole('button', { name: 'Create Category' });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
         name: 'Test Category',
-        is_active: false,
+        slug: '',
+        description: '',
+        parent_id: '',
+        sort_order: 0,
+        is_visible: false,
       });
     });
   });
