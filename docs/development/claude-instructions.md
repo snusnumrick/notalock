@@ -24,6 +24,9 @@ These instructions help Claude understand and work with the Notalock project eff
 - Use TypeScript for new code
 - Add appropriate documentation
 - Update tests when modifying functionality
+- Never use placeholders in code comments like '[previous code stays the same]', 
+  '[the rest of the code is unchanged]', or any variations - always show the complete code 
+  or use `edit_file` for targeted changes
 
 ## Common Tasks
 - To analyze code: Use the analysis tool with proper imports
