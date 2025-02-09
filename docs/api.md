@@ -155,30 +155,38 @@ const { error } = await supabase
 ```
 
 ### Bulk Update Products
+
+The product service provides comprehensive bulk update functionality with permission checks:
+
 ```typescript
-// Update multiple products status
-const { data, error } = await supabase
-  .from('products')
-  .update({ is_active: boolean })
-  .in('id', productIds);
+interface BulkUpdateOptions {
+  is_active?: boolean;
+  retail_price_adjustment?: number;
+  business_price_adjustment?: number;
+  stock_adjustment?: number;
+}
 
-// Adjust retail prices
-const { data, error } = await supabase.rpc('adjust_retail_prices', {
-  product_ids: string[],
-  adjustment: number
-});
+// Example usage:
+const productService = new ProductService(supabase);
 
-// Adjust business prices
-const { data, error } = await supabase.rpc('adjust_business_prices', {
-  product_ids: string[],
-  adjustment: number
-});
+try {
+  await productService.bulkUpdateProducts(productIds, {
+    is_active: true,                  // Update status
+    retail_price_adjustment: 10.00,    // Increase retail price by $10
+    business_price_adjustment: 8.00,   // Increase business price by $8
+    stock_adjustment: 5                // Increase stock by 5 units
+  });
+} catch (error) {
+  console.error('Bulk update failed:', error);
+  throw error;
+}
+```
 
-// Adjust stock levels
-const { data, error } = await supabase.rpc('adjust_stock', {
-  product_ids: string[],
-  adjustment: number
-});
+Each update type is handled separately and includes:
+- Permission validation (admin role required)
+- Session verification
+- Error handling
+- Database stored procedures for price and stock adjustments
 ```
 
 ### Bulk Delete Products
@@ -189,9 +197,51 @@ const { error } = await supabase
   .in('id', productIds);
 ```
 
+## Error Handling Pattern
+
+All API calls should implement proper error handling:
+
+```typescript
+try {
+  // Check session if needed
+  if (!currentSession) {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      throw new Error('No active session found');
+    }
+    currentSession = data.session;
+  }
+
+  // Check permissions if needed
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', currentSession.user.id)
+    .single();
+
+  if (profileError || profile?.role !== 'admin') {
+    throw new Error('User does not have admin permissions');
+  }
+
+  // Perform operation
+  const { data, error } = await supabase
+    .from('resource')
+    .select('*');
+    
+  if (error) throw error;
+  
+  return data;
+} catch (error) {
+  console.error('Operation failed:', error);
+  throw new Error(`Operation failed: ${error.message}`);
+}
+```
+
 ## Product Variants
 
-### List Product Options
+### Product Options Management
+
+#### List Options
 ```typescript
 // Get all product options
 const { data: options, error: optionsError } = await supabase
@@ -206,31 +256,86 @@ const { data: values, error: valuesError } = await supabase
   .order('value');
 ```
 
-### Create Product Variant
-```typescript
-// Create variant
-const { data: variant, error: variantError } = await supabase
-  .from('product_variants')
-  .insert({
-    product_id: string,
-    sku: string,
-    retail_price: number,
-    business_price: number,
-    stock: number,
-    is_active: boolean
-  })
-  .select()
-  .single();
+### Product Variant Operations
 
-// Create variant options
-const { error: optionsError } = await supabase
-  .from('product_variant_options')
-  .insert(
-    variantOptions.map(option => ({
-      variant_id: variant.id,
-      option_value_id: option.valueId
-    }))
-  );
+Product variants are managed through a dedicated service that handles atomic operations and ensures data consistency:
+
+```typescript
+// Types
+interface ProductVariantFormData {
+  sku: string;
+  retail_price: string;
+  business_price: string;
+  stock: string;
+  is_active: boolean;
+  options: Record<string, string>; // optionId -> valueId mapping
+}
+
+interface ProductVariant {
+  id: string;
+  product_id: string;
+  sku: string;
+  retail_price: number;
+  business_price: number;
+  stock: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  options?: ProductVariantOption[];
+}
+
+// Create variant with options
+const variant = await createProductVariant(supabase, productId, formData);
+
+// Update variant
+const updatedVariant = await updateProductVariant(supabase, variantId, formData);
+
+// Delete variant (cascades to options)
+const deleteVariant = await deleteProductVariant(supabase, variantId);
+
+// Fetch variants with options
+const variants = await getProductVariants(supabase, productId);
+```
+
+Error handling and data validation:
+```typescript
+try {
+  // Validate form data
+  const parsedData = {
+    ...formData,
+    retail_price: parseFloat(formData.retail_price),
+    business_price: parseFloat(formData.business_price),
+    stock: parseInt(formData.stock)
+  };
+
+  // Create variant record
+  const { data: variant, error: variantError } = await supabase
+    .from('product_variants')
+    .insert(parsedData)
+    .select()
+    .single();
+
+  if (variantError) throw variantError;
+
+  // Create options atomically
+  const optionPromises = Object.entries(formData.options)
+    .map(([, valueId]) => (
+      supabase
+        .from('product_variant_options')
+        .insert({
+          variant_id: variant.id,
+          option_value_id: valueId
+        })
+    ));
+
+  await Promise.all(optionPromises);
+
+  return variant;
+} catch (error) {
+  console.error('Failed to create variant:', error);
+  throw new Error(`Variant creation failed: ${error.message}`);
+}
+```
 ```
 
 ### Get Product Variants
@@ -284,27 +389,37 @@ const { error } = await supabase
 ## Product Images
 
 ### Upload Product Image
-```typescript
-// Upload to storage
-const { data: fileData, error: fileError } = await supabase.storage
-  .from('product-images')
-  .upload(filePath, file, {
-    cacheControl: '3600',
-    upsert: false
-  });
 
-// Create database record
-const { data, error } = await supabase
-  .from('product_images')
-  .insert([{
-    product_id: string,
-    url: string,
-    storage_path: string,
-    file_name: string,
-    is_primary: boolean,
-    sort_order: number
-  }])
-  .select();
+The ProductImageService handles image uploads with optimization, primary image management, and automatic ordering:
+
+```typescript
+// Initialize image service
+const imageService = new ProductImageService(supabase);
+
+// Upload single image
+const image = await imageService.uploadImage(file, productId, isPrimary);
+
+// Upload multiple images
+const images = await imageService.uploadMultipleImages(files, productId);
+
+// Image optimization settings
+interface OptimizationOptions {
+  maxWidth: number;  // Default: 2000
+  maxHeight: number; // Default: 2000
+  quality: number;   // Default: 85
+}
+
+// Response type
+interface ProductImage {
+  id: string;
+  product_id: string;
+  url: string;
+  storage_path: string;
+  file_name: string;
+  is_primary: boolean;
+  sort_order: number;
+  created_at: string;
+}
 ```
 
 ### Update Image Order
@@ -333,7 +448,11 @@ const { error: dbError } = await supabase
   .eq('id', imageId);
 ```
 
-## Categories
+## Categories (Phase 1: Sprint 2 - In Progress)
+
+> **Note:** Category management features are being implemented as part of Phase 1, Sprint 2.
+
+### Currently Available
 
 ### List Categories
 ```typescript
@@ -367,9 +486,11 @@ const { data, error } = await supabase
   .select();
 ```
 
-## Orders
+## Order Management (Phase 1: Sprint 4 - Planned)
 
-### Create Order
+> **Note:** Order management features are scheduled for implementation in Phase 1, Sprint 4 (Q1 2025).
+
+### Order Creation
 ```typescript
 const { data, error } = await supabase
   .from('orders')
@@ -411,25 +532,155 @@ const { data, error } = await supabase
   .select();
 ```
 
-## Image Upload
+## Image Management
 
-### Upload Product Image
+### Currently Implemented
+
+#### Image Service Configuration
+
+The image management system provides comprehensive image handling with optimization:
+
 ```typescript
-// Upload to storage
-const { data: fileData, error: fileError } = await supabase.storage
-  .from('product-images')
-  .upload(filePath, file);
+interface ImageOptimizer {
+  optimizeImage: (file: File, options: OptimizationOptions) => Promise<Blob>;
+}
 
-// Create database record
-const { data, error } = await supabase
-  .from('product_images')
-  .insert([{
-    product_id: string,
-    url: filePath,
-    alt_text: string,
-    is_primary: boolean
-  }])
-  .select();
+interface OptimizationOptions {
+  maxWidth: number;   // Default: 2000
+  maxHeight: number;  // Default: 2000
+  quality: number;    // Default: 85
+  format?: 'jpeg' | 'png' | 'webp';
+}
+
+// Initialize service with custom optimizer
+const imageService = new ProductImageService(
+  supabase,
+  new ClientImageOptimizer() // or ServerImageOptimizer
+);
+```
+
+#### Core Operations
+
+```typescript
+// Single image upload with optimization
+const image = await imageService.uploadImage(file, productId, isPrimary);
+
+// Batch upload with automatic primary image handling
+const images = await imageService.uploadMultipleImages(files, productId);
+
+// Update image order
+await imageService.updateImageOrder(imageId, newOrder);
+
+// Set primary image (updates product record automatically)
+await imageService.setPrimaryImage(imageId);
+
+// Reorder all product images
+await imageService.reorderImages(productId);
+
+// Delete image with cleanup
+await imageService.deleteImage(imageId);
+```
+
+#### Error Handling and Cleanup
+
+```typescript
+try {
+  // Upload handling with cleanup on failure
+  const { data: fileData, error: uploadError } = await supabase.storage
+    .from('product-images')
+    .upload(filePath, optimizedImage, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type
+    });
+
+  if (uploadError) throw uploadError;
+
+  // Database record creation
+  const { data: imageRecord, error: dbError } = await supabase
+    .from('product_images')
+    .insert({
+      product_id: productId,
+      url: publicUrl,
+      storage_path: filePath,
+      file_name: fileName,
+      is_primary: false,
+      sort_order: nextSortOrder
+    })
+    .select()
+    .single();
+
+  if (dbError) {
+    // Cleanup uploaded file on database error
+    await supabase.storage
+      .from('product-images')
+      .remove([filePath]);
+    throw dbError;
+  }
+
+  return imageRecord;
+} catch (error) {
+  console.error('Image upload failed:', error);
+  throw new Error(`Failed to upload image: ${error.message}`);
+}
+```
+
+### Planned Features
+
+> **Note:** The following features are planned according to our development roadmap.
+
+#### Performance Optimization (Phase 3)
+
+```typescript
+// Image optimization configuration
+interface OptimizationConfig {
+  compression: {
+    quality: number;    // 0-100
+    format: 'jpeg' | 'webp' | 'avif';
+  };
+  loading: {
+    lazy: boolean;
+    preload: boolean;
+  };
+  responsive: {
+    sizes: number[];    // Breakpoint widths
+    devicePixelRatio: number;
+  };
+}
+
+// Batch optimization for product images
+await imageService.optimizeProductImages(productId, config);
+
+// Get optimized image URL
+const url = imageService.getOptimizedUrl(imageId, {
+  width: number,
+  quality: number,
+  format: 'webp'
+});
+```
+
+### Potential Future Features
+
+> **Note:** These features are being considered but are not yet part of the official roadmap.
+
+```typescript
+// Advanced image processing
+interface ImageProcessingOptions {
+  crop?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  effects?: {
+    filter?: 'grayscale' | 'sepia' | 'blur';
+    intensity?: number;
+  };
+}
+
+// These APIs are conceptual and subject to change
+await imageService.processImage(imageId, options);
+```
 ```
 
 ### Delete Product Image
@@ -446,26 +697,101 @@ const { error } = await supabase
   .eq('id', imageId);
 ```
 
-## Error Handling
-All API calls should be wrapped in try-catch blocks:
+## Security and Error Handling
+
+### Permission Validation
+
+All privileged operations require proper permission checks:
+
+```typescript
+async function requireAdmin(supabase: SupabaseClient) {
+  // Check for active session
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData?.session) {
+    throw new Error('No active session found');
+  }
+
+  // Verify admin role
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', sessionData.session.user.id)
+    .single();
+
+  if (profileError || profile?.role !== 'admin') {
+    throw new Error('User does not have admin permissions');
+  }
+
+  return sessionData.session;
+}
+
+// Usage in services
+class ProductService {
+  private currentSession: Session | null = null;
+
+  async deleteProduct(id: string): Promise<void> {
+    try {
+      // Ensure admin permissions
+      if (!this.currentSession) {
+        this.currentSession = await requireAdmin(this.supabase);
+      }
+
+      // Proceed with deletion
+      const { error } = await this.supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Delete failed:', error);
+      throw new Error(`Failed to delete product: ${error.message}`);
+    }
+  }
+}
+```
+
+### Error Handling Best Practices
+
+Implement comprehensive error handling with proper cleanup:
+
 ```typescript
 try {
-  const { data, error } = await supabase
+  // 1. Validate inputs
+  if (!productId || !imageId) {
+    throw new Error('Missing required parameters');
+  }
+
+  // 2. Check permissions
+  await requireAdmin(this.supabase);
+
+  // 3. Perform operation with proper error handling
+  const { data, error } = await this.supabase
     .from('resource')
     .select('*');
     
   if (error) throw error;
-  
-  // Handle success
-} catch (err) {
-  console.error('Error:', err.message);
-  throw new Error(`Failed to fetch resource: ${err.message}`);
+
+  // 4. Cleanup on partial success if needed
+  try {
+    await this.cleanup();
+  } catch (cleanupError) {
+    console.error('Cleanup failed:', cleanupError);
+    // Continue with the main operation
+  }
+
+  return data;
+} catch (error) {
+  // 5. Proper error logging and rethrowing
+  console.error('Operation failed:', error);
+  throw new Error(`Operation failed: ${error.message}`);
 }
 ```
 
 ## Type Definitions
 
-### Product Types
+### Product Types (Implemented)
+
 ```typescript
 interface Product {
   id: string;
@@ -530,7 +856,10 @@ interface ProductOptionValue {
 }
 ```
 
-### Order Types
+### Order Types (Phase 1: Sprint 4)
+
+> **Note:** These types will be implemented as part of the Order Management sprint in Q1 2025.
+
 ```typescript
 interface Order {
   id: string;
