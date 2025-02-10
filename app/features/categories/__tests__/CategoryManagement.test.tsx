@@ -67,7 +67,7 @@ describe('CategoryManagement', () => {
       expect(mockCategoryService.fetchCategories).toHaveBeenCalled();
     });
 
-    expect(screen.getByText('Test Category')).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Test Category' })).toBeInTheDocument();
   });
 
   it('opens create category dialog', async () => {
@@ -119,7 +119,7 @@ describe('CategoryManagement', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Test Category')).toBeInTheDocument();
+      expect(screen.getByRole('cell', { name: 'Test Category' })).toBeInTheDocument();
     });
 
     const editButton = screen.getByLabelText('Edit category');
@@ -164,10 +164,12 @@ describe('CategoryManagement', () => {
       <CategoryManagement categoryService={mockCategoryService as unknown as CategoryService} />
     );
 
+    // Wait for the data to be rendered
     await waitFor(() => {
       expect(screen.getByText('Test Category')).toBeInTheDocument();
     });
 
+    // Now that we know the category exists, find the switch
     const toggleSwitch = screen.getByRole('switch');
     await userEvent.click(toggleSwitch);
 

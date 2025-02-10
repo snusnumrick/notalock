@@ -30,7 +30,7 @@
      - ✅ Category service with CRUD methods
      - ✅ Basic UI components (Form, List)
      - ✅ Admin route setup
-     - ⏳ Drag-and-drop reordering
+     - ✅ Drag-and-drop reordering
      - ⏳ Category tree visualization
      - ⏳ Bulk operations
      - ⏳ UI polish and refinements

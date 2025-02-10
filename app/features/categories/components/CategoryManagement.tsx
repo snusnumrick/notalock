@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from '~/components/ui/dialog';
 import { CategoryForm } from './CategoryForm';
-import { CategoryList } from './CategoryList';
+import { DraggableCategoryList } from './DraggableCategoryList';
 import { CategoryService } from '../services/categoryService';
 import type { Category, CategoryFormData } from '../types/category.types';
 import { useToast } from '~/hooks/use-toast';
@@ -121,6 +121,24 @@ export function CategoryManagement({ categoryService }: CategoryManagementProps)
     }
   };
 
+  const handleReorder = async (updates: { id: string; position: number }[]) => {
+    try {
+      await categoryService.updatePositions(updates);
+      await loadCategories();
+      toast({
+        title: 'Success',
+        description: 'Category order updated successfully',
+      });
+    } catch (error) {
+      console.error('Error updating category positions:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update category order',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleEdit = (category: Category) => {
     setSelectedCategory(category);
     setIsDialogOpen(true);
@@ -141,11 +159,12 @@ export function CategoryManagement({ categoryService }: CategoryManagementProps)
         </Button>
       </div>
 
-      <CategoryList
+      <DraggableCategoryList
         categories={categories}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onToggleActive={handleToggleActive}
+        onReorder={handleReorder}
       />
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

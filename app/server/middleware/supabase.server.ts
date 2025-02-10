@@ -20,15 +20,17 @@ export function createSupabaseClient(request: Request, response?: Response) {
       return cookie ? cookie.split('=')[1] : null;
     },
     set: (key: string, value: string) => {
+      // Ensure we're not setting duplicate cookies
+      response!.headers.delete('Set-Cookie');
       response!.headers.append(
         'Set-Cookie',
-        `${key}=${value}; Path=/; HttpOnly; SameSite=Lax; Secure`
+        `${key}=${value}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=3600`
       );
     },
     remove: (key: string) => {
       response!.headers.append(
         'Set-Cookie',
-        `${key}=; Path=/; HttpOnly; SameSite=Lax; Secure; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+        `${key}=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
       );
     },
   };
@@ -42,6 +44,9 @@ export function createSupabaseClient(request: Request, response?: Response) {
     auth: {
       detectSessionInUrl: true,
       flowType: 'pkce',
+      autoRefreshToken: true,
+      persistSession: true,
+      storageKey: 'sb-session', // Explicit storage key
     },
   });
 }
@@ -52,8 +57,29 @@ export function createSupabaseClient(request: Request, response?: Response) {
 export async function getSupabaseSession(request: Request) {
   const response = new Response();
   const supabase = createSupabaseClient(request, response);
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return { session, response };
+
+  try {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      // If there's an error getting the session, clean up cookies
+      const cookieNames = ['sb-access-token', 'sb-refresh-token', 'sb-session'];
+      cookieNames.forEach(name => {
+        response.headers.append(
+          'Set-Cookie',
+          `${name}=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+        );
+      });
+
+      return { session: null, response };
+    }
+
+    return { session, response };
+  } catch (error) {
+    console.error('Error getting session:', error);
+    return { session: null, response };
+  }
 }

@@ -10,11 +10,7 @@ declare global {
   }
 }
 
-let supabase: ReturnType<typeof createClient<Database>>;
-
-const getSupabase = () => {
-  if (supabase) return supabase;
-
+export const getSupabase = () => {
   // Get environment variables from window.ENV in the browser
   // or from process.env on the server
   const supabaseUrl =
@@ -26,8 +22,14 @@ const getSupabase = () => {
     throw new Error('Missing Supabase environment variables');
   }
 
-  supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
-  return supabase;
+  // Create a new client instance each time
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true, // This ensures proper session handling
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
 };
 
 export const useSupabase = () => {

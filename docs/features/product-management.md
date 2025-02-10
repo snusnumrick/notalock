@@ -37,6 +37,14 @@ await variantService.createVariant(productId, variantData);
 
 ## Categories Integration
 
+### Category System
+Categories are managed through a dedicated interface with drag-and-drop reordering capabilities. The system supports:
+- Category CRUD operations
+- Drag-and-drop reordering
+- Hierarchical structure (coming soon)
+- Visibility controls
+- Bulk operations (coming soon)
+
 ### Category Assignment
 Products can be assigned to categories through the product form:
 ```typescript
@@ -310,6 +318,31 @@ interface ProductVariantOption {
   variant_id: string;
   option_value_id: string;
   option_value?: ProductOptionValue;
+}
+```
+
+### Category Types
+```typescript
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  sort_order: number;
+  is_visible: boolean;
+  parent_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  children?: Category[];
+}
+
+interface CategoryFormData {
+  name: string;
+  slug?: string;
+  description?: string;
+  parent_id?: string | null;
+  sort_order: number;
+  is_visible: boolean;
 }
 ```
 
