@@ -3,22 +3,19 @@ export interface Category {
   name: string;
   slug: string;
   description?: string;
-  parent_id?: string;
   sort_order: number;
   is_visible: boolean;
-  created_at: string;
-  updated_at: string;
+  parent_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  children?: Category[];
 }
 
 export interface CategoryFormData {
   name: string;
   slug?: string;
   description?: string;
-  parent_id?: string;
-  sort_order?: number;
-  is_visible?: boolean;
-}
-
-export interface CategoryTreeItem extends Category {
-  children: CategoryTreeItem[];
+  parent_id?: string | null;
+  sort_order: number;
+  is_visible: boolean;
 }

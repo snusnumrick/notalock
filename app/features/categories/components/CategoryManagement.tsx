@@ -159,7 +159,7 @@ export function CategoryManagement({ categoryService }: CategoryManagementProps)
             </DialogDescription>
           </DialogHeader>
           <CategoryForm
-            initialData={selectedCategory ?? undefined}
+            initialData={selectedCategory || {}}
             onSubmit={selectedCategory ? handleUpdate : handleCreate}
             categories={categories.filter(cat => cat.id !== selectedCategory?.id)}
           />

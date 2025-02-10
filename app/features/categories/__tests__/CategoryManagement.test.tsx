@@ -2,13 +2,16 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { CategoryManagement } from '../components/CategoryManagement';
 import { CategoryService } from '../services/categoryService';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { toast } from '~/hooks/use-toast';
 import userEvent from '@testing-library/user-event';
 
-// Mock the toast component
+// Mock toast function
+const mockToast = vi.fn();
+
+// Mock the useToast hook
 vi.mock('~/hooks/use-toast', () => ({
-  toast: vi.fn(),
-  useToast: () => ({ toast: vi.fn() }),
+  useToast: () => ({
+    toast: mockToast,
+  }),
 }));
 
 describe('CategoryManagement', () => {
@@ -33,12 +36,26 @@ describe('CategoryManagement', () => {
     updatePositions: vi.fn(),
   };
 
-  beforeEach(() => {
+  // Mock console.error to prevent error logging during error test cases
+  const originalConsoleError = console.error;
+  beforeAll(() => {
+    console.error = vi.fn();
+  });
+
+  afterAll(() => {
+    console.error = originalConsoleError;
+  });
+
+  beforeEach(async () => {
     vi.clearAllMocks();
     mockCategoryService.fetchCategories.mockResolvedValue(mockCategories);
     mockCategoryService.createCategory.mockResolvedValue(mockCategories[0]);
     mockCategoryService.updateCategory.mockResolvedValue(mockCategories[0]);
     mockCategoryService.deleteCategory.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('loads and displays categories on mount', async () => {
@@ -163,21 +180,20 @@ describe('CategoryManagement', () => {
   });
 
   it('displays error toast on fetch failure', async () => {
+    // Silence console.error for this specific test
     const error = new Error('Failed to load categories');
-    mockCategoryService.fetchCategories.mockRejectedValue(error);
+    mockCategoryService.fetchCategories.mockRejectedValueOnce(error);
 
     render(
       <CategoryManagement categoryService={mockCategoryService as unknown as CategoryService} />
     );
 
     await waitFor(() => {
-      expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Error',
-          description: 'Failed to load categories',
-          variant: 'destructive',
-        })
-      );
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Error',
+        description: 'Failed to load categories',
+        variant: 'destructive',
+      });
     });
   });
 
@@ -199,12 +215,10 @@ describe('CategoryManagement', () => {
     await userEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Success',
-          description: 'Category created successfully',
-        })
-      );
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Success',
+        description: 'Category created successfully',
+      });
     });
   });
 

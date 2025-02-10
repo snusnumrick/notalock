@@ -21,7 +21,7 @@ const categoryFormSchema = z.object({
   description: z.string().optional(),
   parent_id: z.string().optional(),
   sort_order: z.number().optional(),
-  is_visible: z.boolean().default(true),
+  is_visible: z.boolean(),
 });
 
 interface CategoryFormProps {
@@ -31,16 +31,18 @@ interface CategoryFormProps {
 }
 
 export function CategoryForm({ initialData, onSubmit, categories }: CategoryFormProps) {
+  const defaultValues = {
+    name: initialData?.name ?? '',
+    slug: initialData?.slug ?? '',
+    description: initialData?.description ?? '',
+    parent_id: initialData?.parent_id ?? '',
+    sort_order: initialData?.sort_order ?? 0,
+    is_visible: true, // Always start with true
+  };
+
   const form = useForm<CategoryFormData>({
     resolver: zodResolver(categoryFormSchema),
-    defaultValues: {
-      name: initialData?.name ?? '',
-      slug: initialData?.slug ?? '',
-      description: initialData?.description ?? '',
-      parent_id: initialData?.parent_id ?? '',
-      sort_order: initialData?.sort_order ?? 0,
-      is_visible: initialData?.is_visible ?? true,
-    },
+    defaultValues,
   });
 
   const handleSubmit = async (data: CategoryFormData) => {
@@ -49,10 +51,11 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
         name: data.name,
         slug: data.slug || '',
         description: data.description || '',
-        is_visible: data.is_visible ?? true,
+        is_visible: typeof data.is_visible === 'boolean' ? data.is_visible : true,
         parent_id: data.parent_id || '',
         sort_order: data.sort_order ?? 0,
       };
+
       await onSubmit(formattedData);
       form.reset();
     } catch (error) {
@@ -142,7 +145,12 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
                 <FormLabel>Active</FormLabel>
               </div>
               <FormControl>
-                <Switch checked={field.value ?? true} onCheckedChange={field.onChange} />
+                <Switch
+                  checked={field.value === true}
+                  onCheckedChange={(checked: boolean) => {
+                    field.onChange(checked);
+                  }}
+                />
               </FormControl>
             </FormItem>
           )}

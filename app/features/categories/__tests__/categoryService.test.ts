@@ -80,10 +80,12 @@ describe('CategoryService', () => {
     });
 
     it('should handle fetch error', async () => {
-      mockSupabase.from().select = vi.fn(() => ({
-        order: vi.fn(() => ({
-          data: null,
-          error: new Error('Failed to load categories'),
+      mockSupabase.from = vi.fn(() => ({
+        select: vi.fn(() => ({
+          order: vi.fn(() => ({
+            data: null,
+            error: new Error('Failed to load categories'),
+          })),
         })),
       }));
 
@@ -138,10 +140,12 @@ describe('CategoryService', () => {
     });
 
     it('should handle delete error', async () => {
-      mockSupabase.from().delete = vi.fn(() => ({
-        eq: vi.fn(() => ({
-          data: null,
-          error: new Error('Delete failed'),
+      mockSupabase.from = vi.fn(() => ({
+        delete: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            data: null,
+            error: new Error('Delete failed'),
+          })),
         })),
       }));
 
@@ -160,9 +164,12 @@ describe('CategoryService', () => {
     });
 
     it('should handle update positions error', async () => {
-      mockSupabase.from().upsert = vi.fn(() => ({
-        data: null,
-        error: new Error('Update positions failed'),
+      // Reset the mock to return an error
+      mockSupabase.from = vi.fn(() => ({
+        upsert: vi.fn(() => ({
+          data: null,
+          error: new Error('Update positions failed'),
+        })),
       }));
 
       await expect(categoryService.updatePositions([{ id: '1', position: 1 }])).rejects.toThrow(
@@ -192,10 +199,13 @@ describe('CategoryService', () => {
         },
       ];
 
-      mockSupabase.from().select = vi.fn(() => ({
-        order: vi.fn(() => ({
-          data: categories,
-          error: null,
+      // Reset the mock and set up the new response
+      mockSupabase.from = vi.fn(() => ({
+        select: vi.fn(() => ({
+          order: vi.fn(() => ({
+            data: categories,
+            error: null,
+          })),
         })),
       }));
 
