@@ -31,10 +31,10 @@
      - ✅ Basic UI components (Form, List)
      - ✅ Admin route setup
      - ✅ Drag-and-drop reordering
-     - ⏳ Category tree visualization
+     - ✅ Category tree visualization
      - ⏳ Bulk operations
      - ⏳ UI polish and refinements
-   - Hierarchical structure
+   - ✅ Hierarchical structure
    - Category-product relations
    - Category-based navigation
 
@@ -42,14 +42,7 @@
    - SEO-friendly URLs
    - Category filtering
    - Category sorting
-   - Visibility controls
-
-### Sprint 3: Shopping Experience
-1. Product Discovery
-   - Product listing page
-   - Product detail page
-   - Search functionality
-   - Filtering system
+   - ✅ Visibility controls
 
 2. Cart & Checkout
    - Shopping cart

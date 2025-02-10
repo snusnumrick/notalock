@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from '~/components/ui/dialog';
 import { CategoryForm } from './CategoryForm';
-import { DraggableCategoryList } from './DraggableCategoryList';
+import { CategorySplitView } from './CategorySplitView';
 import { CategoryService } from '../services/categoryService';
 import type { Category, CategoryFormData } from '../types/category.types';
 import { useToast } from '~/hooks/use-toast';
@@ -149,6 +149,11 @@ export function CategoryManagement({ categoryService }: CategoryManagementProps)
     setIsDialogOpen(true);
   };
 
+  const handleSelectCategory = (category: Category) => {
+    setSelectedCategory(category);
+    setIsDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -159,8 +164,10 @@ export function CategoryManagement({ categoryService }: CategoryManagementProps)
         </Button>
       </div>
 
-      <DraggableCategoryList
+      <CategorySplitView
         categories={categories}
+        selectedCategoryId={selectedCategory?.id}
+        onSelectCategory={handleSelectCategory}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onToggleActive={handleToggleActive}

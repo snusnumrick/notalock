@@ -42,7 +42,7 @@ npm run dev
 - Payments: Square (planned)
 - Image Storage: Supabase Storage
 
-## Latest Updates (As of Feb 7, 2025)
+## Latest Updates (As of Feb 10, 2025)
 
 ### Recently Completed
 - Product Management System:
@@ -57,6 +57,13 @@ npm run dev
   - Enhanced product gallery with zoom and lightbox
   - Mobile-friendly with touch swipe support
   - Optimized image handling and preloading
+- Category Management System:
+  - Hierarchical category tree visualization
+  - Split view with tree and list layouts
+  - Drag-and-drop category reordering
+  - Mobile-friendly tab interface
+  - Category visibility controls
+  - Interactive folder navigation
 - Role-based access control
 - Integration with Supabase Storage
 
@@ -82,6 +89,11 @@ Detailed documentation is available in the `docs` directory:
   - Advanced search & filtering
   - Bulk operations
   - Database structure
+- [Category Management](./docs/features/category-management.md)
+  - Hierarchical structure
+  - Tree visualization
+  - Drag-and-drop ordering
+  - Mobile responsiveness
 
 ### Planning
 - [Development Roadmap](./docs/roadmap/development-plan.md)
