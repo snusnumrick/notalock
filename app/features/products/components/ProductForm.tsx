@@ -153,7 +153,7 @@ export function ProductForm({
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="basic">Basic Information</TabsTrigger>
-            {initialData?.id && <TabsTrigger value="variants">Variants</TabsTrigger>}
+            <TabsTrigger value="variants">Variants</TabsTrigger>
             <TabsTrigger value="images">Images</TabsTrigger>
           </TabsList>
 
@@ -340,29 +340,27 @@ export function ProductForm({
             </form>
           </TabsContent>
 
-          {initialData?.id && (
-            <TabsContent value="variants">
-              {variantsError ? (
-                <Alert variant="destructive">
-                  <AlertDescription>
-                    {variantsError instanceof Error
-                      ? variantsError.message
-                      : 'Failed to load variants'}
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <VariantManagement
-                  productId={initialData.id}
-                  variants={variants}
-                  options={options}
-                  optionValues={optionValues}
-                  onVariantCreate={handleVariantCreate}
-                  onVariantUpdate={handleVariantUpdate}
-                  onVariantDelete={handleVariantDelete}
-                />
-              )}
-            </TabsContent>
-          )}
+          <TabsContent value="variants">
+            {variantsError ? (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  {variantsError instanceof Error
+                    ? variantsError.message
+                    : 'Failed to load variants'}
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <VariantManagement
+                productId={initialData?.id}
+                variants={variants}
+                options={options}
+                optionValues={optionValues}
+                onVariantCreate={handleVariantCreate}
+                onVariantUpdate={handleVariantUpdate}
+                onVariantDelete={handleVariantDelete}
+              />
+            )}
+          </TabsContent>
 
           <TabsContent value="images">
             <div className="space-y-2">

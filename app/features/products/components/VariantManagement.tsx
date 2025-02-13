@@ -32,37 +32,47 @@ export default function VariantManagement({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Product Variants</CardTitle>
-        <Button onClick={() => setIsFormOpen(true)} className="ml-4" variant="outline" size="sm">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Variant
-        </Button>
+        {productId && (
+          <Button onClick={() => setIsFormOpen(true)} className="ml-4" variant="outline" size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Variant
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
-        <VariantList
-          variants={variants}
-          options={options}
-          optionValues={optionValues}
-          onEdit={handleEditVariant}
-          onDelete={onVariantDelete}
-        />
+        {!productId ? (
+          <div className="text-center py-6 text-gray-500">
+            Save the product first to manage variants
+          </div>
+        ) : (
+          <>
+            <VariantList
+              variants={variants}
+              options={options}
+              optionValues={optionValues}
+              onEdit={handleEditVariant}
+              onDelete={onVariantDelete}
+            />
 
-        <VariantForm
-          isOpen={isFormOpen}
-          onClose={handleCloseForm}
-          variantId={editingVariant}
-          productId={productId}
-          options={options}
-          optionValues={optionValues}
-          variants={variants}
-          onSubmit={async data => {
-            if (editingVariant) {
-              await onVariantUpdate(editingVariant, data);
-            } else {
-              await onVariantCreate(data);
-            }
-            handleCloseForm();
-          }}
-        />
+            <VariantForm
+              isOpen={isFormOpen}
+              onClose={handleCloseForm}
+              variantId={editingVariant}
+              productId={productId}
+              options={options}
+              optionValues={optionValues}
+              variants={variants}
+              onSubmit={async data => {
+                if (editingVariant) {
+                  await onVariantUpdate(editingVariant, data);
+                } else {
+                  await onVariantCreate(data);
+                }
+                handleCloseForm();
+              }}
+            />
+          </>
+        )}
       </CardContent>
     </Card>
   );
