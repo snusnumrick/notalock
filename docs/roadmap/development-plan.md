@@ -32,7 +32,7 @@
      - ✅ Admin route setup
      - ✅ Drag-and-drop reordering
      - ✅ Category tree visualization
-     - ⏳ Bulk operations
+     - ✅ Bulk operations
      - ⏳ UI polish and refinements
    - ✅ Hierarchical structure
    - ✅ Category-product relations

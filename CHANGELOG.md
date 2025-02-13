@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Bulk Operations for Categories
+  - Added multi-select functionality in category management
+  - Implemented bulk delete operations
+  - Added bulk visibility toggle feature
+  - Created confirmation dialogs for bulk actions
+  - Implemented error handling for bulk operations
+  - Added undo functionality for bulk actions
 - Category-Product Relations
   - Implemented many-to-many relationship between categories and products
   - Added database migrations for category_products junction table
