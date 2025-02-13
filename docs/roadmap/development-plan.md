@@ -33,7 +33,36 @@
      - ✅ Drag-and-drop reordering
      - ✅ Category tree visualization
      - ✅ Bulk operations
-     - ⏳ UI polish and refinements
+     - UI polish and refinements
+       - ⏳ Visual Hierarchy
+         - ⏳ Consistent spacing and padding
+         - ⏳ Visual separation for nested categories
+         - ⏳ Enhanced contrast
+         - ⏳ Hover and active states
+       - ⏳ Interactive Feedback
+         - ⏳ Loading skeletons
+         - ⏳ Smooth transitions
+         - ⏳ Drag-and-drop micro-interactions
+         - ⏳ Progress indicators
+       - ⏳ Error State Handling
+         - ⏳ Consistent error states
+         - ⏳ Inline validation
+         - ⏳ Error boundaries
+         - ⏳ Retry mechanisms
+       - ⏳ Accessibility
+         - ⏳ Keyboard navigation
+         - ⏳ ARIA labels and roles
+         - ⏳ Focus indicators
+         - ⏳ Screen reader announcements
+       - ⏳ Mobile Responsiveness
+         - ⏳ Optimized touch targets
+         - ⏳ Mobile tree navigation
+         - ⏳ Responsive spacing
+         - ⏳ Touch-friendly drag-drop
+       - ⏳ Empty States
+         - ⏳ List empty states
+         - ⏳ Contextual help text
+         - ⏳ Clear call-to-actions
    - ✅ Hierarchical structure
    - ✅ Category-product relations
    - Category-based navigation
