@@ -33,39 +33,30 @@
      - ✅ Drag-and-drop reordering
      - ✅ Category tree visualization
      - ✅ Bulk operations
-     - UI polish and refinements
-       - ⏳ Visual Hierarchy
-         - ⏳ Consistent spacing and padding
-         - ⏳ Visual separation for nested categories
-         - ⏳ Enhanced contrast
-         - ⏳ Hover and active states
-       - ⏳ Interactive Feedback
-         - ⏳ Loading skeletons
-         - ⏳ Smooth transitions
-         - ⏳ Drag-and-drop micro-interactions
-         - ⏳ Progress indicators
-       - ⏳ Error State Handling
-         - ⏳ Consistent error states
-         - ⏳ Inline validation
-         - ⏳ Error boundaries
-         - ⏳ Retry mechanisms
-       - ⏳ Accessibility
-         - ⏳ Keyboard navigation
-         - ⏳ ARIA labels and roles
-         - ⏳ Focus indicators
-         - ⏳ Screen reader announcements
-       - ⏳ Mobile Responsiveness
-         - ⏳ Optimized touch targets
-         - ⏳ Mobile tree navigation
-         - ⏳ Responsive spacing
-         - ⏳ Touch-friendly drag-drop
-       - ⏳ Empty States
-         - ⏳ List empty states
-         - ⏳ Contextual help text
-         - ⏳ Clear call-to-actions
    - ✅ Hierarchical structure
    - ✅ Category-product relations
+
+2. Customer-Facing Pages
+   - Homepage
+     - Featured products section
+     - Category highlights
+     - Hero banner/slider
+     - Quick access to popular categories
+     - New arrivals section
+   - Product listing page
+     - Product grid/list view
+     - Basic product filtering
+     - Pagination
+   - Product detail page
+     - Product information display
+     - Image gallery
+     - Variant selection
+     - Add to cart functionality
    - Category-based navigation
+     - Category menu structure
+     - Category landing pages
+     - Breadcrumb navigation
+     - Category-filtered product lists
 
 2. Category Features
    - SEO-friendly URLs
@@ -73,7 +64,41 @@
    - Category sorting
    - ✅ Visibility controls
 
-2. Cart & Checkout
+3. Customer Account Management
+   - Basic Account Features
+     - Account Dashboard
+       - Account overview
+       - Personal information management
+       - Change password
+       - Email preferences
+     - Order Management
+       - Order history
+       - Order tracking
+       - Order details view
+       - Reorder functionality
+     - Address Book
+       - Multiple shipping addresses
+       - Default address selection
+       - Address validation
+   - B2B Account Features
+     - Company Profile
+       - Company information management
+       - Multiple user accounts
+       - Role-based permissions
+       - Department/cost center tracking
+     - B2B Order Management
+       - Purchase orders
+       - Order approval workflows
+       - Bulk order capabilities
+       - Order templates
+     - B2B Specific Tools
+       - Custom pricing views
+       - Quick order by SKU
+       - Quote requests
+       - Credit limit display
+       - Payment terms information
+
+4. Cart & Checkout
    - Shopping cart
    - Checkout process
    - Address management
@@ -94,18 +119,30 @@
 
 ## Phase 2: Enhanced Features (Q2 2025)
 
-### Business Accounts
-1. Account Features
-   - Business registration
-   - Account verification
-   - Special pricing
-   - Bulk ordering
+### Advanced B2B Features
+1. Business Account Enhancements
+   - Credit Management
+     - Credit applications
+     - Credit limit management
+     - Payment terms customization
+     - Invoice management
+   - Advanced Pricing
+     - Contract-based pricing
+     - Volume discounts
+     - Customer-specific catalogs
+     - Promotional pricing rules
 
-2. Business Tools
-   - Quote requests
-   - Order templates
-   - Credit applications
-   - Business dashboard
+2. B2B Workflow Tools
+   - Advanced Approval Flows
+     - Multi-level approvals
+     - Budget controls
+     - Spending limits
+     - Approval delegation
+   - Integration Features
+     - ERP system integration
+     - Procurement system connections
+     - EDI capabilities
+     - API access for customers
 
 ### Content Management
 1. Product Content
@@ -147,6 +184,37 @@
    - Bundle optimization
    - Database optimization
    - API performance
+
+3. UI Polish and Refinements
+   - Visual Hierarchy
+     - Consistent spacing and padding
+     - Visual separation for nested categories
+     - Enhanced contrast
+     - Hover and active states
+   - Interactive Feedback
+     - Loading skeletons
+     - Smooth transitions
+     - Drag-and-drop micro-interactions
+     - Progress indicators
+   - Error State Handling
+     - Consistent error states
+     - Inline validation
+     - Error boundaries
+     - Retry mechanisms
+   - Accessibility
+     - Keyboard navigation
+     - ARIA labels and roles
+     - Focus indicators
+     - Screen reader announcements
+   - Mobile Responsiveness
+     - Optimized touch targets
+     - Mobile tree navigation
+     - Responsive spacing
+     - Touch-friendly drag-drop
+   - Empty States
+     - List empty states
+     - Contextual help text
+     - Clear call-to-actions
 
 ### Analytics & Reporting
 1. Business Intelligence
