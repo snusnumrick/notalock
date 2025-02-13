@@ -4,15 +4,119 @@ import type { FilterOptions } from '../components/ProductSearch';
 import { ProductImageService } from './productImageService';
 
 export class ProductService {
-  private supabase: SupabaseClient;
-  private currentSession: Session | null = null;
-
-  constructor(supabase: SupabaseClient) {
-    this.supabase = supabase;
-  }
+  constructor(private supabase: SupabaseClient) {}
 
   setSession(session: Session) {
     this.currentSession = session;
+  }
+
+  private currentSession: Session | null = null;
+
+  async createProduct(formData: ProductFormData): Promise<Product> {
+    if (!this.currentSession) {
+      const { data } = await this.supabase.auth.getSession();
+      if (!data.session) {
+        throw new Error('No active session found');
+      }
+      this.currentSession = data.session;
+    }
+
+    const productData = {
+      name: formData.name,
+      sku: formData.sku,
+      description: formData.description,
+      retail_price: parseFloat(formData.retail_price),
+      business_price: parseFloat(formData.business_price),
+      stock: parseInt(formData.stock),
+      is_active: formData.is_active,
+      category_id: formData.category_id || null,
+      image_url: null,
+    };
+
+    const { data: product, error: productError } = await this.supabase
+      .from('products')
+      .insert([productData])
+      .select()
+      .single();
+
+    if (productError) {
+      console.error('Error creating product:', productError);
+      throw new Error(`Failed to create product: ${productError.message}`);
+    }
+
+    if (formData.tempImages && formData.tempImages.length > 0) {
+      const imageService = new ProductImageService(this.supabase);
+      try {
+        for (const tempImage of formData.tempImages) {
+          await imageService.uploadImage(tempImage.file, product.id, tempImage.isPrimary);
+        }
+
+        const { data: productWithImages, error: fetchError } = await this.supabase
+          .from('products')
+          .select(
+            `
+        *,
+        product_images(*),
+        category:categories (id, name)
+      `
+          )
+          .eq('id', product.id)
+          .single();
+
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        return productWithImages;
+      } catch (imageError) {
+        console.error('Error uploading images:', imageError);
+        return product;
+      }
+    }
+
+    return product;
+  }
+
+  async updateProduct(id: string, formData: ProductFormData): Promise<Product> {
+    if (!this.currentSession) {
+      const { data } = await this.supabase.auth.getSession();
+      if (!data.session) {
+        throw new Error('No active session found');
+      }
+      this.currentSession = data.session;
+    }
+
+    const productData = {
+      name: formData.name,
+      sku: formData.sku,
+      description: formData.description,
+      retail_price: parseFloat(formData.retail_price),
+      business_price: parseFloat(formData.business_price),
+      stock: parseInt(formData.stock),
+      is_active: formData.is_active,
+      category_id: formData.category_id || null,
+      image_url: formData.image_url,
+    };
+
+    const { data, error } = await this.supabase
+      .from('products')
+      .update(productData)
+      .eq('id', id)
+      .select(
+        `
+        *,
+        product_images(*),
+        category:categories (id, name)
+      `
+      )
+      .single();
+
+    if (error) {
+      console.error('Error updating product:', error);
+      throw new Error(`Failed to update product: ${error.message}`);
+    }
+
+    return data;
   }
 
   async fetchProducts(filters?: FilterOptions): Promise<Product[]> {
@@ -77,99 +181,6 @@ export class ProductService {
     if (error) {
       console.error('Error fetching products:', error);
       throw new Error(`Failed to fetch products: ${error.message}`);
-    }
-
-    return data;
-  }
-
-  async createProduct(formData: ProductFormData): Promise<Product> {
-    if (!this.currentSession) {
-      const { data } = await this.supabase.auth.getSession();
-      if (!data.session) {
-        throw new Error('No active session found');
-      }
-      this.currentSession = data.session;
-    }
-
-    const productData = {
-      name: formData.name,
-      sku: formData.sku,
-      description: formData.description,
-      retail_price: parseFloat(formData.retail_price),
-      business_price: parseFloat(formData.business_price),
-      stock: parseInt(formData.stock),
-      is_active: formData.is_active,
-      image_url: null,
-    };
-
-    const { data: product, error: productError } = await this.supabase
-      .from('products')
-      .insert([productData])
-      .select()
-      .single();
-
-    if (productError) {
-      console.error('Error creating product:', productError);
-      throw new Error(`Failed to create product: ${productError.message}`);
-    }
-
-    if (formData.tempImages && formData.tempImages.length > 0) {
-      const imageService = new ProductImageService(this.supabase);
-      try {
-        for (const tempImage of formData.tempImages) {
-          await imageService.uploadImage(tempImage.file, product.id, tempImage.isPrimary);
-        }
-
-        const { data: productWithImages, error: fetchError } = await this.supabase
-          .from('products')
-          .select('*, product_images(*)')
-          .eq('id', product.id)
-          .single();
-
-        if (fetchError) {
-          throw fetchError;
-        }
-
-        return productWithImages;
-      } catch (imageError) {
-        console.error('Error uploading images:', imageError);
-        return product;
-      }
-    }
-
-    return product;
-  }
-
-  async updateProduct(id: string, formData: ProductFormData): Promise<Product> {
-    if (!this.currentSession) {
-      const { data } = await this.supabase.auth.getSession();
-      if (!data.session) {
-        throw new Error('No active session found');
-      }
-      this.currentSession = data.session;
-    }
-
-    const productData = {
-      name: formData.name,
-      sku: formData.sku,
-      description: formData.description,
-      retail_price: parseFloat(formData.retail_price),
-      business_price: parseFloat(formData.business_price),
-      stock: parseInt(formData.stock),
-      is_active: formData.is_active,
-      image_url: formData.image_url,
-    };
-
-    const { data, error } = await this.supabase
-      .from('products')
-      .update(productData)
-      .eq('id', id)
-      .select('*, product_images(*)')
-      .single();
-
-    if (error) {
-      console.error('Error updating product:', error);
-      throw new Error(`Failed to update product: ${error.message}`);
     }
 
     return data;

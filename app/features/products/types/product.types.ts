@@ -61,6 +61,7 @@ export interface ProductFormData {
   stock: string;
   is_active: boolean;
   image_url?: string | null;
+  category_id?: string | null;
   tempImages?: TempImage[] | undefined;
 }
 

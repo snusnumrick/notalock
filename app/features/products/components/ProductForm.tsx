@@ -2,9 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '~/components/ui/dialog';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/components/ui/select';
 import ReorderableImageGallery from './ReorderableImageGallery';
 import { TempImageGallery } from './TempImageGallery';
 import { ProductImageService } from '../api/productImageService';
+import { CategoryService } from '~/features/categories/api/categoryService';
 import { useVariants } from '../hooks/useVariants';
 import VariantManagement from './VariantManagement';
 import type {
@@ -16,6 +24,7 @@ import type {
   ProductImage,
   TempImage,
 } from '../types/product.types';
+import type { Category } from '~/features/categories/types/category.types';
 import { validateProductForm } from '../utils/validation';
 
 export function ProductForm({
@@ -33,6 +42,7 @@ export function ProductForm({
     business_price: initialData?.business_price?.toString() || '',
     stock: initialData?.stock?.toString() || '',
     is_active: initialData?.is_active ?? true,
+    category_id: initialData?.category_id || null,
   });
 
   const [loading, setLoading] = useState(false);
@@ -41,6 +51,8 @@ export function ProductForm({
   const [images, setImages] = useState<ProductImage[]>([]);
   const [tempImages, setTempImages] = useState<TempImage[]>([]);
   const [activeTab, setActiveTab] = useState('basic');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
 
   const {
     options,
@@ -57,6 +69,28 @@ export function ProductForm({
     [supabaseClient]
   );
 
+  const categoryService = React.useMemo(
+    () => new CategoryService(supabaseClient),
+    [supabaseClient]
+  );
+
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setLoadingCategories(true);
+      try {
+        const data = await categoryService.fetchCategories();
+        setCategories(data);
+      } catch (err) {
+        console.error('Failed to load categories:', err);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, [categoryService]);
+
   // Fetch existing images if editing a product
   useEffect(() => {
     if (initialData?.id) {
@@ -67,7 +101,7 @@ export function ProductForm({
     }
   }, [initialData?.id, imageService]);
 
-  const handleInputChange = (field: FormFields, value: string | boolean) => {
+  const handleInputChange = (field: FormFields | 'category_id', value: string | boolean) => {
     setFormData({ ...formData, [field]: value });
     if (field in validationErrors) {
       const errors = { ...validationErrors };
@@ -169,6 +203,34 @@ export function ProductForm({
                     required
                   />
                 </div>
+              </div>
+
+              {/* Category Field */}
+              <div>
+                <label htmlFor="category" className="text-sm font-medium">
+                  Category
+                </label>
+                <Select
+                  value={formData.category_id || 'none'}
+                  onValueChange={value =>
+                    handleInputChange('category_id', value === 'none' ? null : value)
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {loadingCategories && (
+                  <div className="text-sm text-gray-500">Loading categories...</div>
+                )}
               </div>
 
               {/* Description Field */}
