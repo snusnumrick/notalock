@@ -35,7 +35,7 @@
      - ⏳ Bulk operations
      - ⏳ UI polish and refinements
    - ✅ Hierarchical structure
-   - Category-product relations
+   - ✅ Category-product relations
    - Category-based navigation
 
 2. Category Features

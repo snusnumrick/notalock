@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Category-Product Relations
+  - Implemented many-to-many relationship between categories and products
+  - Added database migrations for category_products junction table
+  - Created API endpoints for managing product categories
+  - Added UI components for assigning products to categories
+  - Implemented bulk category assignment functionality
 - Category Tree Visualization
   - New CategoryTreeView component with expand/collapse functionality
   - Interactive folder icons and visibility indicators
