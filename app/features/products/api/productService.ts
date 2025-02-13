@@ -19,7 +19,8 @@ export class ProductService {
     let query = this.supabase.from('products').select(`
         *,
         product_images (*),
-        variants:product_variants (*)
+        variants:product_variants (*),
+        category:categories (id, name)
       `);
 
     // Apply filters

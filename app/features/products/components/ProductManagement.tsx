@@ -275,6 +275,7 @@ export function ProductManagement({
                   </th>
                   <th className="p-4 text-left">SKU</th>
                   <th className="p-4 text-left">Name</th>
+                  <th className="p-4 text-left">Category</th>
                   <th className="p-4 text-right">Retail Price</th>
                   <th className="p-4 text-right">Business Price</th>
                   <th className="p-4 text-right">Stock</th>
@@ -294,6 +295,7 @@ export function ProductManagement({
                     </td>
                     <td className="p-4">{product.sku}</td>
                     <td className="p-4">{product.name}</td>
+                    <td className="p-4">{product.category?.name || '-'}</td>
                     <td className="p-4 text-right">${product.retail_price.toFixed(2)}</td>
                     <td className="p-4 text-right">${product.business_price.toFixed(2)}</td>
                     <td className="p-4 text-right">{product.stock}</td>

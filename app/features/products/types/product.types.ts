@@ -12,6 +12,8 @@ export interface Product {
   created_at: string;
   image_url: string | null;
   images?: ProductImage[];
+  category_id: string | null;
+  category?: { id: string; name: string };
 }
 
 export interface LoaderData {
