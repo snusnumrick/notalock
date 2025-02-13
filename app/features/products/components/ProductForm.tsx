@@ -158,7 +158,7 @@ export function ProductForm({
           </TabsList>
 
           <TabsContent value="basic">
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form id="product-form" onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 {/* Name Field */}
                 <div>
@@ -337,24 +337,6 @@ export function ProductForm({
                   <span className="text-sm font-medium">Active Product</span>
                 </label>
               </div>
-
-              <div className="flex justify-end space-x-4 pt-4">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  disabled={loading}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  disabled={loading}
-                >
-                  {loading ? 'Saving...' : initialData ? 'Update Product' : 'Create Product'}
-                </button>
-              </div>
             </form>
           </TabsContent>
 
@@ -400,6 +382,25 @@ export function ProductForm({
             </div>
           </TabsContent>
         </Tabs>
+
+        <div className="flex justify-end space-x-4 pt-4 border-t mt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="product-form"
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : initialData ? 'Update Product' : 'Create Product'}
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );
