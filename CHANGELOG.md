@@ -8,6 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Featured Products Section
+  - Added new FeaturedProducts component for homepage
+  - Implemented product card design with hover effects
+  - Added loading states with skeleton animation
+  - Integrated with Supabase for featured products data
+  - Added multi-category display with badges
+  - Responsive grid layout (1/2/4 columns)
+  - Added proper error handling
+  - Euro currency formatting for prices
+
+### Changed
+- Improved product-category relationship implementation
+  - Updated database schema to support many-to-many relationships
+  - Added proper foreign key constraints
+  - Enhanced category display in product management
+  - Added null handling for product prices and stock
+  - Updated type definitions for better null safety
+  - Refactored product management components
+
+### Added
 - Bulk Operations for Categories
   - Added multi-select functionality in category management
   - Implemented bulk delete operations

@@ -5,15 +5,19 @@ export interface Product {
   name: string;
   sku: string;
   description: string | null;
-  retail_price: number;
-  business_price: number;
-  stock: number;
-  is_active: boolean;
+  retail_price: number | null;
+  business_price: number | null;
+  stock: number | null;
+  is_active: boolean | null;
   created_at: string;
   image_url: string | null;
   images?: ProductImage[];
-  category_id: string | null;
-  category?: { id: string; name: string };
+  categories?: {
+    category: {
+      id: string;
+      name: string;
+    };
+  }[];
 }
 
 export interface LoaderData {
@@ -61,7 +65,7 @@ export interface ProductFormData {
   stock: string;
   is_active: boolean;
   image_url?: string | null;
-  category_id?: string | null;
+  category_ids?: string[];
   tempImages?: TempImage[] | undefined;
 }
 

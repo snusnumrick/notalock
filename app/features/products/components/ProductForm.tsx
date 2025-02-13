@@ -42,7 +42,7 @@ export function ProductForm({
     business_price: initialData?.business_price?.toString() || '',
     stock: initialData?.stock?.toString() || '',
     is_active: initialData?.is_active ?? true,
-    category_id: initialData?.category_id || null,
+    category_ids: initialData?.categories?.map(({ category }) => category.id) || [],
   });
 
   const [loading, setLoading] = useState(false);
@@ -101,7 +101,10 @@ export function ProductForm({
     }
   }, [initialData?.id, imageService]);
 
-  const handleInputChange = (field: FormFields | 'category_id', value: string | boolean) => {
+  const handleInputChange = (
+    field: FormFields | 'category_ids',
+    value: string | boolean | string[]
+  ) => {
     setFormData({ ...formData, [field]: value });
     if (field in validationErrors) {
       const errors = { ...validationErrors };
@@ -205,29 +208,30 @@ export function ProductForm({
                 </div>
               </div>
 
-              {/* Category Field */}
+              {/* Categories Field */}
               <div>
-                <label htmlFor="category" className="text-sm font-medium">
-                  Category
+                <label htmlFor="categories" className="text-sm font-medium">
+                  Categories
                 </label>
-                <Select
-                  value={formData.category_id || 'none'}
-                  onValueChange={value =>
-                    handleInputChange('category_id', value === 'none' ? null : value)
-                  }
+                <select
+                  id="categories"
+                  multiple
+                  value={formData.category_ids}
+                  onChange={e => {
+                    const selectedOptions = Array.from(
+                      e.target.selectedOptions,
+                      option => option.value
+                    );
+                    handleInputChange('category_ids', selectedOptions);
+                  }}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {categories.map(category => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
                 {loadingCategories && (
                   <div className="text-sm text-gray-500">Loading categories...</div>
                 )}

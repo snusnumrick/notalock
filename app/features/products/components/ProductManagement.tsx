@@ -295,14 +295,20 @@ export function ProductManagement({
                     </td>
                     <td className="p-4">{product.sku}</td>
                     <td className="p-4">{product.name}</td>
-                    <td className="p-4">{product.category?.name || '-'}</td>
-                    <td className="p-4 text-right">${product.retail_price.toFixed(2)}</td>
-                    <td className="p-4 text-right">${product.business_price.toFixed(2)}</td>
-                    <td className="p-4 text-right">{product.stock}</td>
+                    <td className="p-4">
+                      {product.categories?.map(({ category }) => category.name).join(', ') || '-'}
+                    </td>
+                    <td className="p-4 text-right">
+                      ${product.retail_price?.toFixed(2) ?? '0.00'}
+                    </td>
+                    <td className="p-4 text-right">
+                      ${product.business_price?.toFixed(2) ?? '0.00'}
+                    </td>
+                    <td className="p-4 text-right">{product.stock ?? 0}</td>
                     <td className="p-4">
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                          product.is_active
+                          (product.is_active ?? false)
                             ? 'bg-green-100 text-green-700'
                             : 'bg-red-100 text-red-700'
                         }`}
@@ -353,11 +359,11 @@ export function ProductManagement({
               name: editingProduct.name,
               sku: editingProduct.sku,
               description: editingProduct.description || '',
-              retail_price: editingProduct.retail_price.toString(),
-              business_price: editingProduct.business_price.toString(),
-              stock: editingProduct.stock.toString(),
-              is_active: editingProduct.is_active,
-              category_id: editingProduct.category_id,
+              retail_price: editingProduct.retail_price?.toString() ?? '0',
+              business_price: editingProduct.business_price?.toString() ?? '0',
+              stock: editingProduct.stock?.toString() ?? '0',
+              is_active: editingProduct.is_active ?? true,
+              categories: editingProduct.categories,
             },
           })}
           supabaseClient={supabase}

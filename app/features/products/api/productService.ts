@@ -4,6 +4,33 @@ import type { FilterOptions } from '../components/ProductSearch';
 import { ProductImageService } from './productImageService';
 
 export class ProductService {
+  private async updateProductCategories(productId: string, categoryIds: string[]) {
+    // First, remove existing category associations
+    const { error: deleteError } = await this.supabase
+      .from('product_categories')
+      .delete()
+      .eq('product_id', productId);
+
+    if (deleteError) {
+      throw new Error(`Failed to update product categories: ${deleteError.message}`);
+    }
+
+    // Then add new category associations
+    if (categoryIds.length > 0) {
+      const categoryAssignments = categoryIds.map(categoryId => ({
+        product_id: productId,
+        category_id: categoryId,
+      }));
+
+      const { error: insertError } = await this.supabase
+        .from('product_categories')
+        .insert(categoryAssignments);
+
+      if (insertError) {
+        throw new Error(`Failed to assign product categories: ${insertError.message}`);
+      }
+    }
+  }
   constructor(private supabase: SupabaseClient) {}
 
   setSession(session: Session) {
@@ -29,7 +56,7 @@ export class ProductService {
       business_price: parseFloat(formData.business_price),
       stock: parseInt(formData.stock),
       is_active: formData.is_active,
-      category_id: formData.category_id || null,
+      // Categories are now handled through the junction table
       image_url: null,
     };
 
@@ -44,6 +71,12 @@ export class ProductService {
       throw new Error(`Failed to create product: ${productError.message}`);
     }
 
+    // Handle category assignments
+    if (formData.category_ids && formData.category_ids.length > 0) {
+      await this.updateProductCategories(product.id, formData.category_ids);
+    }
+
+    // Handle image uploads
     if (formData.tempImages && formData.tempImages.length > 0) {
       const imageService = new ProductImageService(this.supabase);
       try {
@@ -57,7 +90,7 @@ export class ProductService {
             `
         *,
         product_images(*),
-        category:categories (id, name)
+        categories:product_categories!left(category:categories(id, name))
       `
           )
           .eq('id', product.id)
@@ -94,10 +127,11 @@ export class ProductService {
       business_price: parseFloat(formData.business_price),
       stock: parseInt(formData.stock),
       is_active: formData.is_active,
-      category_id: formData.category_id || null,
+      // Categories are now handled through the junction table
       image_url: formData.image_url,
     };
 
+    // Update product data
     const { data, error } = await this.supabase
       .from('products')
       .update(productData)
@@ -106,7 +140,7 @@ export class ProductService {
         `
         *,
         product_images(*),
-        category:categories (id, name)
+        categories:product_categories!left(category:categories(id, name))
       `
       )
       .single();
@@ -114,6 +148,11 @@ export class ProductService {
     if (error) {
       console.error('Error updating product:', error);
       throw new Error(`Failed to update product: ${error.message}`);
+    }
+
+    // Update categories if provided
+    if (formData.category_ids) {
+      await this.updateProductCategories(id, formData.category_ids);
     }
 
     return data;
@@ -124,7 +163,7 @@ export class ProductService {
         *,
         product_images (*),
         variants:product_variants (*),
-        category:categories (id, name)
+        categories:product_categories!left(category:categories(id, name))
       `);
 
     // Apply filters
