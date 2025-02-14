@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from '@remix-run/react';
+import { Outlet, Link, useLocation, useRouteError, isRouteErrorResponse } from '@remix-run/react';
 import { type LoaderFunction, redirect } from '@remix-run/node';
 import { requireAdmin } from '~/server/middleware/auth.server';
 
@@ -19,6 +19,42 @@ export const loader: LoaderFunction = async ({ request }) => {
     throw redirect(loginUrl.pathname + loginUrl.search);
   }
 };
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+
+  let errorMessage = 'An error occurred in the admin section.';
+  let errorStatus = 500;
+
+  if (isRouteErrorResponse(error)) {
+    errorMessage = error.data;
+    errorStatus = error.status;
+  } else if (error instanceof Error) {
+    errorMessage = error.message;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 px-4 py-16 sm:px-6 sm:py-24 md:grid md:place-items-center lg:px-8">
+      <div className="max-w-max mx-auto text-center">
+        <main>
+          <p className="text-4xl font-bold text-blue-600 sm:text-5xl mb-4">{errorStatus}</p>
+          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight sm:text-3xl mb-2">
+            Admin Error
+          </h1>
+          <p className="mt-2 text-base text-gray-500 mb-6">{errorMessage}</p>
+          <div className="mt-6 flex items-center justify-center gap-4">
+            <Link
+              to="/admin"
+              className="rounded-md bg-blue-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+            >
+              Return to Admin Dashboard
+            </Link>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminLayout() {
   const location = useLocation();

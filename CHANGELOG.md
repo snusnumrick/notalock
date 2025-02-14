@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Enhanced Login Page Error Handling
+  - Replaced 401 error page redirect with inline error messages
+  - Implemented Remix's ErrorBoundary pattern for better error handling
+  - Added field-level validation with specific error messages
+  - Added loading states during form submission
+  - Improved form accessibility and user feedback
+  - Better error message presentation using shadcn/ui Alert component
+
+### Added
+- Comprehensive Error Handling System
+  - Added root-level ErrorBoundary for global error catching
+  - Implemented specialized admin ErrorBoundary for admin section
+  - Proper error status code and message handling
+  - Styled error pages matching application design
+  - Integrated with Remix's error boundary system
+  - Full error hierarchy support for nested routes
+  - Enhanced UX with clear error messages and recovery actions
+
 ### Added
 - Featured Products Section
   - Added new FeaturedProducts component for homepage
