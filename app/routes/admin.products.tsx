@@ -12,18 +12,12 @@ export const loader: LoaderFunction = async ({ request }) => {
       hasSupabaseUrl: !!process.env.SUPABASE_URL,
       hasSupabaseAnonKey: !!process.env.SUPABASE_ANON_KEY,
     });
-    console.log('Checking admin requirements...');
     const { user, response } = await requireAdmin(request);
-    console.log('Admin check passed, user:', user);
     const supabase = createSupabaseClient(request, response);
 
     const {
       data: { session },
     } = await supabase.auth.getSession();
-
-    // Log session state
-    console.log('Admin products loader - User:', user);
-    console.log('Admin products loader - Session:', session);
 
     if (!session) {
       throw redirect('/login');

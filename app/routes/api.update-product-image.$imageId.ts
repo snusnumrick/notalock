@@ -8,6 +8,7 @@ import {
 } from '~/server/middleware';
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
+  console.log('Update image');
   try {
     if (!['PUT', 'PATCH'].includes(request.method)) {
       throw json({ error: 'Method not allowed' }, { status: 405 });

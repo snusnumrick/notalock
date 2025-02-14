@@ -3,6 +3,7 @@ import type { ActionFunctionArgs } from '@remix-run/node';
 import { requireAdmin } from '~/utils/auth.server';
 
 export async function action({ request }: ActionFunctionArgs) {
+  console.log('Creating product...');
   const { supabase } = await requireAdmin(request);
 
   if (request.method !== 'POST') {

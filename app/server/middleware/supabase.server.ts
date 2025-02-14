@@ -10,7 +10,6 @@ type CookieHandler = {
  * Creates a Supabase client with cookie handling for server-side operations
  */
 export function createSupabaseClient(request: Request, response?: Response) {
-  console.log('Creating Supabase client');
   const cookies = request.headers.get('Cookie') ?? '';
   response = response || new Response();
 

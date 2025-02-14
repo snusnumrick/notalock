@@ -3,6 +3,7 @@ import { json } from '@remix-run/node';
 import { requireAdmin } from '~/server/middleware';
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
+  console.log('Delete image');
   try {
     if (request.method !== 'DELETE') {
       throw json({ error: 'Method not allowed' }, { status: 405 });

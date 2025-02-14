@@ -7,6 +7,7 @@ import { useSupabase } from '~/lib/supabase';
 import { createSupabaseClient } from '~/server/middleware/supabase.server';
 
 export const loader: LoaderFunction = async ({ request }) => {
+  console.log('Starting admin categories loader');
   const response = new Response();
   const { user } = await requireAdmin(request);
   const supabase = createSupabaseClient(request, response);

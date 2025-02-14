@@ -16,7 +16,7 @@ interface AuthResult {
  * Throws redirect to login if user is not authenticated
  */
 export async function requireAuth(request: Request): Promise<AuthResult> {
-  console.log('Starting requireAuth check');
+  console.log('app/server/middleware/auth.server.ts - Starting requireAuth check');
   const response = new Response();
   const supabase = createSupabaseClient(request, response);
 
@@ -27,7 +27,11 @@ export async function requireAuth(request: Request): Promise<AuthResult> {
 
   if (error || !user) {
     console.log('Auth check failed:', { error, user });
-    throw redirect('/login');
+    const url = new URL(request.url);
+    const redirectTo = url.pathname + url.search;
+    const loginUrl = new URL('/login', url.origin);
+    loginUrl.searchParams.set('redirectTo', redirectTo);
+    throw redirect(loginUrl.pathname + loginUrl.search);
   }
 
   return { user, response };
@@ -38,7 +42,7 @@ export async function requireAuth(request: Request): Promise<AuthResult> {
  * Throws redirect to unauthorized if user is not an admin
  */
 export async function requireAdmin(request: Request): Promise<AuthResult> {
-  console.log('Starting requireAdmin check');
+  console.log('app/server/middleware/auth.server.ts -Starting requireAdmin check');
   const { user, response } = await requireAuth(request);
   const supabase = createSupabaseClient(request, response);
 

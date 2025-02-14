@@ -3,11 +3,20 @@ import { type LoaderFunction, redirect } from '@remix-run/node';
 import { requireAdmin } from '~/server/middleware/auth.server';
 
 export const loader: LoaderFunction = async ({ request }) => {
+  console.log('Starting admin permissions check');
   try {
     await requireAdmin(request);
     return null;
   } catch (error) {
-    throw redirect('/login');
+    if (error instanceof Response && error.status === 302) {
+      console.log('Preserve the redirect from requireAdmin/requireAuth', error);
+      throw error; // Preserve the redirect from requireAdmin/requireAuth
+    }
+    const url = new URL(request.url);
+    const loginUrl = new URL('/login', url.origin);
+    loginUrl.searchParams.set('redirectTo', url.pathname + url.search);
+    console.log('Redirecting to login', loginUrl.pathname + loginUrl.search);
+    throw redirect(loginUrl.pathname + loginUrl.search);
   }
 };
 

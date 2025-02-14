@@ -1,7 +1,7 @@
 import type { SupabaseClient, Session } from '@supabase/supabase-js';
 import type { Product, ProductFormData } from '../types/product.types';
 import type { FilterOptions } from '../components/ProductSearch';
-import { ProductImageService } from './productImageService';
+import { createImageService, ProductImageService } from './productImageService';
 
 export class ProductService {
   private async updateProductCategories(productId: string, categoryIds: string[]) {
@@ -78,7 +78,7 @@ export class ProductService {
 
     // Handle image uploads
     if (formData.tempImages && formData.tempImages.length > 0) {
-      const imageService = new ProductImageService(this.supabase);
+      const imageService = createImageService(this.supabase);
       try {
         for (const tempImage of formData.tempImages) {
           await imageService.uploadImage(tempImage.file, product.id, tempImage.isPrimary);

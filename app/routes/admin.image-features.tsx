@@ -10,6 +10,7 @@ import ProductGallery from '~/features/products/components/ProductGallery';
 import type { ProductImage } from '~/features/products/types/product.types';
 import { ProductImageService } from '~/features/products/api/productImageService';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { createSupabaseClient, requireAdmin } from '~/server/middleware';
 
 // Create an adapter that extends the ProductImageService class
 class FormSubmitImageService extends ProductImageService {
@@ -152,54 +153,14 @@ class FormSubmitImageService extends ProductImageService {
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  console.log('Loader called');
+  console.log('admin-features - Loader called');
   const response = new Response();
-  const cookies = request.headers.get('Cookie') ?? '';
-
-  const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
-    cookies: {
-      get: key => {
-        console.log('Getting cookie:', key);
-        const cookie = cookies.split(';').find(c => c.trim().startsWith(`${key}=`));
-        if (!cookie) return null;
-        const [, value] = cookie.trim().split('=');
-        return decodeURIComponent(value);
-      },
-      set: (key, value) => {
-        console.log('Setting cookie:', key, value);
-        response.headers.append('Set-Cookie', `${key}=${value}; Path=/; HttpOnly; SameSite=Lax`);
-      },
-      remove: key => {
-        console.log('Removing cookie:', key);
-        response.headers.append(
-          'Set-Cookie',
-          `${key}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
-        );
-      },
-    },
-  });
+  const supabase = createSupabaseClient(request, response);
 
   const {
     data: { user },
-    error: userError,
   } = await supabase.auth.getUser();
-  console.log('User:', user);
-
-  if (userError || !user) {
-    return redirect('/login');
-  }
-
-  // Verify admin role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-  console.log('Profile:', profile);
-
-  if (profile?.role !== 'admin') {
-    return redirect('/unauthorized');
-  }
+  console.log('admin-features - User:', user);
 
   // Ensure test product exists
   const testProductId = '123e4567-e89b-12d3-a456-426614174000';

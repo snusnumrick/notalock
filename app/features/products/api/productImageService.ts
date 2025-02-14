@@ -2,8 +2,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { nanoid } from 'nanoid';
 import type { ProductImage } from '../types/product.types';
-import type { ImageOptimizer } from './optimization';
-import { ClientImageOptimizer } from './optimization';
+import { ImageOptimizer, ServerImageOptimizer, ClientImageOptimizer } from './optimization';
 
 export class ProductImageService {
   private supabase: SupabaseClient;
@@ -406,4 +405,25 @@ export class ProductImageService {
 
     return data || [];
   }
+}
+
+interface CreateImageServiceOptions {
+  useServerOptimization?: boolean;
+  optimizationConfig?: {
+    maxWidth?: number;
+    maxHeight?: number;
+    quality?: number;
+    format?: string;
+  };
+}
+
+export function createImageService(
+  supabase: SupabaseClient,
+  options: CreateImageServiceOptions = {}
+) {
+  const { useServerOptimization = false } = options;
+
+  const optimizer = useServerOptimization ? new ServerImageOptimizer() : new ClientImageOptimizer();
+
+  return new ProductImageService(supabase, optimizer);
 }
