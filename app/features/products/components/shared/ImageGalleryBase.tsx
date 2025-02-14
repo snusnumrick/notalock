@@ -54,6 +54,7 @@ function DraggableImage<T extends GalleryImage>({
       }
     },
   });
+  console.log('image: ', image);
 
   return (
     <div
@@ -125,15 +126,15 @@ export function ImageGalleryBase<T extends GalleryImage>({
       setError(null);
 
       try {
-        const newImages = await onUpload(acceptedFiles);
-        onImagesChange([...images, ...newImages]);
+        // Just call onUpload and let parent handle state updates
+        await onUpload(acceptedFiles);
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Failed to process images');
       } finally {
         setIsLoading(false);
       }
     },
-    [images, onImagesChange, onUpload]
+    [onUpload]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -150,18 +151,25 @@ export function ImageGalleryBase<T extends GalleryImage>({
     async (index: number) => {
       const image = images[index];
       try {
-        if (onDelete) {
-          await onDelete(image.id);
-        }
+        // Create new array and update it before making any async calls
         const newImages = [...images];
         newImages.splice(index, 1);
 
+        // Update primary status before the async operation
         if (image.isPrimary && newImages.length > 0) {
           newImages[0].isPrimary = true;
         }
 
+        // Update the UI state first
         onImagesChange(newImages);
+
+        // Then perform the async deletion
+        if (onDelete) {
+          await onDelete(image.id);
+        }
       } catch (error) {
+        // If deletion fails, revert the UI state
+        onImagesChange(images);
         const errorMessage = error instanceof Error ? error.message : 'Failed to remove image';
         setError(errorMessage);
       }

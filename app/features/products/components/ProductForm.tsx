@@ -2,13 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '~/components/ui/dialog';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '~/components/ui/select';
 import ReorderableImageGallery from './ReorderableImageGallery';
 import { TempImageGallery } from './TempImageGallery';
 import { ProductImageService } from '../api/productImageService';

@@ -36,7 +36,6 @@ CREATE TABLE categories (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -45,28 +44,23 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create trigger to automatically update updated_at
 CREATE TRIGGER update_categories_updated_at
     BEFORE UPDATE ON categories
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Add RLS policies
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 
--- Policy for admins (full access)
 CREATE POLICY "Allow full access for admins" ON categories
     FOR ALL USING (
         auth.jwt() ->> 'role' = 'admin'
     );
 
--- Policy for viewing visible categories (public access)
 CREATE POLICY "Allow viewing visible categories for all users" ON categories
     FOR SELECT USING (
         is_visible = true
     );
 
--- Create indexes for faster lookups
 CREATE INDEX idx_categories_parent_id ON categories(parent_id);
 CREATE INDEX idx_categories_slug ON categories(slug);
 CREATE INDEX idx_categories_sort_order ON categories(sort_order);
@@ -182,11 +176,128 @@ CREATE TABLE order_items (
 );
 ```
 
+## Admin Permissions System
+
+### admin_permissions
+```sql
+CREATE TABLE public.admin_permissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    role user_role NOT NULL DEFAULT 'customer',
+    can_manage_products BOOLEAN NOT NULL DEFAULT false,
+    can_view_products BOOLEAN NOT NULL DEFAULT true,
+    can_manage_categories BOOLEAN NOT NULL DEFAULT false,
+    can_view_categories BOOLEAN NOT NULL DEFAULT true,
+    can_manage_orders BOOLEAN NOT NULL DEFAULT false,
+    can_view_orders BOOLEAN NOT NULL DEFAULT true,
+    can_manage_users BOOLEAN NOT NULL DEFAULT false,
+    can_view_users BOOLEAN NOT NULL DEFAULT true,
+    can_manage_all_products BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id)
+);
+```
+
+### admin_audit_log
+```sql
+CREATE TABLE public.admin_audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    action TEXT NOT NULL,
+    details JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### Permission Synchronization
+```sql
+CREATE OR REPLACE FUNCTION sync_admin_permissions()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+        INSERT INTO public.admin_permissions (
+            user_id,
+            role,
+            can_manage_products,
+            can_view_products,
+            can_manage_categories,
+            can_view_categories,
+            can_manage_orders,
+            can_view_orders,
+            can_manage_users,
+            can_view_users,
+            can_manage_all_products
+        )
+        VALUES (
+            NEW.id,
+            NEW.role,
+            CASE 
+                WHEN NEW.role = 'admin' THEN true
+                WHEN NEW.role = 'business' THEN false
+                ELSE false
+            END,
+            CASE 
+                WHEN NEW.role IN ('admin', 'business') THEN true
+                ELSE true
+            END,
+            CASE 
+                WHEN NEW.role = 'admin' THEN true
+                ELSE false
+            END,
+            CASE 
+                WHEN NEW.role IN ('admin', 'business') THEN true
+                ELSE true
+            END,
+            CASE 
+                WHEN NEW.role = 'admin' THEN true
+                ELSE false
+            END,
+            CASE 
+                WHEN NEW.role IN ('admin', 'business') THEN true
+                ELSE false
+            END,
+            CASE 
+                WHEN NEW.role = 'admin' THEN true
+                ELSE false
+            END,
+            CASE 
+                WHEN NEW.role = 'admin' THEN true
+                ELSE false
+            END,
+            CASE 
+                WHEN NEW.role = 'admin' THEN true
+                ELSE false
+            END
+        )
+        ON CONFLICT (user_id) 
+        DO UPDATE SET
+            role = EXCLUDED.role,
+            can_manage_products = EXCLUDED.can_manage_products,
+            can_view_products = EXCLUDED.can_view_products,
+            can_manage_categories = EXCLUDED.can_manage_categories,
+            can_view_categories = EXCLUDED.can_view_categories,
+            can_manage_orders = EXCLUDED.can_manage_orders,
+            can_view_orders = EXCLUDED.can_view_orders,
+            can_manage_users = EXCLUDED.can_manage_users,
+            can_view_users = EXCLUDED.can_view_users,
+            can_manage_all_products = EXCLUDED.can_manage_all_products,
+            updated_at = NOW();
+    END IF;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER sync_profile_permissions
+    AFTER INSERT OR UPDATE OF role ON public.profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION sync_admin_permissions();
+```
+
 ## Database Functions
 
 ### Price Adjustment Functions
 ```sql
--- Adjust retail prices for multiple products
 CREATE OR REPLACE FUNCTION adjust_retail_prices(
     product_ids UUID[],
     adjustment DECIMAL
@@ -199,7 +310,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Adjust business prices for multiple products
 CREATE OR REPLACE FUNCTION adjust_business_prices(
     product_ids UUID[],
     adjustment DECIMAL
@@ -230,25 +340,57 @@ $$ LANGUAGE plpgsql;
 
 ## Row Level Security (RLS) Policies
 
+### Storage Policies
+```sql
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public Read Access"
+ON storage.objects FOR SELECT
+USING ( bucket_id = 'product-images' );
+
+CREATE POLICY "Admin Insert Access"
+ON storage.objects
+FOR INSERT
+WITH CHECK (
+  bucket_id = 'product-images' 
+  AND EXISTS (
+    SELECT 1 FROM public.admin_permissions
+    WHERE user_id = auth.uid()
+    AND can_manage_products = true
+  )
+);
+
+CREATE POLICY "Admin Full Access"
+ON storage.objects
+FOR ALL
+USING (
+  bucket_id = 'product-images' 
+  AND EXISTS (
+    SELECT 1 FROM public.admin_permissions
+    WHERE user_id = auth.uid()
+    AND can_manage_products = true
+  )
+);
+```
+
 ### Profiles
 ```sql
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- Users can read their own profile
 CREATE POLICY "Users can read own profile"
     ON profiles FOR SELECT
     USING (auth.uid() = id);
 
--- Only admins can read all profiles
 CREATE POLICY "Admins can read all profiles"
     ON profiles FOR SELECT
     USING (
-        auth.uid() IN (
-            SELECT id FROM profiles WHERE role = 'admin'
+        EXISTS (
+            SELECT 1 FROM public.admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_users = true
         )
     );
 
--- Users can update their own profile
 CREATE POLICY "Users can update own profile"
     ON profiles FOR UPDATE
     USING (auth.uid() = id);
@@ -256,51 +398,93 @@ CREATE POLICY "Users can update own profile"
 
 ### Products and Related Tables
 ```sql
--- Products
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
--- Everyone can view active products
 CREATE POLICY "Products are viewable by everyone"
     ON products FOR SELECT
     USING (is_active = true);
 
--- Only admins can modify products
 CREATE POLICY "Products are editable by admins"
     ON products FOR ALL
     USING (
-        auth.uid() IN (
-            SELECT id FROM profiles WHERE role = 'admin'
+        EXISTS (
+            SELECT 1 FROM public.admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
         )
     );
 
--- Product Options
 ALTER TABLE product_options ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_option_values ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_variants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_variant_options ENABLE ROW LEVEL SECURITY;
 
--- Public read access for product-related tables
 CREATE POLICY "Public Read Access" ON product_options FOR SELECT USING (true);
 CREATE POLICY "Public Read Access" ON product_option_values FOR SELECT USING (true);
 CREATE POLICY "Public Read Access" ON product_variants FOR SELECT USING (true);
 CREATE POLICY "Public Read Access" ON product_variant_options FOR SELECT USING (true);
 
--- Admin write access for product-related tables
 CREATE POLICY "Admin Write Access" ON product_options
     USING (
-        auth.role() = 'authenticated'
-        AND EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE id = auth.uid()
-            AND role = 'admin'
+        EXISTS (
+            SELECT 1 FROM public.admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
         )
     )
     WITH CHECK (
-        auth.role() = 'authenticated'
-        AND EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE id = auth.uid()
-            AND role = 'admin'
+        EXISTS (
+            SELECT 1 FROM public.admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
+        )
+    );
+
+CREATE POLICY "Admin Write Access" ON product_option_values
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
+        )
+    );
+
+CREATE POLICY "Admin Write Access" ON product_variants
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
+        )
+    );
+
+CREATE POLICY "Admin Write Access" ON product_variant_options
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
         )
     );
 ```
@@ -309,73 +493,95 @@ CREATE POLICY "Admin Write Access" ON product_options
 ```sql
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
--- Users can view their own orders
 CREATE POLICY "Users can view own orders"
     ON orders FOR SELECT
     USING (user_id = auth.uid());
 
--- Users can create their own orders
+CREATE POLICY "Admins can view all orders"
+    ON orders FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_orders = true
+        )
+    );
+
 CREATE POLICY "Users can create orders"
     ON orders FOR INSERT
     WITH CHECK (user_id = auth.uid());
 
--- Only admins can update orders
 CREATE POLICY "Admins can update orders"
     ON orders FOR UPDATE
     USING (
-        auth.uid() IN (
-            SELECT id FROM profiles WHERE role = 'admin'
+        EXISTS (
+            SELECT 1 FROM public.admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_orders = true
         )
     );
-```
+
+ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own order items"
+    ON order_items FOR SELECT
+    USING (
+        order_id IN (
+            SELECT id FROM orders WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Admins can view all order items"
+    ON order_items FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_orders = true
+        )
+    );
 
 ## Indexes
 
 ### Product Indexes
 ```sql
--- Products
 CREATE INDEX idx_products_category ON products(category_id);
 CREATE INDEX idx_products_sku ON products(sku);
 CREATE INDEX idx_products_slug ON products(slug);
 CREATE INDEX idx_products_active ON products(is_active);
 
--- Product Images
 CREATE INDEX idx_product_images_product ON product_images(product_id);
 CREATE INDEX idx_product_images_primary ON product_images(product_id) WHERE is_primary = true;
 
--- Product Options
 CREATE INDEX idx_product_options_name ON product_options(name);
 
--- Product Option Values
 CREATE INDEX idx_product_option_values_option ON product_option_values(option_id);
 CREATE INDEX idx_product_option_values_value ON product_option_values(value);
 
--- Product Variants
 CREATE INDEX idx_product_variants_product ON product_variants(product_id);
 CREATE INDEX idx_product_variants_sku ON product_variants(sku);
 CREATE INDEX idx_product_variants_active ON product_variants(is_active);
 
--- Product Variant Options
 CREATE INDEX idx_product_variant_options_variant ON product_variant_options(variant_id);
 CREATE INDEX idx_product_variant_options_value ON product_variant_options(option_value_id);
 ```
 
-### Category Indexes
-```sql
-CREATE INDEX idx_categories_parent ON categories(parent_id);
-CREATE INDEX idx_categories_slug ON categories(slug);
-```
-
 ### Order Indexes
 ```sql
--- Orders
 CREATE INDEX idx_orders_user ON orders(user_id);
 CREATE INDEX idx_orders_status ON orders(status);
 CREATE INDEX idx_orders_created ON orders(created_at DESC);
 
--- Order Items
 CREATE INDEX idx_order_items_order ON order_items(order_id);
 CREATE INDEX idx_order_items_product ON order_items(product_id);
+```
+
+### Admin Permission Indexes
+```sql
+CREATE INDEX idx_admin_permissions_user ON admin_permissions(user_id);
+CREATE INDEX idx_admin_permissions_role ON admin_permissions(role);
+CREATE INDEX idx_admin_audit_log_user ON admin_audit_log(user_id);
+CREATE INDEX idx_admin_audit_log_created ON admin_audit_log(created_at DESC);
 ```
 
 ## Field Formats
@@ -388,7 +594,7 @@ The `technical_specs` JSONB field in the products table follows this structure:
         "height": "number",
         "width": "number",
         "depth": "number",
-        "unit": "string" // mm, cm, inches
+        "unit": "string"
     },
     "material": "string",
     "finish": "string",
@@ -416,5 +622,18 @@ The `shipping_address` and `billing_address` JSONB fields follow this structure:
     "postal_code": "string",
     "country": "string",
     "phone": "string"
+}
+```
+
+### Audit Log Format
+The `details` JSONB field in the admin_audit_log table follows this structure:
+```json
+{
+  "table": "string",
+  "operation": "string",
+  "old_values": {},
+  "new_values": {},
+  "affected_ids": ["string"],
+  "metadata": {}
 }
 ```

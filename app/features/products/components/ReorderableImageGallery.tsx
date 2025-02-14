@@ -35,23 +35,41 @@ export default function ReorderableImageGallery({
   const handleUpload = useCallback(
     async (files: File[]): Promise<{ id: string; url: string; isPrimary: boolean }[]> => {
       const uploadedImages = await imageService.uploadMultipleImages(files, productId);
+
+      // Get fresh list from server
+      const allImages = await imageService.getProductImages(productId);
+
+      // Update parent component with complete list
+      onImagesChange(allImages);
+
+      // Return just the newly uploaded images for the gallery component
       return uploadedImages.map(mapToGalleryImage);
     },
-    [imageService, productId]
+    [imageService, productId, onImagesChange]
   );
 
   const handleDelete = useCallback(
     async (imageId: string): Promise<void> => {
+      console.log('handleDelete', imageId);
       await imageService.deleteImage(imageId);
+
+      // Get the updated list of images after deletion
+      const updatedImages = await imageService.getProductImages(productId);
+      onImagesChange(updatedImages);
     },
-    [imageService]
+    [imageService, productId, onImagesChange]
   );
 
+  // Rest of the component remains the same
   const handleSetPrimary = useCallback(
     async (imageId: string): Promise<void> => {
       await imageService.setPrimaryImage(imageId);
+
+      // Get the updated list of images after changing primary
+      const updatedImages = await imageService.getProductImages(productId);
+      onImagesChange(updatedImages);
     },
-    [imageService]
+    [imageService, productId, onImagesChange]
   );
 
   const handleReorder = useCallback(
@@ -61,20 +79,20 @@ export default function ReorderableImageGallery({
       newImages.splice(dragIndex, 1);
       newImages.splice(hoverIndex, 0, draggedImage);
 
-      // Update the order in the database
       try {
-        // Update sort_order for each image
         await Promise.all(
           newImages.map((image, index) => imageService.updateImageOrder(image.id, index))
         );
-        onImagesChange(newImages);
+
+        // Get the updated list of images after reordering
+        const updatedImages = await imageService.getProductImages(productId);
+        onImagesChange(updatedImages);
       } catch (error) {
         console.error('Failed to update image order:', error);
-        // Revert the order if update fails
         onImagesChange(images);
       }
     },
-    [images, onImagesChange, imageService]
+    [images, onImagesChange, imageService, productId]
   );
 
   const galleryImages = images.map(mapToGalleryImage);
@@ -82,9 +100,21 @@ export default function ReorderableImageGallery({
   const handleImagesChange = (
     updatedGalleryImages: Array<{ id: string; url: string; isPrimary: boolean }>
   ) => {
-    const updatedImages = images.map((originalImage, index) =>
-      preserveDatabaseFields(originalImage, updatedGalleryImages[index])
-    );
+    console.log('handleImagesChange', updatedGalleryImages);
+
+    // Create a map of updated gallery images by ID for easy lookup
+    const updatedGalleryMap = new Map(updatedGalleryImages.map(img => [img.id, img]));
+
+    // Only keep images that exist in the updated gallery
+    const updatedImages = images
+      .filter(img => updatedGalleryMap.has(img.id))
+      .map(originalImage => {
+        const updatedGalleryImage = updatedGalleryMap.get(originalImage.id);
+        return preserveDatabaseFields(originalImage, {
+          isPrimary: updatedGalleryImage?.isPrimary || false,
+        });
+      });
+
     onImagesChange(updatedImages);
   };
 

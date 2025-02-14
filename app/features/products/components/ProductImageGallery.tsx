@@ -53,6 +53,7 @@ export function ProductImageGallery({
 
   const handleRemoveImage = async (imageId: string) => {
     try {
+      console.log('handleRemoveImage', imageId);
       await imageService.deleteImage(imageId);
       onImagesChange(images.filter(img => img.id !== imageId));
     } catch (error) {
