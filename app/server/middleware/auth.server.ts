@@ -54,7 +54,9 @@ export async function requireAdmin(request: Request): Promise<AuthResult> {
 
   if (profileError || profile?.role !== 'admin') {
     console.log('Admin check failed:', { profileError, role: profile?.role });
-    throw redirect('/unauthorized');
+    const loginUrl = new URL('/login', url.origin);
+    loginUrl.searchParams.set('from', 'unauthorized');
+    throw redirect(loginUrl.pathname + loginUrl.search);
   }
 
   return {

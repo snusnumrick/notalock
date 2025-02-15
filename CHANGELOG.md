@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Authentication and Authorization System
+  - Added sign-up functionality to login page
+  - Implemented email confirmation flow
+  - Added admin user creation route (/admin/signup)
+  - Added role-based authorization (admin/customer)
+  - Enhanced error handling for auth flows
+  - Added confirmation email resend functionality
+  - Improved unauthorized access handling
+  - Added proper session management
+  - Added user profile creation
+
+### Changed
+- Improved Authentication UX
+  - Added tabbed interface for login/signup
+  - Enhanced form validation and error messages
+  - Added proper loading states
+  - Improved error message presentation
+  - Added email confirmation status messages
+  - Better handling of unauthorized access
+  - Clear user feedback for auth actions
+
 ### Changed
 - Enhanced Login Page Error Handling
   - Replaced 401 error page redirect with inline error messages
