@@ -38,7 +38,7 @@
 
 2. Customer-Facing Pages
    - Homepage
-     - Featured products section
+     - ✅ Featured products section
      - Category highlights
      - Hero banner/slider
      - Quick access to popular categories
