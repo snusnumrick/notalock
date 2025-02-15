@@ -1,5 +1,5 @@
 import React from 'react';
-import { json, redirect } from '@remix-run/node';
+import { json } from '@remix-run/node';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
 import { useLoaderData, useSubmit, useActionData } from '@remix-run/react';
 import { createServerClient } from '@supabase/ssr';
@@ -10,7 +10,7 @@ import ProductGallery from '~/features/products/components/ProductGallery';
 import type { ProductImage } from '~/features/products/types/product.types';
 import { ProductImageService } from '~/features/products/api/productImageService';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { createSupabaseClient, requireAdmin } from '~/server/middleware';
+import { createSupabaseClient } from '~/server/middleware';
 
 // Create an adapter that extends the ProductImageService class
 class FormSubmitImageService extends ProductImageService {

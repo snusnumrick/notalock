@@ -1,7 +1,7 @@
 import type { SupabaseClient, Session } from '@supabase/supabase-js';
 import type { Product, ProductFormData } from '../types/product.types';
 import type { FilterOptions } from '../components/ProductSearch';
-import { createImageService, ProductImageService } from './productImageService';
+import { createImageService } from './productImageService';
 
 export class ProductService {
   private async updateProductCategories(productId: string, categoryIds: string[]) {

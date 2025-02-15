@@ -1,17 +1,21 @@
-import { json, redirect } from '@remix-run/node';
-import type { LoaderFunction } from '@remix-run/node';
+import { json } from '@remix-run/node';
+import type { LoaderFunctionArgs } from '@remix-run/node';
 import { useLoaderData, isRouteErrorResponse, useRouteError } from '@remix-run/react';
 import { ProductManagement } from '~/features/products/components/ProductManagement';
 import { requireAdmin } from '~/server/middleware/auth.server';
 import { createSupabaseClient } from '~/server/middleware/supabase.server';
+import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 
-export const loader: LoaderFunction = async ({ request }) => {
-  try {
-    console.log('Starting admin products loader');
-    console.log('Environment check:', {
-      hasSupabaseUrl: !!process.env.SUPABASE_URL,
-      hasSupabaseAnonKey: !!process.env.SUPABASE_ANON_KEY,
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  // Check environment variables first
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+    throw new Response('Missing required environment variables', {
+      status: 500,
+      statusText: 'Server Configuration Error',
     });
+  }
+
+  try {
     const { user, response } = await requireAdmin(request);
     const supabase = createSupabaseClient(request, response);
 
@@ -20,7 +24,10 @@ export const loader: LoaderFunction = async ({ request }) => {
     } = await supabase.auth.getSession();
 
     if (!session) {
-      throw redirect('/login');
+      throw new Response('Authentication required', {
+        status: 401,
+        statusText: 'Unauthorized',
+      });
     }
 
     // Add admin role to session context
@@ -46,49 +53,102 @@ export const loader: LoaderFunction = async ({ request }) => {
       }
     );
   } catch (error) {
+    // Let Remix handle redirects and responses
     if (error instanceof Response) {
-      throw error; // Let Remix handle redirects
+      throw error;
     }
 
-    console.error('Loader error:', {
+    console.error('Product management error:', {
       error,
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
     });
-    throw json(
-      {
-        error: error instanceof Error ? error.message : 'An unexpected error occurred',
-      },
-      {
-        status: 500,
-      }
-    );
+
+    throw new Response('Failed to load product management', {
+      status: 500,
+      statusText: error instanceof Error ? error.message : 'Server Error',
+    });
   }
 };
+
+function ProductsErrorDisplay({
+  title,
+  message,
+  action,
+}: {
+  title: string;
+  message: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Alert variant="destructive">
+          <AlertTitle>{title}</AlertTitle>
+          <AlertDescription>{message}</AlertDescription>
+          {action}
+        </Alert>
+      </div>
+    </div>
+  );
+}
 
 export function ErrorBoundary() {
   const error = useRouteError();
 
   if (isRouteErrorResponse(error)) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white shadow rounded-lg p-8">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">
-            {error.status} {error.statusText}
-          </h1>
-          <p className="text-gray-600">{error.data.error}</p>
-        </div>
-      </div>
-    );
+    switch (error.status) {
+      case 401:
+        return (
+          <ProductsErrorDisplay
+            title="Authentication Required"
+            message="Please log in to access product management."
+            action={
+              <div className="mt-4">
+                <a href="/login" className="text-sm font-medium text-white hover:text-white/90">
+                  Go to Login
+                </a>
+              </div>
+            }
+          />
+        );
+      case 403:
+        return (
+          <ProductsErrorDisplay
+            title="Access Denied"
+            message="You don't have permission to access product management."
+          />
+        );
+      case 500:
+        if (error.statusText === 'Server Configuration Error') {
+          return (
+            <ProductsErrorDisplay
+              title="Server Configuration Error"
+              message="The server is not properly configured. Please contact the administrator."
+            />
+          );
+        }
+        return (
+          <ProductsErrorDisplay
+            title="Server Error"
+            message={error.statusText || 'An unexpected error occurred while loading products.'}
+          />
+        );
+      default:
+        return (
+          <ProductsErrorDisplay
+            title={`Error ${error.status}`}
+            message={error.statusText || 'An unexpected error occurred.'}
+          />
+        );
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="max-w-md w-full bg-white shadow rounded-lg p-8">
-        <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
-        <p className="text-gray-600">An unexpected error occurred. Please try again later.</p>
-      </div>
-    </div>
+    <ProductsErrorDisplay
+      title="Error"
+      message="An unexpected error occurred while loading product management."
+    />
   );
 }
 
@@ -99,8 +159,8 @@ export default function Products() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <ProductManagement
-          supabaseUrl={loaderData.supabase.url!}
-          supabaseAnonKey={loaderData.supabase.anonKey!}
+          supabaseUrl={loaderData.supabase.url}
+          supabaseAnonKey={loaderData.supabase.anonKey}
           initialSession={loaderData.session}
         />
       </div>

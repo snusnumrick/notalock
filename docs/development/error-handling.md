@@ -12,9 +12,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     // Your loader logic here
     const data = await someOperation();
     
-    return json(data, {
-      headers: response.headers // If you have headers to include
-    });
+    return json(data);
   } catch (error) {
     // Always let Remix handle redirects
     if (error instanceof Response) {
@@ -23,15 +21,11 @@ export const loader: LoaderFunction = async ({ request }) => {
 
     console.error('Loader error:', error);
     
-    // Throw a json response for other errors
-    throw json(
-      { 
-        error: error instanceof Error ? error.message : 'An unexpected error occurred'
-      },
-      { 
-        status: 500 
-      }
-    );
+    // Throw error response for the ErrorBoundary to handle
+    throw new Response('An unexpected error occurred', {
+      status: 500,
+      statusText: error instanceof Error ? error.message : 'Server Error'
+    });
   }
 };
 ```
@@ -42,6 +36,12 @@ import { json, redirect } from '@remix-run/node';
 import type { ActionFunction } from '@remix-run/node';
 
 export const action: ActionFunction = async ({ request }) => {
+  // Field validation errors should return json with fieldErrors
+  const fieldErrors = validateFields(formData);
+  if (Object.keys(fieldErrors).length > 0) {
+    return json({ fieldErrors }, { status: 400 });
+  }
+
   try {
     // Your action logic here
     const result = await someOperation();
@@ -55,13 +55,12 @@ export const action: ActionFunction = async ({ request }) => {
 
     console.error('Action error:', error);
     
-    // Return error response
-    throw json(
+    // Throw error response for the ErrorBoundary to handle
+    throw new Response(
+      error instanceof Error ? error.message : 'An unexpected error occurred',
       { 
-        error: error instanceof Error ? error.message : 'An unexpected error occurred'
-      },
-      { 
-        status: 500 
+        status: 500,
+        statusText: 'Server Error'
       }
     );
   }
@@ -75,140 +74,202 @@ import { useRouteError, isRouteErrorResponse } from '@remix-run/react';
 export function ErrorBoundary() {
   const error = useRouteError();
 
+  // Handle route error responses
   if (isRouteErrorResponse(error)) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white shadow rounded-lg p-8">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">
-            {error.status} {error.statusText}
-          </h1>
-          <p className="text-gray-600">{error.data.error}</p>
-        </div>
-      </div>
-    );
+    switch (error.status) {
+      case 401:
+        return <UnauthorizedError message={error.data} />;
+      case 403:
+        return <ForbiddenError message={error.data} />;
+      case 404:
+        return <NotFoundError message={error.data} />;
+      default:
+        return <GenericError 
+          status={error.status} 
+          message={error.data || error.statusText} 
+        />;
+    }
   }
 
+  // Handle unexpected errors
+  return <GenericError 
+    status={500} 
+    message="An unexpected error occurred. Please try again later." 
+  />;
+}
+```
+
+### Form Error Handling Example (Login Form)
+```typescript
+// Action with field validation and authentication error handling
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const formData = await request.formData();
+  
+  // Handle field validation
+  const fieldErrors: ActionData['fieldErrors'] = {};
+  if (!email || typeof email !== 'string') {
+    fieldErrors.email = 'Email is required';
+  }
+  if (!password || typeof password !== 'string') {
+    fieldErrors.password = 'Password is required';
+  }
+
+  // Return field errors as JSON
+  if (Object.keys(fieldErrors).length > 0) {
+    return json({ fieldErrors }, { status: 400 });
+  }
+
+  // Handle authentication
+  const { error } = await authenticate(email, password);
+  if (error) {
+    // Throw Response for ErrorBoundary to handle
+    throw new Response('Invalid email or password', {
+      status: 401,
+      statusText: 'Invalid credentials'
+    });
+  }
+
+  return redirect('/dashboard');
+};
+
+// Component with error handling
+function LoginForm({ errorMessage }: { errorMessage?: string }) {
+  const actionData = useActionData<ActionData>();
+  
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="max-w-md w-full bg-white shadow rounded-lg p-8">
-        <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
-        <p className="text-gray-600">An unexpected error occurred. Please try again later.</p>
-      </div>
-    </div>
+    <Form method="post">
+      {errorMessage && (
+        <Alert variant="destructive">
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+      
+      <input
+        name="email"
+        type="email"
+        className={actionData?.fieldErrors?.email ? 'border-red-500' : 'border-gray-300'}
+      />
+      {actionData?.fieldErrors?.email && (
+        <p className="text-red-600">{actionData.fieldErrors.email}</p>
+      )}
+      
+      {/* ... rest of the form */}
+    </Form>
   );
+}
+
+// Error boundary for login-specific errors
+export function ErrorBoundary() {
+  const error = useRouteError();
+  
+  if (isRouteErrorResponse(error)) {
+    if (error.status === 401) {
+      return <LoginForm errorMessage="Invalid email or password" />;
+    }
+    return <LoginForm errorMessage={`Error: ${error.statusText}`} />;
+  }
+
+  return <LoginForm errorMessage="An unexpected error occurred" />;
 }
 ```
 
 ## Best Practices
 
-### Error Types
-1. Routing/Navigation Errors
-   - Use `redirect` for navigation
-   - Always let Remix handle Response objects
+### Error Types and Handling
+1. Field Validation Errors
+   - Return as JSON with `fieldErrors` object
+   - Use status 400
+   - Display inline with form fields
    ```typescript
-   if (error instanceof Response) {
-     throw error;
-   }
+   return json({ fieldErrors }, { status: 400 });
    ```
 
-2. Data Operation Errors
-   - Log the error for debugging
-   - Return appropriate status code
-   - Include helpful error message
+2. Authentication/Authorization Errors
+   - Throw Response with appropriate status
+   - Use ErrorBoundary to render form with error
    ```typescript
-   throw json(
-     { error: error.message },
-     { status: 500 }
-   );
+   throw new Response('Invalid credentials', {
+     status: 401,
+     statusText: 'Unauthorized'
+   });
    ```
 
-3. Validation Errors
-   - Return 400 status code
-   - Include specific validation messages
+3. Unexpected Errors
+   - Log error details
+   - Throw Response with 500 status
+   - Show user-friendly message
    ```typescript
-   throw json(
-     { 
-       error: 'Validation failed',
-       details: validationErrors 
-     },
-     { status: 400 }
-   );
+   console.error('Unexpected error:', error);
+   throw new Response('Server error', { status: 500 });
    ```
 
-### Error Responses
-1. Always include:
-   - Clear error message
-   - Appropriate status code
-   - Consistent response structure
+### Error Response Patterns
+1. Field Validation:
+   - Return JSON with fieldErrors
+   - Status 400
+   - Display inline with form
 
-2. Status codes:
-   - 400: Bad Request (validation errors)
-   - 401: Unauthorized (not logged in)
-   - 403: Forbidden (insufficient permissions)
-   - 404: Not Found
-   - 500: Server Error
+2. Authentication/Authorization:
+   - Throw Response
+   - Status 401/403
+   - Re-render form with error
+
+3. Server Errors:
+   - Throw Response
+   - Status 500
+   - Generic error message
 
 ### Error Boundaries
-1. Handle both:
-   - Route error responses (`isRouteErrorResponse`)
-   - Unexpected errors
+1. Common patterns:
+   - Re-render form with error message
+   - Show error state UI
+   - Provide recovery actions
 
-2. Provide:
-   - Clear error message
-   - User-friendly display
-   - Consistent styling
+2. Error handling hierarchy:
+   - Field errors (inline)
+   - Route errors (ErrorBoundary)
+   - Root errors (fallback)
 
 ### Error Logging
-1. Always log errors for debugging:
-   ```typescript
-   console.error('Error context:', error);
-   ```
+1. Development:
+   - Log full error details
+   - Include stack traces
+   - Show in console
 
-2. Include relevant context:
-   - Error message
-   - Stack trace
-   - Request data (when appropriate)
-   - User context (when appropriate)
+2. Production:
+   - Log to monitoring service
+   - Sanitize sensitive data
+   - Include request context
 
-## Handling Specific Cases
+## Examples
 
-### Authentication Errors
+### Authentication Error Pattern
 ```typescript
 if (!session) {
-  throw redirect('/login');
-}
-
-if (!hasPermission) {
-  throw json(
-    { error: 'Insufficient permissions' },
-    { status: 403 }
-  );
+  throw new Response('Please log in', {
+    status: 401,
+    statusText: 'Unauthorized'
+  });
 }
 ```
 
-### Database Errors
+### Database Error Pattern
 ```typescript
 try {
   const result = await db.query();
 } catch (error) {
   console.error('Database error:', error);
-  throw json(
-    { error: 'Database operation failed' },
-    { status: 500 }
-  );
+  throw new Response('Database operation failed', {
+    status: 500,
+    statusText: 'Server Error'
+  });
 }
 ```
 
-### Validation Errors
+### Validation Error Pattern
 ```typescript
 const errors = validateData(formData);
 if (errors) {
-  throw json(
-    { 
-      error: 'Validation failed',
-      details: errors 
-    },
-    { status: 400 }
-  );
+  return json({ fieldErrors: errors }, { status: 400 });
 }
 ```
