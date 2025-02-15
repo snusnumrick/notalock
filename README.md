@@ -1,13 +1,20 @@
 # Notalock - European Door Hardware Store
 
-## Project Overview
-Notalock is an e-commerce platform specializing in high-end European door hardware. 
-We offer sophisticated products including:
+## Overview
+Notalock is a modern e-commerce platform specializing in high-end European door hardware, built with Remix.js.
+
+Our product catalog includes:
 - Premium locks and locking mechanisms
 - Designer door handles and levers
 - Heavy-duty hinges and pivot systems
 - Pocket door rails and sliding systems
 - Special opening systems (folding, invisible)
+
+## Tech Stack
+- Framework: Remix.js (v2)
+- Styling: Tailwind CSS with shadcn/ui
+- Backend: Supabase
+- Payments: Square (planned)
 
 ## Quick Start
 
@@ -17,7 +24,7 @@ We offer sophisticated products including:
 - Supabase account
 - Square account (for payments)
 
-### Setup
+### Development Setup
 1. Clone and install:
 ```bash
 git clone [repository-url]
@@ -31,18 +38,10 @@ cp .env.example .env
 # Edit .env with your credentials
 ```
 
-3. Start development:
+3. Start development server:
 ```bash
 npm run dev
 ```
-
-## Tech Stack
-- Frontend: Remix.js with Tailwind CSS
-- Backend: Supabase (Authentication, Database, Storage)
-- Payments: Square (planned)
-- Image Storage: Supabase Storage
-
-For the latest updates and known issues, please see [CHANGELOG.md](./CHANGELOG.md).
 
 ## Documentation
 

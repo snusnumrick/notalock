@@ -1,77 +1,74 @@
 # Code Organization
 
-## Project Structure
+## Remix Project Structure
 ```
 notalock/
-├── app/                   # Main application code
+├── app/                   # Remix application code
+│   ├── root.tsx          # Root route
+│   ├── entry.client.tsx  # Client entry
+│   ├── entry.server.tsx  # Server entry
+│   ├── routes/           # Route modules
+│   │   ├── _index.tsx    # Index route
+│   │   ├── admin/        # Admin routes
+│   │   └── categories/   # Category routes
 │   ├── __mocks__/        # Test mocks
-│   │   └── web-encoding.ts
-│   ├── components/
-│   │   ├── common/       # Shared components
-│   │   ├── features/     # Feature-specific components
-│   │   └── ui/           # UI components (shadcn/ui)
+│   ├── components/       # Shared components
 │   ├── config/           # Configuration files
-│   ├── features/         # Feature modules
-│   │   ├── categories/   # Category management
-│   │   │   ├── __tests__/
-│   │   │   ├── api/
-│   │   │   │   └── categoryService.ts
-│   │   │   ├── components/
-│   │   │   │   ├── CategoryForm.tsx
-│   │   │   │   ├── CategoryList.tsx
-│   │   │   │   ├── DraggableCategoryList.tsx
-│   │   │   │   ├── SortableCategoryItem.tsx
-│   │   │   │   ├── CategoryTreeView.tsx
-│   │   │   │   ├── CategorySplitView.tsx
-│   │   │   │   └── CategoryManagement.tsx
-│   │   │   ├── hooks/
-│   │   │   │   └── useCategories.ts
-│   │   │   └── types/
-│   │   │       └── category.types.ts
-│   │   └── products/    # Product management
-│   │       ├── api/
-│   │       ├── components/
-│   │       ├── hooks/
-│   │       ├── types/
-│   │       └── utils/
-├── docs/                 # Documentation
-│   ├── development/     # Development guides
-│   │   ├── code-organization.md
-│   │   └── claude-instructions.md
-│   └── roadmap/        # Project roadmap
-│       └── development-plan.md
-├── supabase/           # Supabase configuration
-│   └── migrations/     # Database migrations
-├── tests/              # End-to-end and integration tests
-├── coverage/           # Test coverage reports
-└── public/             # Static assets
+│   └── features/         # Feature modules
+├── public/              # Static assets
+├── docs/               # Documentation
+├── supabase/          # Supabase configuration
+├── tests/             # End-to-end and integration tests
+└── coverage/          # Test coverage reports
 ```
 
-## Feature Module Structure
-Each feature module (e.g., categories, products) follows a consistent structure:
+## Core Directory Structure
 
+### Remix-specific Directories
+- `app/routes/`: All route modules
+  - Follows Remix file-based routing conventions
+  - Nested routes in subdirectories
+  - Route specific components co-located with routes
+
+### Component Organization
+- `app/components/`: Application-wide shared components
+  - `common/`: Shared utility components
+  - `features/`: Feature-specific shared components
+  - `ui/`: shadcn/ui components and customizations
+
+### Feature Module Structure
+Each feature module is organized as:
 ```
 feature/
 ├── __tests__/          # Feature-specific tests
-├── api/                # API services and data access
-├── components/         # React components
-│   └── shared/         # Components shared within the feature
+├── api/                # API and loader/action functions
+├── components/         # Route and shared components
 ├── hooks/              # Custom React hooks
 ├── types/              # TypeScript types and interfaces
 └── utils/              # Helper functions and utilities
 ```
 
-## Component Organization
-- `components/common/`: Shared components used across multiple features
-- `components/features/`: Feature-specific components that don't fit in feature modules
-- `components/ui/`: shadcn/ui components and their customizations
+## Route Organization
+- Routes follow Remix conventions
+- Routes can import from feature modules
+- Loaders and actions defined in route modules
+- Complex logic moved to feature modules
+
+## File Naming Conventions
+- Route modules: Follow Remix conventions (e.g., `admin.categories.$id.tsx`)
+- Components: PascalCase (e.g., `ProductList.tsx`)
+- Loaders/Actions: camelCase (e.g., `categoryLoader.ts`)
+- Hooks: camelCase with 'use' prefix (e.g., `useProducts.ts`)
+- Types: PascalCase with '.types' suffix (e.g., `product.types.ts`)
+- Tests: Same name as tested file with '.test' suffix
 
 ## Test Organization
-- Unit tests: Co-located with source files in `__tests__` directories
-- Integration tests: In the root `tests` directory
-- E2E tests: In the root `tests/e2e` directory
+- Unit tests: Co-located with source files
+- Route tests: In `routes/__tests__`
+- Integration tests: In root `tests` directory
+- E2E tests: In `tests/e2e` directory
 - Test mocks: In `app/__mocks__`
 
-## Database Management
-- Migrations: Located in `supabase/migrations/`
-- Naming convention: `{timestamp}_{description}.sql`
+## Database Organization
+- Migrations: In `supabase/migrations`
+- Follow timestamp-based naming: `{timestamp}_{description}.sql`
