@@ -8,8 +8,10 @@ import {
 } from '~/components/ui/table';
 import { Button } from '~/components/ui/button';
 import { Switch } from '~/components/ui/switch';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Star } from 'lucide-react';
 import type { Category } from '../types/category.types';
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
+import { Badge } from '~/components/ui/badge';
 
 interface CategoryListProps {
   categories: Category[];
@@ -26,7 +28,8 @@ export function CategoryList({ categories, onEdit, onDelete, onToggleActive }: C
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead>Active</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Highlight</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -40,6 +43,21 @@ export function CategoryList({ categories, onEdit, onDelete, onToggleActive }: C
                   checked={category.is_visible}
                   onCheckedChange={checked => onToggleActive(category.id, checked)}
                 />
+              </TableCell>
+              <TableCell>
+                {category.is_highlighted ? (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge variant="secondary" className="gap-1">
+                        <Star className="h-3 w-3 fill-current" />
+                        <span>Priority: {category.highlight_priority}</span>
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Featured on Homepage</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : null}
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">

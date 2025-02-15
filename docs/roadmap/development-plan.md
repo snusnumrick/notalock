@@ -40,6 +40,25 @@
    - Homepage
      - ✅ Featured products section
      - Category highlights
+       - Database Changes
+         - ✅ Add highlight flag to categories
+         - ✅ Add highlight priority/order field
+         - ✅ Migration script
+       - Admin Interface
+         - ✅ Highlight toggle in category edit form
+         - ✅ Bulk highlight actions
+         - ✅ Priority/order management UI
+       - Frontend Components
+         - Category highlight grid/list component
+         - Category card component with image
+         - Loading states and skeletons
+         - Empty state design
+         - Responsive layout implementation
+       - Integration
+         - Cache implementation
+         - Analytics setup
+         - A11y improvements
+         - Performance optimization
      - Hero banner/slider
      - Quick access to popular categories
      - New arrivals section
@@ -258,6 +277,11 @@
    - Hierarchical structure validation
    - Category-product relationships
    - Sorting and filtering
+   - Highlight Management Tests
+     - Toggle highlight status
+     - Update highlight priority
+     - Bulk highlight operations
+     - Frontend component tests
 
 ### API Endpoint Tests
 1. Image Processing API

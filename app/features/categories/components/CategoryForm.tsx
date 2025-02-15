@@ -8,6 +8,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '~/components/ui/form';
 import { Input } from '~/components/ui/input';
 import { Textarea } from '~/components/ui/textarea';
@@ -22,6 +23,8 @@ const categoryFormSchema = z.object({
   parent_id: z.string().optional(),
   sort_order: z.number().optional(),
   is_visible: z.boolean(),
+  is_highlighted: z.boolean(),
+  highlight_priority: z.number().min(0, 'Priority must be non-negative'),
 });
 
 interface CategoryFormProps {
@@ -37,7 +40,9 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
     description: initialData?.description ?? '',
     parent_id: initialData?.parent_id ?? '',
     sort_order: initialData?.sort_order ?? 0,
-    is_visible: true, // Always start with true
+    is_visible: initialData?.is_visible ?? true,
+    is_highlighted: initialData?.is_highlighted ?? false,
+    highlight_priority: initialData?.highlight_priority ?? 0,
   };
 
   const form = useForm<CategoryFormData>({
@@ -52,6 +57,8 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
         slug: data.slug || '',
         description: data.description || '',
         is_visible: typeof data.is_visible === 'boolean' ? data.is_visible : true,
+        is_highlighted: typeof data.is_highlighted === 'boolean' ? data.is_highlighted : false,
+        highlight_priority: data.highlight_priority ?? 0,
         parent_id: data.parent_id || '',
         sort_order: data.sort_order ?? 0,
       };
@@ -64,6 +71,9 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
   };
 
   const submitButtonText = initialData?.id ? 'Update Category' : 'Create Category';
+
+  // Watch is_highlighted to conditionally show priority field
+  const isHighlighted = form.watch('is_highlighted');
 
   return (
     <Form {...form}>
@@ -119,6 +129,7 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
                 <FormLabel>Parent Category</FormLabel>
                 <FormControl>
                   <select
+                    data-testid="parent-category-select"
                     {...field}
                     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -136,25 +147,64 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
           />
         )}
 
-        <FormField
-          control={form.control}
-          name="is_visible"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-              <div className="space-y-0.5">
-                <FormLabel>Active</FormLabel>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value === true}
-                  onCheckedChange={(checked: boolean) => {
-                    field.onChange(checked);
-                  }}
-                />
-              </FormControl>
-            </FormItem>
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
+            name="is_visible"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                <div className="space-y-0.5">
+                  <FormLabel>Active</FormLabel>
+                </div>
+                <FormControl>
+                  <Switch checked={field.value === true} onCheckedChange={field.onChange} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="is_highlighted"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                <div className="space-y-0.5">
+                  <FormLabel>Highlight on Homepage</FormLabel>
+                  <FormDescription>
+                    Show this category in the homepage highlights section
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch checked={field.value === true} onCheckedChange={field.onChange} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          {isHighlighted && (
+            <FormField
+              control={form.control}
+              name="highlight_priority"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Display Priority</FormLabel>
+                  <FormDescription>
+                    Higher numbers will be displayed first (0 is lowest priority)
+                  </FormDescription>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      {...field}
+                      onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           )}
-        />
+        </div>
 
         <Button type="submit" className="w-full">
           {submitButtonText}

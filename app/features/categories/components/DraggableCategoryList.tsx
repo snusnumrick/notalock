@@ -17,6 +17,7 @@ import {
 import { SortableCategoryItem } from './SortableCategoryItem';
 import type { Category } from '../types/category.types';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '~/components/ui/table';
+import { TooltipProvider } from '~/components/ui/tooltip';
 
 interface DraggableCategoryListProps {
   categories: Category[];
@@ -24,6 +25,7 @@ interface DraggableCategoryListProps {
   onDelete: (id: string) => void;
   onToggleActive: (id: string, isVisible: boolean) => void;
   onReorder: (updates: { id: string; position: number }[]) => Promise<void>;
+  onSelectionChange?: (selectedCategories: Category[]) => void;
 }
 
 export function DraggableCategoryList({
@@ -32,8 +34,10 @@ export function DraggableCategoryList({
   onDelete,
   onToggleActive,
   onReorder,
+  onSelectionChange,
 }: DraggableCategoryListProps) {
   const [items, setItems] = useState(categories);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
   // Update items when categories prop changes
   useEffect(() => {
@@ -82,34 +86,48 @@ export function DraggableCategoryList({
     [items, categories, onReorder]
   );
 
+  const handleSelectionChange = (categoryId: string, selected: boolean) => {
+    const newSelection = selected
+      ? [...selectedItems, categoryId]
+      : selectedItems.filter(id => id !== categoryId);
+    setSelectedItems(newSelection);
+    onSelectionChange?.(categories.filter(cat => newSelection.includes(cat.id)));
+  };
+
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-8"></TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Active</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <SortableContext items={items} strategy={verticalListSortingStrategy}>
-              {items.map(category => (
-                <SortableCategoryItem
-                  key={category.id}
-                  category={category}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  onToggleActive={onToggleActive}
-                />
-              ))}
-            </SortableContext>
-          </TableBody>
-        </Table>
-      </div>
+      <TooltipProvider>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-8"></TableHead>
+                <TableHead className="w-12"></TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Active</TableHead>
+                <TableHead>Homepage</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <SortableContext items={items} strategy={verticalListSortingStrategy}>
+                {items.map(category => (
+                  <SortableCategoryItem
+                    key={category.id}
+                    category={category}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onToggleActive={onToggleActive}
+                    isSelected={selectedItems.includes(category.id)}
+                    onSelectionChange={selected => handleSelectionChange(category.id, selected)}
+                  />
+                ))}
+              </SortableContext>
+            </TableBody>
+          </Table>
+        </div>
+      </TooltipProvider>
     </DndContext>
   );
 }

@@ -10,6 +10,7 @@ import {
 } from '~/components/ui/dialog';
 import { CategoryForm } from './CategoryForm';
 import { CategorySplitView } from './CategorySplitView';
+import { CategoryHighlightActions } from './CategoryHighlightActions';
 import { CategoryService } from '../services/categoryService';
 import type { Category, CategoryFormData } from '../types/category.types';
 import { useToast } from '~/hooks/use-toast';
@@ -21,6 +22,7 @@ interface CategoryManagementProps {
 export function CategoryManagement({ categoryService }: CategoryManagementProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -139,6 +141,43 @@ export function CategoryManagement({ categoryService }: CategoryManagementProps)
     }
   };
 
+  const handleHighlightUpdate = async (categoryIds: string[], highlight: boolean) => {
+    try {
+      await categoryService.updateHighlightStatus(categoryIds, highlight);
+      await loadCategories();
+      setSelectedCategories([]); // Clear selection after update
+      toast({
+        title: 'Success',
+        description: `Categories ${highlight ? 'added to' : 'removed from'} highlights successfully`,
+      });
+    } catch (error) {
+      console.error('Error updating highlight status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update highlight status',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handlePriorityUpdate = async (categoryId: string, priority: number) => {
+    try {
+      await categoryService.updateHighlightPriority(categoryId, priority);
+      await loadCategories();
+      toast({
+        title: 'Success',
+        description: 'Highlight priority updated successfully',
+      });
+    } catch (error) {
+      console.error('Error updating highlight priority:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update highlight priority',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleEdit = (category: Category) => {
     setSelectedCategory(category);
     setIsDialogOpen(true);
@@ -154,14 +193,27 @@ export function CategoryManagement({ categoryService }: CategoryManagementProps)
     setIsDialogOpen(true);
   };
 
+  const handleCategorySelection = (categories: Category[]) => {
+    setSelectedCategories(categories);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold tracking-tight">Categories</h2>
-        <Button onClick={handleAddNew}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Category
-        </Button>
+        <div className="flex gap-4">
+          {selectedCategories.length > 0 && (
+            <CategoryHighlightActions
+              selectedCategories={selectedCategories}
+              onHighlight={handleHighlightUpdate}
+              onUpdatePriority={handlePriorityUpdate}
+            />
+          )}
+          <Button onClick={handleAddNew}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Category
+          </Button>
+        </div>
       </div>
 
       <CategorySplitView
@@ -172,6 +224,7 @@ export function CategoryManagement({ categoryService }: CategoryManagementProps)
         onDelete={handleDelete}
         onToggleActive={handleToggleActive}
         onReorder={handleReorder}
+        onSelectionChange={handleCategorySelection}
       />
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

@@ -21,6 +21,20 @@ export class CategoryService {
     return data;
   }
 
+  async fetchHighlightedCategories(): Promise<Category[]> {
+    const { data, error } = await this.client
+      .from('categories')
+      .select('*')
+      .eq('is_highlighted', true)
+      .order('highlight_priority', { ascending: false });
+
+    if (error) {
+      throw new Error('Failed to load highlighted categories');
+    }
+
+    return data;
+  }
+
   async createCategory(data: CategoryFormData): Promise<Category> {
     const { data: category, error } = await this.client
       .from('categories')
@@ -31,6 +45,8 @@ export class CategoryService {
         parent_id: data.parent_id || null,
         sort_order: data.sort_order || 0,
         is_visible: data.is_visible ?? true,
+        is_highlighted: data.is_highlighted ?? false,
+        highlight_priority: data.highlight_priority ?? 0,
       })
       .select()
       .single();
@@ -82,6 +98,40 @@ export class CategoryService {
 
     if (error) {
       throw new Error('Update positions failed');
+    }
+  }
+
+  async updateHighlightStatus(categoryIds: string[], isHighlighted: boolean): Promise<void> {
+    const { error } = await this.client
+      .from('categories')
+      .update({
+        is_highlighted: isHighlighted,
+        highlight_priority: isHighlighted ? 0 : null, // Reset priority when removing from highlights
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', categoryIds);
+
+    if (error) {
+      throw new Error('Failed to update highlight status');
+    }
+  }
+
+  async updateHighlightPriority(categoryId: string, priority: number): Promise<void> {
+    if (priority < 0) {
+      throw new Error('Priority must be non-negative');
+    }
+
+    const { error } = await this.client
+      .from('categories')
+      .update({
+        highlight_priority: priority,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', categoryId)
+      .eq('is_highlighted', true); // Only update if category is highlighted
+
+    if (error) {
+      throw new Error('Failed to update highlight priority');
     }
   }
 

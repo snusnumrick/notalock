@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Homepage Category Highlights Feature
+  - Added highlight flag and priority for categories
+  - New database schema with migrations
+  - Admin interface for managing highlighted categories
+  - Bulk highlight management operations
+  - Priority-based ordering system
+  - Comprehensive test coverage for highlight functionality
+
+### Changed
+- Enhanced Category Management UI
+  - Added highlight toggle in category form
+  - Added priority management for highlighted categories
+  - Updated CategoryService with highlight methods
+  - Added bulk highlight actions component
+  - Improved test coverage for highlight features
+
+### Added
 - Authentication and Authorization System
   - Added sign-up functionality to login page
   - Implemented email confirmation flow

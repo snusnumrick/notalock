@@ -3,14 +3,19 @@ import { CSS } from '@dnd-kit/utilities';
 import { TableCell, TableRow } from '~/components/ui/table';
 import { Button } from '~/components/ui/button';
 import { Switch } from '~/components/ui/switch';
-import { GripVertical, Pencil, Trash2 } from 'lucide-react';
+import { GripVertical, Pencil, Trash2, Star } from 'lucide-react';
 import type { Category } from '../types/category.types';
+import { Checkbox } from '~/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
+import { Badge } from '~/components/ui/badge';
 
 interface SortableCategoryItemProps {
   category: Category;
   onEdit: (category: Category) => void;
   onDelete: (id: string) => void;
   onToggleActive: (id: string, isVisible: boolean) => void;
+  isSelected?: boolean;
+  onSelectionChange?: (selected: boolean) => void;
 }
 
 export function SortableCategoryItem({
@@ -18,6 +23,8 @@ export function SortableCategoryItem({
   onEdit,
   onDelete,
   onToggleActive,
+  isSelected,
+  onSelectionChange,
 }: SortableCategoryItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
@@ -43,6 +50,13 @@ export function SortableCategoryItem({
           <GripVertical className="h-4 w-4" />
         </Button>
       </TableCell>
+      <TableCell className="w-12">
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={onSelectionChange}
+          aria-label={`Select ${category.name}`}
+        />
+      </TableCell>
       <TableCell className="font-medium" data-testid="category-name">
         {category.name}
       </TableCell>
@@ -52,6 +66,23 @@ export function SortableCategoryItem({
           checked={category.is_visible}
           onCheckedChange={checked => onToggleActive(category.id, checked)}
         />
+      </TableCell>
+      <TableCell>
+        {category.is_highlighted ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant="secondary" className="inline-flex items-center gap-1">
+                <Star className="h-3 w-3 fill-primary text-primary" />
+                <span>{category.highlight_priority}</span>
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Featured on Homepage (Priority: {category.highlight_priority})</p>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <span className="text-muted-foreground text-sm">Not featured</span>
+        )}
       </TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-2">

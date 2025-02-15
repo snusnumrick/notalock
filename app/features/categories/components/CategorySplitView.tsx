@@ -8,6 +8,7 @@ interface CategorySplitViewProps {
   categories: Category[];
   selectedCategoryId?: string;
   onSelectCategory: (category: Category) => void;
+  onSelectionChange?: (selectedCategories: Category[]) => void;
   onEdit: (category: Category) => void;
   onDelete: (id: string) => void;
   onToggleActive: (id: string, isActive: boolean) => void;
@@ -22,6 +23,7 @@ export function CategorySplitView({
   onDelete,
   onToggleActive,
   onReorder,
+  onSelectionChange,
 }: CategorySplitViewProps) {
   return (
     <div className="space-y-4">
@@ -47,6 +49,7 @@ export function CategorySplitView({
               onDelete={onDelete}
               onToggleActive={onToggleActive}
               onReorder={onReorder}
+              onSelectionChange={onSelectionChange}
             />
           </div>
         </Card>
@@ -79,6 +82,7 @@ export function CategorySplitView({
                 onDelete={onDelete}
                 onToggleActive={onToggleActive}
                 onReorder={onReorder}
+                onSelectionChange={onSelectionChange}
               />
             </div>
           </Card>
