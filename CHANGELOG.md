@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Category Highlight Grid Component
+  - New responsive grid/list layout for highlighted categories
+  - Loading states with skeleton animation
+  - Empty state design
+  - Priority-based ordering system
+  - Focus on text-based presentation
+
+### Added
 - Homepage Category Highlights Feature
   - Added highlight flag and priority for categories
   - New database schema with migrations

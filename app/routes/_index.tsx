@@ -2,6 +2,9 @@ import type { LoaderFunction, MetaFunction } from '@remix-run/node';
 import { json } from '@remix-run/node';
 import { Link, useLoaderData } from '@remix-run/react';
 import { FeaturedProducts } from '~/features/products/components/FeaturedProducts';
+import { CategoryHighlightGrid } from '~/features/categories/components/CategoryHighlightGrid';
+import { getCategoryService } from '~/features/categories/api/categoryService.server';
+import type { Category } from '~/features/categories/types/category.types';
 
 export const meta: MetaFunction = () => {
   return [
@@ -13,9 +16,10 @@ export const meta: MetaFunction = () => {
 interface LoaderData {
   supabaseUrl: string;
   supabaseAnonKey: string;
+  categories: Category[];
 }
 
-export const loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async ({ request }) => {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
@@ -23,14 +27,23 @@ export const loader: LoaderFunction = async () => {
     throw new Error('Supabase environment variables are not set');
   }
 
+  const response = new Response();
+  const categoryService = getCategoryService(request, response);
+
+  const categories = await categoryService.fetchCategories({
+    isHighlighted: true,
+    isVisible: true,
+  });
+
   return json<LoaderData>({
     supabaseUrl,
     supabaseAnonKey,
+    categories,
   });
 };
 
 export default function Index() {
-  const { supabaseUrl, supabaseAnonKey } = useLoaderData<LoaderData>();
+  const { supabaseUrl, supabaseAnonKey, categories } = useLoaderData<LoaderData>();
 
   return (
     <div className="min-h-screen bg-white">
@@ -138,8 +151,8 @@ export default function Index() {
             <h2 className="text-2xl font-extrabold tracking-tight text-gray-900">
               Featured Categories
             </h2>
-            <div className="mt-6 grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
-              {/* Category cards will go here */}
+            <div className="mt-6">
+              <CategoryHighlightGrid categories={categories} view="grid" />
             </div>
           </div>
         </div>

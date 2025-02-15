@@ -1,9 +1,7 @@
-// app/features/categories/components/CategoryHighlightGrid.tsx
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import Image from 'next/image';
-import Link from 'next/link';
+import { Card, CardContent } from '~/components/ui/card';
+import { Skeleton } from '~/components/ui/skeleton';
+import { Link } from '@remix-run/react';
 import { Category } from '../types/category.types';
 
 interface CategoryHighlightProps {
@@ -15,9 +13,6 @@ interface CategoryHighlightProps {
 const CategoryHighlightSkeleton = ({ view = 'grid' }: { view?: 'grid' | 'list' }) => {
   return (
     <Card className={`overflow-hidden ${view === 'list' ? 'flex gap-4' : ''}`}>
-      <div className={`relative ${view === 'grid' ? 'h-48' : 'h-24 w-24'}`}>
-        <Skeleton className="h-full w-full" />
-      </div>
       <CardContent className="p-4">
         <Skeleton className="h-6 w-3/4 mb-2" />
         <Skeleton className="h-4 w-full" />
@@ -70,36 +65,21 @@ export const CategoryHighlightGrid: React.FC<CategoryHighlightProps> = ({
     <div className={containerClass}>
       {visibleHighlightedCategories.map(category => (
         <Link
-          href={`/categories/${category.slug}`}
+          to={`/categories/${category.slug}`}
           key={category.id}
           className="group hover:opacity-90 transition-opacity"
         >
-          <Card className={`overflow-hidden ${view === 'list' ? 'flex gap-4' : ''}`}>
-            <div className={`relative ${view === 'grid' ? 'h-48' : 'h-24 w-24'}`}>
-              {category.image_url ? (
-                <Image
-                  src={category.image_url}
-                  alt={category.name}
-                  fill
-                  className="object-cover"
-                  sizes={
-                    view === 'grid'
-                      ? '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
-                      : '96px'
-                  }
-                />
-              ) : (
-                <div className="h-full w-full bg-muted flex items-center justify-center">
-                  <span className="text-muted-foreground">No image</span>
-                </div>
-              )}
-            </div>
-            <CardContent className="p-4">
-              <h3 className="font-semibold mb-2 group-hover:text-primary transition-colors">
+          <Card
+            className={`overflow-hidden h-full bg-white hover:bg-gray-50 transition-colors ${
+              view === 'list' ? 'flex' : ''
+            }`}
+          >
+            <CardContent className="p-6">
+              <h3 className="text-xl font-semibold mb-3 group-hover:text-primary transition-colors">
                 {category.name}
               </h3>
               {category.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">{category.description}</p>
+                <p className="text-muted-foreground line-clamp-2">{category.description}</p>
               )}
             </CardContent>
           </Card>

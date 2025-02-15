@@ -6,13 +6,32 @@ interface CategoryNode extends Category {
 }
 
 export class CategoryService {
+  static instance: CategoryService;
+
+  static initialize(client: SupabaseClient): CategoryService {
+    if (!CategoryService.instance) {
+      CategoryService.instance = new CategoryService(client);
+    }
+    return CategoryService.instance;
+  }
+
   constructor(private client: SupabaseClient) {}
 
-  async fetchCategories(): Promise<Category[]> {
-    const { data, error } = await this.client
-      .from('categories')
-      .select('*')
-      .order('sort_order', { ascending: true });
+  async fetchCategories(options?: {
+    isHighlighted?: boolean;
+    isVisible?: boolean;
+  }): Promise<Category[]> {
+    let query = this.client.from('categories').select('*').order('sort_order', { ascending: true });
+
+    if (options?.isHighlighted) {
+      query = query.eq('is_highlighted', true);
+    }
+
+    if (options?.isVisible) {
+      query = query.eq('is_visible', true);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw new Error('Failed to load categories');
@@ -168,4 +187,46 @@ export class CategoryService {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
   }
+
+  async uploadCategoryImage(categoryId: string, file: File): Promise<string> {
+    const fileExt = file.name.split('.').pop();
+    const filePath = `category-images/${categoryId}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await this.client.storage
+      .from('categories')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw new Error('Failed to upload image');
+    }
+
+    const {
+      data: { publicUrl },
+    } = this.client.storage.from('categories').getPublicUrl(filePath);
+
+    await this.updateCategory(categoryId, { image_url: publicUrl });
+
+    return publicUrl;
+  }
+
+  async deleteCategoryImage(categoryId: string): Promise<void> {
+    const category = await this.fetchCategory(categoryId);
+    if (!category.image_url) return;
+
+    const filePath = category.image_url.split('/').pop();
+    if (!filePath) return;
+
+    const { error } = await this.client.storage
+      .from('categories')
+      .remove([`category-images/${categoryId}/${filePath}`]);
+
+    if (error) {
+      throw new Error('Failed to delete image');
+    }
+
+    await this.updateCategory(categoryId, { image_url: null });
+  }
 }
+
+// Create and export a default instance
+export const categoryService = CategoryService.instance;

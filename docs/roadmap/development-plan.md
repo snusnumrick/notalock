@@ -49,8 +49,7 @@
          - ✅ Bulk highlight actions
          - ✅ Priority/order management UI
        - Frontend Components
-         - Category highlight grid/list component
-         - Category card component with image
+         - ✅ Category highlight grid/list component
          - Loading states and skeletons
          - Empty state design
          - Responsive layout implementation

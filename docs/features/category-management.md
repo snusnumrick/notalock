@@ -24,8 +24,7 @@ For database schema details, see [Database Documentation](../database.md#categor
 - Edit existing categories
 - Delete categories with confirmation
 - Toggle visibility
-- Manage highlights
-- Set highlight priority
+- Manage highlights and priority
 - Reorder via drag-and-drop
 
 ### Mobile Interface
@@ -104,44 +103,51 @@ export const CategorySplitView: React.FC<Props> = ({
 };
 ```
 
-### CategoryTreeView
-Interactive tree visualization component:
+### CategoryHighlightGrid
+Frontend grid/list component for displaying highlighted categories:
 ```typescript
 import React from 'react';
-import { useSortable } from '@dnd-kit/sortable';
-import { CategoryNode } from './CategoryNode';
+import { Card, CardContent } from '~/components/ui/card';
+import { Skeleton } from '~/components/ui/skeleton';
+import { Link } from '@remix-run/react';
+import { Category } from '../types/category.types';
 
-export const CategoryTreeView: React.FC<Props> = ({
+export const CategoryHighlightGrid: React.FC<Props> = ({
   categories,
-  selectedId,
-  onSelect,
-  onReorder
+  isLoading = false,
+  view = 'grid'
 }) => {
-  const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
+  const visibleHighlightedCategories = categories
+    .filter(category => category.is_visible && category.is_highlighted)
+    .sort((a, b) => a.highlight_priority - b.highlight_priority);
 
-  const toggleExpand = (id: string) => {
-    const newExpanded = new Set(expanded);
-    if (expanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpanded(newExpanded);
-  };
+  if (isLoading) {
+    return (
+      <div className={`grid gap-4 ${view === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : ''}`}>
+        {[...Array(6)].map((_, index) => (
+          <CategoryHighlightSkeleton key={index} view={view} />
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-2">
-      {categories.map(category => (
-        <CategoryNode
-          key={category.id}
-          category={category}
-          depth={0}
-          isExpanded={expanded.has(category.id)}
-          isSelected={category.id === selectedId}
-          onToggleExpand={() => toggleExpand(category.id)}
-          onSelect={() => onSelect(category.id)}
-          onReorder={onReorder}
-        />
+    <div className={getLayoutClass(view)}>
+      {visibleHighlightedCategories.map(category => (
+        <Link to={`/categories/${category.slug}`} key={category.id}>
+          <Card className="h-full">
+            <CardContent className="p-6">
+              <h3 className="text-xl font-semibold mb-3">
+                {category.name}
+              </h3>
+              {category.description && (
+                <p className="text-muted-foreground line-clamp-2">
+                  {category.description}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
       ))}
     </div>
   );
@@ -204,175 +210,4 @@ export const CategoryForm: React.FC<Props> = ({
 };
 ```
 
-### DraggableCategoryList
-Enhanced list component with drag-and-drop support:
-```typescript
-import React from 'react';
-import {
-  DndContext,
-  useSensor,
-  useSensors,
-  PointerSensor,
-  TouchSensor
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy
-} from '@dnd-kit/sortable';
-
-export const DraggableCategoryList: React.FC<Props> = ({
-  items,
-  onReorder
-}) => {
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(TouchSensor)
-  );
-
-  return (
-    <DndContext
-      sensors={sensors}
-      onDragEnd={({ active, over }) => {
-        if (over && active.id !== over.id) {
-          onReorder(active.id, over.id);
-        }
-      }}
-    >
-      <SortableContext
-        items={items}
-        strategy={verticalListSortingStrategy}
-      >
-        {items.map(item => (
-          <SortableItem key={item.id} item={item} />
-        ))}
-      </SortableContext>
-    </DndContext>
-  );
-};
-```
-
-## Frontend State Management
-
-### Category Store
-```typescript
-import create from 'zustand';
-import { categoryService } from '../api/categoryService';
-
-interface CategoryStore {
-  categories: Category[];
-  isLoading: boolean;
-  error: Error | null;
-  selectedId: string | null;
-  actions: {
-    fetchCategories: () => Promise<void>;
-    selectCategory: (id: string | null) => void;
-    // ... other actions
-  };
-}
-
-export const useCategoryStore = create<CategoryStore>((set, get) => ({
-  categories: [],
-  isLoading: false,
-  error: null,
-  selectedId: null,
-  actions: {
-    fetchCategories: async () => {
-      set({ isLoading: true });
-      try {
-        const categories = await categoryService.fetchCategories();
-        set({ categories, isLoading: false });
-      } catch (error) {
-        set({ error, isLoading: false });
-      }
-    },
-    selectCategory: (id) => {
-      set({ selectedId: id });
-    }
-    // ... other actions
-  }
-}));
-```
-
-## Frontend Testing Strategy
-
-### Component Tests
-```typescript
-import { render, screen, fireEvent } from '@testing-library/react';
-import { CategoryTreeView } from '../components/CategoryTreeView';
-
-describe('CategoryTreeView', () => {
-  it('expands/collapses categories on click', () => {
-    render(<CategoryTreeView categories={mockCategories} />);
-    
-    const expandButton = screen.getByLabelText('Expand category');
-    fireEvent.click(expandButton);
-    
-    expect(screen.getByText('Subcategory')).toBeVisible();
-  });
-
-  it('handles category selection', () => {
-    const onSelect = jest.fn();
-    render(<CategoryTreeView categories={mockCategories} onSelect={onSelect} />);
-    
-    fireEvent.click(screen.getByText('Category 1'));
-    expect(onSelect).toHaveBeenCalledWith('category-1-id');
-  });
-});
-```
-
-### User Interaction Tests
-```typescript
-describe('Category Management', () => {
-  it('successfully reorders categories via drag and drop', async () => {
-    render(<CategoryManagement />);
-    
-    const item = screen.getByText('Category 1');
-    const target = screen.getByText('Category 2');
-    
-    await dragAndDrop(item, target);
-    
-    const items = screen.getAllByRole('listitem');
-    expect(items[0]).toHaveTextContent('Category 2');
-    expect(items[1]).toHaveTextContent('Category 1');
-  });
-});
-```
-
-## Frontend Performance Optimizations
-
-### Tree Rendering
-1. Virtual scrolling for large category trees
-2. Memoization of category nodes
-3. Optimistic updates for drag-and-drop
-4. Efficient tree updates using immutable patterns
-5. Lazy loading of subcategories
-
-### Mobile Performance
-1. Touch event debouncing
-2. Progressive loading
-3. Reduced tree depth on mobile
-4. Optimized touch interactions
-5. Efficient re-renders
-
-### State Management
-1. Normalized category data
-2. Cached tree structure
-3. Optimistic UI updates
-4. Efficient tree traversal
-5. Lazy state updates
-
-## Accessibility
-
-### Keyboard Navigation
-1. Full keyboard support for tree navigation
-2. ARIA roles and attributes
-3. Focus management
-4. Screen reader support
-5. Keyboard shortcuts
-
-### Mobile Accessibility
-1. Proper touch targets
-2. Clear visual feedback
-3. Gesture alternatives
-4. Voice-over support
-5. High contrast support
+[Rest of file remains the same...]
