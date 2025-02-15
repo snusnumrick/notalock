@@ -187,45 +187,6 @@ export class CategoryService {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
   }
-
-  async uploadCategoryImage(categoryId: string, file: File): Promise<string> {
-    const fileExt = file.name.split('.').pop();
-    const filePath = `category-images/${categoryId}/${Date.now()}.${fileExt}`;
-
-    const { error: uploadError } = await this.client.storage
-      .from('categories')
-      .upload(filePath, file);
-
-    if (uploadError) {
-      throw new Error('Failed to upload image');
-    }
-
-    const {
-      data: { publicUrl },
-    } = this.client.storage.from('categories').getPublicUrl(filePath);
-
-    await this.updateCategory(categoryId, { image_url: publicUrl });
-
-    return publicUrl;
-  }
-
-  async deleteCategoryImage(categoryId: string): Promise<void> {
-    const category = await this.fetchCategory(categoryId);
-    if (!category.image_url) return;
-
-    const filePath = category.image_url.split('/').pop();
-    if (!filePath) return;
-
-    const { error } = await this.client.storage
-      .from('categories')
-      .remove([`category-images/${categoryId}/${filePath}`]);
-
-    if (error) {
-      throw new Error('Failed to delete image');
-    }
-
-    await this.updateCategory(categoryId, { image_url: null });
-  }
 }
 
 // Create and export a default instance

@@ -363,7 +363,7 @@ export function ProductManagement({
               business_price: editingProduct.business_price?.toString() ?? '0',
               stock: editingProduct.stock?.toString() ?? '0',
               is_active: editingProduct.is_active ?? true,
-              categories: editingProduct.categories,
+              category_ids: editingProduct.categories?.map(({ category }) => category.id) ?? [],
             },
           })}
           supabaseClient={supabase}

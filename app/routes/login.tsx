@@ -29,7 +29,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const fromUnauthorized = searchParams.get('from') === 'unauthorized';
+  const url = new URL(request.url);
+  const fromUnauthorized = url.searchParams.get('from') === 'unauthorized';
 
   // If user is already logged in and not coming from unauthorized page, redirect
   if (session && !fromUnauthorized) {
@@ -87,15 +88,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (action === 'signup') {
       // Using signInWithPassword to check if user exists and is confirmed
       const { error: existingUserError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: email as string,
+        password: password as string,
       });
 
       // If the error is 'Email not confirmed', user exists but needs confirmation
       if (existingUserError?.message === 'Email not confirmed') {
         const { error: resendError } = await supabase.auth.resend({
           type: 'signup',
-          email,
+          email: email as string,
         });
 
         if (resendError) {
@@ -121,8 +122,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       // Create new user
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
+        email: email as string,
+        password: password as string,
         options: {
           emailRedirectTo: `${new URL(request.url).origin}/auth/callback`,
         },
@@ -141,8 +142,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
     } else {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: email as string,
+        password: password as string,
       });
       error = signInError;
       session = data.session;
@@ -153,7 +154,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       if (error.message === 'Email not confirmed') {
         const { error: resendError } = await supabase.auth.resend({
           type: 'signup',
-          email,
+          email: email as string,
         });
 
         if (resendError) {

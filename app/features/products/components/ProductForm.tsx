@@ -35,7 +35,7 @@ export function ProductForm({
     business_price: initialData?.business_price?.toString() || '',
     stock: initialData?.stock?.toString() || '',
     is_active: initialData?.is_active ?? true,
-    category_ids: initialData?.categories?.map(({ category }) => category.id) || [],
+    category_ids: initialData?.category_ids || [],
   });
 
   const [loading, setLoading] = useState(false);
@@ -348,7 +348,7 @@ export function ProductForm({
               </Alert>
             ) : (
               <VariantManagement
-                productId={initialData?.id}
+                productId={initialData?.id ?? ''}
                 variants={variants}
                 options={options}
                 optionValues={optionValues}

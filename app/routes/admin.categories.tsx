@@ -2,7 +2,7 @@ import { type LoaderFunction, json } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import { requireAdmin } from '~/server/middleware/auth.server';
 import { CategoryManagement } from '~/features/categories/components/CategoryManagement';
-import { CategoryService } from '~/features/categories/api/categoryService';
+import { CategoryService } from '~/features/categories/services/categoryService';
 import { useSupabase } from '~/lib/supabase';
 import { createSupabaseClient } from '~/server/middleware/supabase.server';
 
