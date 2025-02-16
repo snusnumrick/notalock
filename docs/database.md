@@ -30,8 +30,13 @@ CREATE TABLE categories (
     slug TEXT NOT NULL UNIQUE,
     description TEXT,
     parent_id UUID REFERENCES categories(id),
+    position INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT true,
     sort_order INTEGER NOT NULL DEFAULT 0,
     is_visible BOOLEAN NOT NULL DEFAULT true,
+    status VARCHAR,
+    is_highlighted BOOLEAN NOT NULL DEFAULT false,
+    highlight_priority INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
