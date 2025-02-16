@@ -7,71 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Category Highlight Grid Component
-  - New responsive grid/list layout for highlighted categories
-  - Loading states with skeleton animation
-  - Empty state design
-  - Priority-based ordering system
-  - Focus on text-based presentation
-
-### Added
-- Homepage Category Highlights Feature
-  - Added highlight flag and priority for categories
-  - New database schema with migrations
-  - Admin interface for managing highlighted categories
-  - Bulk highlight management operations
-  - Priority-based ordering system
-  - Comprehensive test coverage for highlight functionality
-
 ### Changed
-- Enhanced Category Management UI
-  - Added highlight toggle in category form
-  - Added priority management for highlighted categories
-  - Updated CategoryService with highlight methods
-  - Added bulk highlight actions component
-  - Improved test coverage for highlight features
+- Migrated to multiple product categories
+  - Added product_categories junction table
+  - Migrated existing category relationships
+  - Removed single category_id column
+  - Updated database documentation
+  - Added proper RLS policies for product categories
 
 ### Added
-- Authentication and Authorization System
-  - Added sign-up functionality to login page
-  - Implemented email confirmation flow
-  - Added admin user creation route (/admin/signup)
-  - Added role-based authorization (admin/customer)
-  - Enhanced error handling for auth flows
-  - Added confirmation email resend functionality
-  - Improved unauthorized access handling
-  - Added proper session management
-  - Added user profile creation
-
-### Changed
-- Improved Authentication UX
-  - Added tabbed interface for login/signup
-  - Enhanced form validation and error messages
-  - Added proper loading states
-  - Improved error message presentation
-  - Added email confirmation status messages
-  - Better handling of unauthorized access
-  - Clear user feedback for auth actions
-
-### Changed
-- Enhanced Login Page Error Handling
-  - Replaced 401 error page redirect with inline error messages
-  - Implemented Remix's ErrorBoundary pattern for better error handling
-  - Added field-level validation with specific error messages
-  - Added loading states during form submission
-  - Improved form accessibility and user feedback
-  - Better error message presentation using shadcn/ui Alert component
-
-### Added
-- Comprehensive Error Handling System
-  - Added root-level ErrorBoundary for global error catching
-  - Implemented specialized admin ErrorBoundary for admin section
-  - Proper error status code and message handling
-  - Styled error pages matching application design
-  - Integrated with Remix's error boundary system
-  - Full error hierarchy support for nested routes
-  - Enhanced UX with clear error messages and recovery actions
+- Product Listing Page
+  - Product grid/list view with toggle functionality
+  - Responsive product cards with hover effects
+  - Price formatting in EUR
+  - Image optimization with aspect ratio
+  - Empty state handling
 
 ### Added
 - Featured Products Section

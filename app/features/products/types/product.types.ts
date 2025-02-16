@@ -1,5 +1,10 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 
+export interface Category {
+  id: string;
+  name: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -68,6 +73,8 @@ export interface ProductFormData {
   category_ids?: string[];
   tempImages?: TempImage[] | undefined;
 }
+
+export type ProductView = 'grid' | 'list';
 
 // Use the base props interface
 export type ProductManagementProps = ProductManagementBaseProps;
