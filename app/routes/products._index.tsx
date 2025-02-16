@@ -53,7 +53,7 @@ export default function Products() {
     if (isMobile && view === 'list') {
       setView('grid');
     }
-  }, [isMobile]);
+  }, [isMobile, view]);
 
   return (
     <div className="container mx-auto px-4 py-8">

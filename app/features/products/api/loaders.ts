@@ -5,16 +5,24 @@ import { getCategories } from '~/features/categories/api/categories.server';
 
 export async function productsLoader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
-  const page = parseInt(url.searchParams.get('page') || '1');
-  const limit = parseInt(url.searchParams.get('limit') || '12');
+  const page = Number.isNaN(parseInt(url.searchParams.get('page') || ''))
+    ? 1
+    : parseInt(url.searchParams.get('page') || '1');
+  const limit = Number.isNaN(parseInt(url.searchParams.get('limit') || ''))
+    ? 12
+    : parseInt(url.searchParams.get('limit') || '12');
 
   // Parse customer filter parameters
   const filters: CustomerFilterOptions = {
     minPrice: url.searchParams.get('minPrice')
-      ? parseFloat(url.searchParams.get('minPrice')!)
+      ? Number.isNaN(parseFloat(url.searchParams.get('minPrice')!))
+        ? undefined
+        : parseFloat(url.searchParams.get('minPrice')!)
       : undefined,
     maxPrice: url.searchParams.get('maxPrice')
-      ? parseFloat(url.searchParams.get('maxPrice')!)
+      ? Number.isNaN(parseFloat(url.searchParams.get('maxPrice')!))
+        ? undefined
+        : parseFloat(url.searchParams.get('maxPrice')!)
       : undefined,
     categoryId: url.searchParams.get('categoryId') || undefined,
     inStockOnly: url.searchParams.get('inStockOnly') === 'true',
