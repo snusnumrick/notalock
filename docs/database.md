@@ -18,6 +18,7 @@ CREATE TABLE products (
     image_url TEXT,
     is_active BOOLEAN DEFAULT true,
     featured BOOLEAN DEFAULT false,
+    has_variants BOOLEAN NOT NULL DEFAULT false,
     created_by UUID REFERENCES auth.users(id),
     updated_by UUID REFERENCES auth.users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -27,6 +28,7 @@ CREATE TABLE products (
 CREATE INDEX idx_products_sku ON products(sku);
 CREATE INDEX idx_products_active ON products(is_active);
 CREATE INDEX idx_products_featured ON products(featured);
+CREATE INDEX idx_products_has_variants ON products(has_variants);
 ```
 
 ### product_categories

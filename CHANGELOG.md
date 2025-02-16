@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Customer-focused product filtering system
+  - Implemented price range filter
+  - Added category selection
+  - Added in-stock only filter
+  - Simple sorting options (Featured, Price Low/High, Newest)
+  - Mobile-friendly filter interface with slide-out panel
+  - Desktop sidebar filter layout
+  - URL-based filter state management
+  - Clear filters functionality
+
+### Changed
+- Enhanced product listing page
+  - Separated admin and customer filter interfaces
+  - Improved responsive design
+  - Added default sorting by featured products
+  - Optimized category filtering
+  - Added loading states
+
+### Added Database
+- Added has_variants column to products table
+  - Default value set to false
+  - Added index for performance
+  - Updated database documentation
+
 ### Changed
 - Migrated to multiple product categories
   - Added product_categories junction table
