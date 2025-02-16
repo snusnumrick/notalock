@@ -3,8 +3,14 @@
 These instructions help Claude understand and work with the Notalock project effectively.
 
 ## Project Information
-- Project root: `/Users/antont/WebstormProjects/Notalock`
-- README location: `/Users/antont/WebstormProjects/Notalock/README.md`
+- README location: `README.md`
+- Code Organization: `docs/development/code-organization.md` 
+- Error handling: `docs/development/error-handling.md`
+- Developemnt guidlines: `docs/development/guidelines.md`
+- Middleware: `docs/development/middleware.md`
+- Development Plan: `docs/roadmap/development-plan.md`
+- Internal API: `docs/api.md`
+- Database schema: `docs/database.md`
 
 ## File Operations
 - Use `edit_file` for making specific changes to existing files
