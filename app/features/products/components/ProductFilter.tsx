@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Filter, X } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '~/components/ui/sheet';
@@ -13,6 +13,7 @@ import {
 import { Label } from '~/components/ui/label';
 import { Switch } from '~/components/ui/switch';
 import { Card } from '~/components/ui/card';
+import { Separator } from '~/components/ui/separator';
 
 export interface CustomerFilterOptions {
   minPrice?: number;
@@ -164,21 +165,24 @@ export default function ProductFilter({
           </SheetTrigger>
           <SheetContent className="w-[300px] sm:w-[400px]">
             <SheetHeader>
-              <div className="flex items-center justify-between">
-                <SheetTitle>Filters</SheetTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="h-8 px-2 lg:px-3"
-                >
-                  Reset
-                  <X className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
+              <SheetTitle>Filters</SheetTitle>
             </SheetHeader>
-            <div className="mt-6">
-              <FilterContent />
+            <div className="flex flex-col h-full">
+              <div className="flex-1 mt-6">
+                <FilterContent />
+              </div>
+              {getActiveFilterCount() > 0 && (
+                <div className="mt-6 pb-8">
+                  <Separator className="mb-6" />
+                  <Button
+                    variant="destructive"
+                    onClick={clearFilters}
+                    className="w-full h-12 text-base"
+                  >
+                    Reset all filters
+                  </Button>
+                </div>
+              )}
             </div>
           </SheetContent>
         </Sheet>
@@ -193,7 +197,6 @@ export default function ProductFilter({
         {getActiveFilterCount() > 0 && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 px-2">
             Reset
-            <X className="ml-2 h-4 w-4" />
           </Button>
         )}
       </div>
