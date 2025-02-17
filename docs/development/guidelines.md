@@ -140,28 +140,39 @@ export function CategoryHighlightGrid() {
 }
 ```
 
-## Performance Guidelines
+## Testing Guidelines
 
-### Remix-specific Optimization
-1. Data Loading
-   - Use proper caching headers
-   - Implement resource routes
-   - Use parallel data loading
-   - Handle pending states
+### Key Testing Principles
+1. Mock Chain Management
+   - Ensure mock chains match actual API call structure
+   - Mock each level of the chain properly (e.g., from -> select -> order -> eq)
+   - Be explicit about return values at each chain level
+   - Use mockReturnThis() for method chaining and mockReturnValue() for final values
 
-2. Form Submissions
-   - Use optimistic updates
-   - Handle concurrent submissions
-   - Implement proper validation
-   - Use transitions
+2. Test Organization
+   - Separate UI tests (.tsx) from service tests (.ts)
+   - Keep UI tests focused on component behavior rather than framework specifics
+   - Break down complex tests into smaller, focused test cases
+   - Group related tests using describe blocks
 
-3. Asset Handling
-   - Use resource routes
-   - Implement proper caching
-   - Handle static assets
-   - Optimize bundle size
+3. Framework Dependencies
+   - Be cautious with framework-specific testing utilities
+   - Consider simpler alternatives when possible
+   - Have fallback testing strategies when framework tools aren't available
+   - Make UI components more testable by reducing framework coupling
 
-## Testing Strategy
+4. Common Pitfalls to Avoid
+   - Don't assume query chain methods exist without mocking them
+   - Don't mix JSX/TSX in .ts files
+   - Don't overcomplicate mocks - start simple and add complexity as needed
+   - Don't test framework behavior, focus on your code's behavior
+
+5. Best Practices
+   - Clear test descriptions that explain what's being tested
+   - Proper setup and teardown in beforeEach
+   - Mock data that represents realistic scenarios
+   - Test both success and error cases
+   - Verify all parts of complex operations
 
 ### Route Testing
 ```typescript
