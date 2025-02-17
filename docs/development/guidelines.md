@@ -76,9 +76,100 @@ export async function categoryLoader({ request }: LoaderArgs) {
    - Implement fetchers
    - Use proper hooks
 
-### Features Implementation
+## Authentication and Session Management
 
-#### Categories Feature
+### Session Handling Best Practices
+
+1. Cookie Management
+   - Always use `getAll` and `setAll` for cookie handling with Supabase SSR
+   - Implement proper cookie attributes (SameSite, Secure, path)
+   - Handle cookie expiration appropriately
+
+2. Session State
+   - Maintain single source of truth for session state
+   - Pass session down from loaders to components
+   - Avoid duplicate session management in components
+   - Use session from loader instead of fetching again
+
+3. Component Architecture
+   ```typescript
+   // Route level - Handle session management here
+   export const loader = async ({ request }: LoaderFunctionArgs) => {
+     const { user, response } = await requireAdmin(request);
+     const supabase = createSupabaseClient(request, response);
+     const { data: { session } } = await supabase.auth.getSession();
+     
+     return json({ session });
+   };
+
+   // Component level - Receive and use session
+   function MyComponent({ initialSession }: { initialSession: Session }) {
+     const supabase = useMemo(() => createBrowserClient(url, key, {
+       cookies: {
+         getAll: () => { /* ... */ },
+         setAll: cookies => { /* ... */ }
+       }
+     }), []);
+
+     // Pass session to service
+     const service = useMemo(
+       () => new MyService(supabase, initialSession),
+       [supabase, initialSession]
+     );
+   }
+
+   // Service level - Use provided session
+   class MyService {
+     constructor(
+       private supabase: SupabaseClient,
+       private session: Session
+     ) {}
+
+     async doSomething() {
+       // Use this.session directly, don't fetch it again
+     }
+   }
+   ```
+
+### Anti-patterns to Avoid
+
+1. Session Management
+   - ❌ Don't mix client-side and server-side session management
+   - ❌ Don't call `getSession()` in components when session is available from loader
+   - ❌ Don't have services fetch their own session state
+   - ❌ Don't create multiple independent Supabase clients with different session states
+
+2. Common Pitfalls
+   - Avoid infinite refresh loops from session updates
+   - Prevent "No active session found" errors by proper session passing
+   - Eliminate redundant session fetching
+   - Handle cookie expiration properly
+
+### Authentication Checklist
+
+Before implementing authentication in a feature:
+
+✓ Session Management
+  - [ ] Session is passed down from loader
+  - [ ] Single source of truth for session state
+  - [ ] Proper cookie handling configuration
+  - [ ] Clear separation of server/client session management
+
+✓ Component Structure
+  - [ ] Components receive session via props
+  - [ ] Services receive session in constructor
+  - [ ] Proper error handling for session issues
+  - [ ] Loading states during authentication
+
+✓ Security Considerations
+  - [ ] Proper RLS policies in place
+  - [ ] Session timeout handling
+  - [ ] Secure cookie configuration
+  - [ ] CSRF protection
+
+## Features Implementation
+
+### Categories Feature
 1. Route Components:
    - `admin.categories._index.tsx`: Category list route
    - `admin.categories.$id.tsx`: Category edit route
