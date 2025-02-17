@@ -8,45 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Customer-focused product filtering system
-  - Implemented price range filter
-  - Added category selection
-  - Added in-stock only filter
-  - Simple sorting options (Featured, Price Low/High, Newest)
-  - Mobile-friendly filter interface with slide-out panel
-  - Desktop sidebar filter layout
-  - URL-based filter state management
-  - Clear filters functionality
+- Product Detail Page Implementation
+  - Created clean, responsive layout
+  - Added product image gallery
+  - Implemented product information display
+  - Added loading states with skeleton animations
+  - Added error handling for non-existent products
+  - Comprehensive test coverage for components and route
+  - Added "Add to Cart" button placeholder
+- New Components
+  - ProductInfo component for displaying product details
+  - PageLayout component for consistent page structure
+- Test Suite
+  - Added route tests for products.$id.tsx
+  - Added component tests for ProductInfo
+  - Included loading state and error handling tests
 
 ### Changed
-- Enhanced product listing page
-  - Separated admin and customer filter interfaces
-  - Improved responsive design
-  - Added default sorting by featured products
-  - Optimized category filtering
-  - Added loading states
-
-### Added Database
-- Added has_variants column to products table
-  - Default value set to false
-  - Added index for performance
-  - Updated database documentation
-
-### Changed
-- Migrated to multiple product categories
-  - Added product_categories junction table
-  - Migrated existing category relationships
-  - Removed single category_id column
-  - Updated database documentation
-  - Added proper RLS policies for product categories
-
-### Added
-- Product Listing Page
-  - Product grid/list view with toggle functionality
-  - Responsive product cards with hover effects
-  - Price formatting in EUR
-  - Image optimization with aspect ratio
-  - Empty state handling
+- Fixed product navigation using ID instead of SKU
+- Improved loading state handling with useNavigation
+- Enhanced error handling in product loader
+- Updated development roadmap with new product detail features
 
 ### Added
 - Featured Products Section

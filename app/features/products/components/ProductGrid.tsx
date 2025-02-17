@@ -13,7 +13,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ products }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {products.map(product => (
-        <Link key={product.id} to={`/products/${product.sku}`}>
+        <Link key={product.id} to={`/products/${product.id}`}>
           <Card className="h-full hover:shadow-lg transition-shadow">
             <CardHeader className="p-0">
               <div className="aspect-square w-full relative overflow-hidden rounded-t-lg">

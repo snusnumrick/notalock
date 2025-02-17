@@ -13,7 +13,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
   return (
     <div className="space-y-4">
       {products.map(product => (
-        <Link key={product.id} to={`/products/${product.sku}`}>
+        <Link key={product.id} to={`/products/${product.id}`}>
           <Card className="hover:shadow-lg transition-shadow">
             <CardContent className="p-4">
               <div className="flex gap-4">
