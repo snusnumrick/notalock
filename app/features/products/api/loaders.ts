@@ -24,7 +24,7 @@ export async function productsLoader({ request }: LoaderFunctionArgs) {
         ? undefined
         : parseFloat(url.searchParams.get('maxPrice')!)
       : undefined,
-    categoryId: url.searchParams.get('categoryId') || undefined,
+    categoryId: url.searchParams.get('categoryId') || url.searchParams.get('category') || undefined,
     inStockOnly: url.searchParams.get('inStockOnly') === 'true',
     sortOrder:
       (url.searchParams.get('sortOrder') as CustomerFilterOptions['sortOrder']) || undefined,

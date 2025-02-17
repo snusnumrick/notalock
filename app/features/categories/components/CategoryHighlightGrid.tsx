@@ -74,7 +74,7 @@ const CategoryCard = ({ category, view }: { category: Category; view: 'grid' | '
 
   return (
     <Link
-      to={`/categories/${category.slug}`}
+      to={`/products?categoryId=${category.id}`}
       className="group block hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
     >
       <Card
