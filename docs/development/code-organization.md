@@ -13,8 +13,8 @@ notalock/
 │   │   └── categories/   # Category routes
 │   ├── __mocks__/        # Test mocks
 │   ├── components/       # Shared components
-│   ├── config/           # Configuration files
-│   └── features/         # Feature modules
+│   ├── config/          # Configuration files
+│   └── features/        # Feature modules
 ├── public/              # Static assets
 ├── docs/               # Documentation
 ├── supabase/          # Supabase configuration
@@ -24,11 +24,25 @@ notalock/
 
 ## Core Directory Structure
 
-### Remix-specific Directories
-- `app/routes/`: All route modules
-  - Follows Remix file-based routing conventions
-  - Nested routes in subdirectories
-  - Route specific components co-located with routes
+### Route Organization and Conventions
+- Routes follow Remix file-based routing conventions
+- Route patterns:
+  - `_index.tsx` - Site index route
+  - Layout routes (e.g. `products.tsx`) - Provide shared UI for child routes
+  - Nested routes inherit parent layout:
+    - `products._index.tsx` - Products list page
+    - `products.$id.tsx` - Individual product page
+  - Admin section example:
+    - `admin.tsx` - Admin layout
+    - `admin._index.tsx` - Admin dashboard
+    - `admin.products.tsx` - Admin products management
+- Use underscore prefix for:
+  - Main index route (`_index.tsx`)
+  - Nested index routes (`parent._index.tsx`)
+  - Layout routes that apply to multiple children
+- Routes can import from feature modules
+- Loaders and actions defined in route modules
+- Complex logic moved to feature modules
 
 ### Component Organization
 - `app/components/`: Application-wide shared components
@@ -47,12 +61,6 @@ feature/
 ├── types/              # TypeScript types and interfaces
 └── utils/              # Helper functions and utilities
 ```
-
-## Route Organization
-- Routes follow Remix conventions
-- Routes can import from feature modules
-- Loaders and actions defined in route modules
-- Complex logic moved to feature modules
 
 ## File Naming Conventions
 - Route modules: Follow Remix conventions (e.g., `admin.categories.$id.tsx`)
