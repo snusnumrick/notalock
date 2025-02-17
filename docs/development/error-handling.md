@@ -235,6 +235,7 @@ export function ErrorBoundary() {
    - Log full error details
    - Include stack traces
    - Show in console
+   - Note: During tests, error logs will appear in stderr when testing error handling paths. This is expected behavior and helps verify error logging works correctly.
 
 2. Production:
    - Log to monitoring service

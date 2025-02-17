@@ -143,6 +143,15 @@ export function CategoryHighlightGrid() {
 ## Testing Guidelines
 
 ### Key Testing Principles
+
+> Note: When running tests that verify error handling, you may see error messages in stderr. This is expected behavior when testing error paths and does not indicate test failures. We intentionally keep these messages visible because:
+> - They provide visibility into error handling behavior during test runs
+> - They serve as a live example of what errors look like in production
+> - They help catch changes in error handling behavior
+> - They make it easier to debug when real errors occur
+>   
+> If these messages ever make it difficult to spot real test issues, we can add console.error mocking to suppress them.
+
 1. Mock Chain Management
    - Ensure mock chains match actual API call structure
    - Mock each level of the chain properly (e.g., from -> select -> order -> eq)
