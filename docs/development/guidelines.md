@@ -359,6 +359,82 @@ describe('Component Interactions', () => {
 });
 ```
 
+### Testing Loading and Error States
+```typescript
+// Bad: Immediate rejection prevents testing loading state
+const mockFetch = vi.fn().mockRejectedValue(new Error('Failed'));
+
+// Bad: setTimeout can be flaky
+const mockFetch = vi.fn().mockImplementation(() => 
+  new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Failed')), 100);
+  })
+);
+
+// Good: Controlled timing with deferred promise
+let rejectFn: (error: Error) => void;
+const fetchPromise = new Promise((_, reject) => {
+  rejectFn = reject;
+});
+
+const mockFetch = vi.fn().mockImplementation(() => fetchPromise);
+
+// Test can now verify loading state
+await screen.findByText('Loading...');
+
+// Then trigger error
+rejectFn!(new Error('Failed'));
+```
+
+### Dialog Testing Best Practices
+```typescript
+// Bad: Immediately looking for dialog content
+fireEvent.click(openButton);
+expect(screen.getByText('Dialog Content')).toBeInTheDocument();
+
+// Good: Wait for dialog to mount and then find content
+fireEvent.click(openButton);
+await waitFor(() => {
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
+});
+
+// Better: Use dialog title as mount indicator
+fireEvent.click(openButton);
+await waitFor(() => {
+  expect(screen.getByText('Dialog Title')).toBeInTheDocument();
+});
+
+// Best: Scope queries to dialog content
+fireEvent.click(openButton);
+await waitFor(() => {
+  expect(screen.getByText('Dialog Title')).toBeInTheDocument();
+});
+
+const dialog = screen.getByRole('dialog');
+const loadingState = within(dialog).getByText('Loading...');
+expect(loadingState).toHaveClass('text-gray-500');
+```
+
+### Element Selection Best Practices
+```typescript
+// Bad: Too generic, might match wrong element
+expect(screen.getByText('Loading...')).toBeInTheDocument();
+
+// Good: More specific, uses CSS classes to ensure correct element
+const loadingText = screen.getByText('Loading...', { 
+  selector: '.text-sm.text-gray-500' 
+});
+expect(loadingText).toBeInTheDocument();
+
+// Good: Uses combination of text and role
+const submitButton = screen.getByRole('button', { 
+  name: /submit/i 
+});
+
+// Good: Uses form labels for inputs
+const emailInput = screen.getByLabelText('Email address');
+```
+
 ### Asynchronous Testing Example
 ```typescript
 // Bad: Multiple assertions in waitFor

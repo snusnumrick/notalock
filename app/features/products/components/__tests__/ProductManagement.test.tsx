@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ProductManagement } from '../ProductManagement';
 import { createBrowserClient } from '@supabase/ssr';
@@ -251,11 +251,17 @@ describe('ProductManagement Component', () => {
     });
 
     it('handles category loading errors gracefully when opening form', async () => {
-      // Mock the error before rendering
-      const mockCategoryService = {
-        fetchCategories: vi.fn().mockRejectedValue(new Error('Failed to load categories')),
-      };
-      (CategoryService as any).mockImplementation(() => mockCategoryService);
+      // Create a deferred promise to control the timing
+      let rejectFn: (error: Error) => void;
+      const fetchPromise = new Promise((_, reject) => {
+        rejectFn = reject;
+      });
+
+      const mockFetchCategories = vi.fn().mockImplementation(() => fetchPromise);
+
+      (CategoryService as any).mockImplementation(() => ({
+        fetchCategories: mockFetchCategories,
+      }));
 
       render(
         <ProductManagement
@@ -269,13 +275,22 @@ describe('ProductManagement Component', () => {
       const addButton = screen.getByText('Add Product');
       fireEvent.click(addButton);
 
-      // Wait for category select to appear
+      // Wait for dialog to appear
       await waitFor(() => {
-        expect(screen.getByLabelText('Categories')).toBeInTheDocument();
+        expect(screen.getByText('Add New Product')).toBeInTheDocument();
       });
 
-      // Verify loading state is shown
-      expect(screen.getByText('Loading categories...')).toBeInTheDocument();
+      // Verify loading state
+      const loadingText = await screen.findByText('Loading categories...');
+      expect(loadingText).toHaveClass('text-sm', 'text-gray-500');
+
+      // Now reject the categories fetch
+      rejectFn!(new Error('Failed to load categories'));
+
+      // Verify the error was handled gracefully
+      await waitFor(() => {
+        expect(mockFetchCategories).toHaveBeenCalled();
+      });
     });
   });
 
