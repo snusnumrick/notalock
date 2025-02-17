@@ -256,6 +256,42 @@ describe('getProducts', () => {
     expect(mockEq).toHaveBeenCalledWith('product_categories.category_id', 'test-category');
   });
 
+  it('should verify INNER JOIN behavior with category filtering', async () => {
+    // Mock product data to simulate database response
+    const mockProducts = [
+      {
+        id: '1',
+        name: 'Product with Category',
+        retail_price: 100,
+        categories: [{ category: { id: 'cat1', name: 'Category 1' } }],
+      },
+      {
+        id: '2',
+        name: 'Product without Category',
+        retail_price: 200,
+        categories: [],
+      },
+    ];
+
+    mockRange.mockResolvedValue({
+      data: mockProducts,
+      count: 2,
+      error: null,
+    });
+
+    // Verify the select query includes INNER JOIN
+    await getProducts({ categoryId: 'cat1' });
+
+    // Check if the select was called with an INNER JOIN
+    expect(mockSelect).toHaveBeenCalledWith(
+      expect.stringContaining('categories:product_categories!inner'),
+      expect.any(Object)
+    );
+
+    // Verify category filter
+    expect(mockEq).toHaveBeenCalledWith('product_categories.category_id', 'cat1');
+  });
+
   it('should handle featured product sorting for customer view', async () => {
     mockRange.mockResolvedValue({
       data: [],

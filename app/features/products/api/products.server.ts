@@ -32,7 +32,7 @@ export async function getProducts({
       is_active,
       featured,
       has_variants,
-      categories:product_categories!left(
+      categories:product_categories!inner(
         category:categories(
           id,
           name
