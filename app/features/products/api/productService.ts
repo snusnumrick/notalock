@@ -137,22 +137,14 @@ export class ProductService {
     };
 
     // Update product data
-    const { data, error } = await this.supabase
+    const { error: updateError } = await this.supabase
       .from('products')
       .update(productData)
-      .eq('id', id)
-      .select(
-        `
-        *,
-        product_images(*),
-        categories:product_categories!left(category:categories(id, name))
-      `
-      )
-      .single();
+      .eq('id', id);
 
-    if (error) {
-      console.error('Error updating product:', error);
-      throw new Error(`Failed to update product: ${error.message}`);
+    if (updateError) {
+      console.error('Error updating product:', updateError);
+      throw new Error(`Failed to update product: ${updateError.message}`);
     }
 
     // Update categories if provided
@@ -160,7 +152,25 @@ export class ProductService {
       await this.updateProductCategories(id, formData.category_ids);
     }
 
-    return data;
+    // Fetch the updated product with all its relations
+    const { data: updatedProduct, error: fetchError } = await this.supabase
+      .from('products')
+      .select(
+        `
+        *,
+        product_images(*),
+        categories:product_categories!left(category:categories(id, name))
+      `
+      )
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching updated product:', fetchError);
+      throw new Error(`Failed to fetch updated product: ${fetchError.message}`);
+    }
+
+    return updatedProduct;
   }
 
   async fetchProducts(filters?: FilterOptions): Promise<Product[]> {

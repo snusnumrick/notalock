@@ -253,13 +253,16 @@ export function CategoryHighlightGrid() {
    - Test form interactions and validation
    - Check conditional rendering based on user actions
 
-> Note: When running tests that verify error handling, you may see error messages in stderr. This is expected behavior when testing error paths and does not indicate test failures. We intentionally keep these messages visible because:
-> - They provide visibility into error handling behavior during test runs
-> - They serve as a live example of what errors look like in production
-> - They help catch changes in error handling behavior
-> - They make it easier to debug when real errors occur
->   
-> If these messages ever make it difficult to spot real test issues, we can add console.error mocking to suppress them.
+4. API and Database Testing
+   - Mock complete API call chains
+   - Test both success and error paths
+   - Verify data transformations
+   - Test complex database operations
+   - Handle relationships between entities
+
+> Note: When running tests that verify error handling, you may see error messages in stderr. This is expected behavior when testing error paths and does not indicate test failures.
+
+### Mock Management
 
 1. Mock Chain Management
    - Ensure mock chains match actual API call structure
@@ -267,25 +270,82 @@ export function CategoryHighlightGrid() {
    - Be explicit about return values at each chain level
    - Use mockReturnThis() for method chaining and mockReturnValue() for final values
 
-2. Test Organization
+2. Supabase Query Mocking
+   ```typescript
+   // Mock builder for successful operations
+   const successBuilder = {
+     update: vi.fn().mockReturnThis(),
+     select: vi.fn().mockReturnThis(),
+     eq: vi.fn().mockReturnThis(),
+     single: vi.fn().mockResolvedValue({
+       data: mockData,
+       error: null
+     }),
+   };
+
+   // Mock builder for failed operations
+   const errorBuilder = {
+     update: vi.fn().mockReturnThis(),
+     eq: vi.fn().mockResolvedValue({
+       data: null,
+       error: new Error('Operation failed')
+     }),
+   };
+
+   // Handle different tables in one test
+   mockClient.from.mockImplementation((table) => {
+     return table === 'products' 
+       ? productsBuilder 
+       : categoriesBuilder;
+   });
+   ```
+
+3. Test Organization
    - Separate UI tests (.tsx) from service tests (.ts)
-   - Keep UI tests focused on component behavior rather than framework specifics
+   - Keep UI tests focused on component behavior
    - Break down complex tests into smaller, focused test cases
    - Group related tests using describe blocks
 
-3. Framework Dependencies
+4. Framework Dependencies
    - Be cautious with framework-specific testing utilities
    - Consider simpler alternatives when possible
-   - Have fallback testing strategies when framework tools aren't available
-   - Make UI components more testable by reducing framework coupling
+   - Have fallback testing strategies
+   - Make UI components more testable
 
-4. Asynchronous Testing
+5. Asynchronous Testing
    - Use `waitFor` for async operations only
    - Keep one assertion per `waitFor`
    - Make synchronous assertions outside of `waitFor`
    - Test loading states and transitions
 
-5. Common Pitfalls to Avoid
+### Best Practices
+
+1. Test Structure
+   ```typescript
+   describe('ServiceName', () => {
+     // Top-level mock data
+     const mockData = {...};
+
+     // Reusable mock builders
+     const createMockBuilder = () => ({...});
+
+     let service;
+     let mockClient;
+
+     beforeEach(() => {
+       mockClient = createMockBuilder();
+       service = new Service(mockClient);
+     });
+
+     describe('operationName', () => {
+       it('succeeds with valid input', async () => {...});
+       it('handles errors properly', async () => {...});
+       it('manages related entities', async () => {...});
+     });
+   });
+   ```
+
+2. Common Pitfalls to Avoid
    - Don't assume query chain methods exist without mocking them
    - Don't mix JSX/TSX in .ts files
    - Don't overcomplicate mocks - start simple and add complexity as needed
