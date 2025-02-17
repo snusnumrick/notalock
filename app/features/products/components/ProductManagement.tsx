@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Session } from '@supabase/supabase-js';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   AlertDialog,
@@ -27,8 +26,6 @@ export function ProductManagement({
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [session, setSession] = useState<Session | null>(initialSession);
-
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({});
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -41,7 +38,7 @@ export function ProductManagement({
       throw new Error('Supabase URL and anon key are required');
     }
 
-    const client = createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    return createBrowserClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         getAll: () => {
           if (typeof document === 'undefined') return [];
@@ -57,36 +54,23 @@ export function ProductManagement({
           });
         },
       },
-      auth: {
-        persistSession: true,
-        storageKey: 'sb-session',
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-      },
     });
+  }, [supabaseUrl, supabaseAnonKey]);
 
-    if (initialSession) {
-      client.auth.setSession(initialSession);
-    }
-
-    return client;
-  }, [supabaseUrl, supabaseAnonKey, initialSession]);
-
-  // Initialize ProductService with the current session
+  // Initialize ProductService
   const productService = React.useMemo(() => {
     const service = new ProductService(supabase);
-    if (session) {
-      service.setSession(session);
+    if (initialSession) {
+      service.setSession(initialSession);
     }
     return service;
-  }, [supabase, session]);
+  }, [supabase, initialSession]);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
       const data = await productService.fetchProducts(filterOptions);
       setProducts(data);
-      // Clear selected products when the product list changes
       setSelectedProducts([]);
     } catch (err) {
       setError(
@@ -98,34 +82,11 @@ export function ProductManagement({
   }, [productService, filterOptions]);
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  useEffect(() => {
-    async function initializeSession() {
-      if (initialSession) {
-        await supabase.auth.setSession(initialSession);
-        setSession(initialSession);
-      } else {
-        const {
-          data: { session: currentSession },
-        } = await supabase.auth.getSession();
-        if (currentSession) {
-          setSession(currentSession);
-        }
-      }
+    if (initialSession) {
+      supabase.auth.setSession(initialSession);
     }
-
-    initializeSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [initialSession, supabase.auth]);
+    fetchProducts();
+  }, [fetchProducts, initialSession, supabase.auth]);
 
   const handleAddProduct = async (formData: ProductFormData) => {
     try {
@@ -154,10 +115,6 @@ export function ProductManagement({
 
   const handleDeleteProduct = async () => {
     if (!productToDelete) return;
-    if (!session) {
-      setError('You must be logged in to delete products');
-      return;
-    }
 
     try {
       await productService.deleteProduct(productToDelete.id);
@@ -197,14 +154,6 @@ export function ProductManagement({
       setError(error instanceof Error ? error.message : 'Failed to update products');
       throw error;
     }
-  };
-
-  const handleDeleteClick = (product: Product) => {
-    setProductToDelete(product);
-  };
-
-  const handleCancelDelete = () => {
-    setProductToDelete(null);
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -329,7 +278,7 @@ export function ProductManagement({
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteClick(product)}
+                          onClick={() => setProductToDelete(product)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                           aria-label={`Delete ${product.name}`}
                         >
@@ -379,7 +328,7 @@ export function ProductManagement({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setProductToDelete(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteProduct}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

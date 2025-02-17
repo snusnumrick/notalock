@@ -31,22 +31,35 @@ export class ProductService {
       }
     }
   }
+
   constructor(private supabase: SupabaseClient) {}
 
   setSession(session: Session) {
+    if (!session) {
+      throw new Error('Invalid session provided');
+    }
     this.currentSession = session;
+    // Update the client's session
+    this.supabase.auth.setSession(session);
   }
 
   private currentSession: Session | null = null;
 
-  async createProduct(formData: ProductFormData): Promise<Product> {
+  private async ensureSession(): Promise<Session> {
     if (!this.currentSession) {
-      const { data } = await this.supabase.auth.getSession();
-      if (!data.session) {
+      const { data, error } = await this.supabase.auth.getSession();
+      if (error || !data.session) {
         throw new Error('No active session found');
       }
       this.currentSession = data.session;
+      // Update the client's session
+      await this.supabase.auth.setSession(data.session);
     }
+    return this.currentSession;
+  }
+
+  async createProduct(formData: ProductFormData): Promise<Product> {
+    await this.ensureSession();
 
     const productData = {
       name: formData.name,
@@ -56,7 +69,6 @@ export class ProductService {
       business_price: parseFloat(formData.business_price),
       stock: parseInt(formData.stock),
       is_active: formData.is_active,
-      // Categories are now handled through the junction table
       image_url: null,
     };
 
@@ -88,10 +100,10 @@ export class ProductService {
           .from('products')
           .select(
             `
-        *,
-        product_images(*),
-        categories:product_categories!left(category:categories(id, name))
-      `
+            *,
+            product_images(*),
+            categories:product_categories!left(category:categories(id, name))
+          `
           )
           .eq('id', product.id)
           .single();
@@ -111,13 +123,7 @@ export class ProductService {
   }
 
   async updateProduct(id: string, formData: ProductFormData): Promise<Product> {
-    if (!this.currentSession) {
-      const { data } = await this.supabase.auth.getSession();
-      if (!data.session) {
-        throw new Error('No active session found');
-      }
-      this.currentSession = data.session;
-    }
+    await this.ensureSession();
 
     const productData = {
       name: formData.name,
@@ -127,7 +133,6 @@ export class ProductService {
       business_price: parseFloat(formData.business_price),
       stock: parseInt(formData.stock),
       is_active: formData.is_active,
-      // Categories are now handled through the junction table
       image_url: formData.image_url,
     };
 
@@ -226,20 +231,14 @@ export class ProductService {
   }
 
   async deleteProduct(id: string): Promise<void> {
-    if (!this.currentSession) {
-      const { data } = await this.supabase.auth.getSession();
-      if (!data.session) {
-        throw new Error('No active session found');
-      }
-      this.currentSession = data.session;
-    }
+    await this.ensureSession();
 
     try {
       // First, check if the user has admin role
       const { data: profile, error: profileError } = await this.supabase
         .from('profiles')
         .select('role')
-        .eq('id', this.currentSession.user.id)
+        .eq('id', this.currentSession!.user.id)
         .single();
 
       if (profileError || profile?.role !== 'admin') {
@@ -315,20 +314,14 @@ export class ProductService {
   }
 
   async bulkDeleteProducts(ids: string[]): Promise<void> {
-    if (!this.currentSession) {
-      const { data } = await this.supabase.auth.getSession();
-      if (!data.session) {
-        throw new Error('No active session found');
-      }
-      this.currentSession = data.session;
-    }
+    await this.ensureSession();
 
     try {
       // Check admin role
       const { data: profile, error: profileError } = await this.supabase
         .from('profiles')
         .select('role')
-        .eq('id', this.currentSession.user.id)
+        .eq('id', this.currentSession!.user.id)
         .single();
 
       if (profileError || profile?.role !== 'admin') {
@@ -385,20 +378,14 @@ export class ProductService {
       stock_adjustment: number;
     }>
   ): Promise<void> {
-    if (!this.currentSession) {
-      const { data } = await this.supabase.auth.getSession();
-      if (!data.session) {
-        throw new Error('No active session found');
-      }
-      this.currentSession = data.session;
-    }
+    await this.ensureSession();
 
     try {
       // Check admin role
       const { data: profile, error: profileError } = await this.supabase
         .from('profiles')
         .select('role')
-        .eq('id', this.currentSession.user.id)
+        .eq('id', this.currentSession!.user.id)
         .single();
 
       if (profileError || profile?.role !== 'admin') {
