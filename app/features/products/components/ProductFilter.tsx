@@ -50,7 +50,15 @@ export default function ProductFilter({
   };
 
   const getActiveFilterCount = () => {
-    return Object.values(filters).filter(value => value !== undefined).length;
+    let count = 0;
+
+    // Count only actually applied filters
+    if (filters.minPrice !== undefined) count++;
+    if (filters.maxPrice !== undefined) count++;
+    if (filters.categoryId !== undefined) count++;
+    if (filters.inStockOnly === true) count++; // Only count if true, since false is default
+
+    return count;
   };
 
   const FilterContent = () => (
