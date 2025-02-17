@@ -235,6 +235,24 @@ export function CategoryHighlightGrid() {
 
 ### Key Testing Principles
 
+1. Test Setup Organization
+   - Keep mock data constants at the top level for reusability
+   - Create helper functions for common mock setups
+   - Avoid duplicating mock setup logic
+   - Use descriptive names for mock data and helper functions
+
+2. Component Lifecycle Testing
+   - Test cleanup and unmount behavior explicitly
+   - Verify subscriptions are properly cleaned up
+   - Test component initialization and state management
+   - Ensure proper handling of side effects
+
+3. Component Interactions
+   - Test the actual user flows and interactions
+   - Verify state changes after user actions
+   - Test form interactions and validation
+   - Check conditional rendering based on user actions
+
 > Note: When running tests that verify error handling, you may see error messages in stderr. This is expected behavior when testing error paths and does not indicate test failures. We intentionally keep these messages visible because:
 > - They provide visibility into error handling behavior during test runs
 > - They serve as a live example of what errors look like in production
@@ -261,7 +279,13 @@ export function CategoryHighlightGrid() {
    - Have fallback testing strategies when framework tools aren't available
    - Make UI components more testable by reducing framework coupling
 
-4. Common Pitfalls to Avoid
+4. Asynchronous Testing
+   - Use `waitFor` for async operations only
+   - Keep one assertion per `waitFor`
+   - Make synchronous assertions outside of `waitFor`
+   - Test loading states and transitions
+
+5. Common Pitfalls to Avoid
    - Don't assume query chain methods exist without mocking them
    - Don't mix JSX/TSX in .ts files
    - Don't overcomplicate mocks - start simple and add complexity as needed
@@ -273,6 +297,95 @@ export function CategoryHighlightGrid() {
    - Mock data that represents realistic scenarios
    - Test both success and error cases
    - Verify all parts of complex operations
+
+### Mock Setup Example
+```typescript
+// Good: Top-level mock data
+const mockCategories = [
+  { id: 'cat1', name: 'Category 1' },
+  { id: 'cat2', name: 'Category 2' },
+];
+
+// Good: Helper function for creating mocks
+const createMockSupabaseClient = () => ({
+  auth: {
+    setSession: vi.fn().mockResolvedValue({ data: {}, error: null }),
+    onAuthStateChange: vi.fn().mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } }
+    }),
+  },
+  // ... other methods
+});
+
+// Good: Reusable setup in beforeEach
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockSupabaseClient = createMockSupabaseClient();
+  (CategoryService as any).mockImplementation(() => ({
+    fetchCategories: vi.fn().mockResolvedValue(mockCategories)
+  }));
+});
+```
+
+### Component Testing Example
+```typescript
+describe('Component Interactions', () => {
+  it('loads categories when opening product form', async () => {
+    render(<ProductManagement {...props} />);
+
+    // Test user interaction
+    const addButton = screen.getByText('Add Product');
+    fireEvent.click(addButton);
+
+    // Verify conditional rendering
+    await waitFor(() => {
+      const categorySelect = screen.getByLabelText('Categories');
+      const options = screen.getAllByRole('option');
+      expect(options).toHaveLength(2);
+      expect(options[0]).toHaveTextContent('Category 1');
+    });
+  });
+
+  it('properly cleans up subscriptions', () => {
+    const unsubscribe = vi.fn();
+    mockSupabaseClient.auth.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe } }
+    });
+
+    const { unmount } = render(<ProductManagement {...props} />);
+    unmount();
+    expect(unsubscribe).toHaveBeenCalled();
+  });
+});
+```
+
+### Asynchronous Testing Example
+```typescript
+// Bad: Multiple assertions in waitFor
+it('loads data', async () => {
+  render(<MyComponent />);
+  await waitFor(() => {
+    expect(screen.getByText('Title')).toBeInTheDocument();
+    expect(screen.getByText('Loading...')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+  });
+});
+
+// Good: Single assertions and clear async/sync separation
+it('loads data', async () => {
+  render(<MyComponent />);
+  
+  // Wait for loading to finish
+  await waitFor(() => {
+    expect(screen.getByText('Title')).toBeInTheDocument();
+  });
+
+  // Make synchronous assertions after loading
+  expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+  const items = screen.getAllByRole('listitem');
+  expect(items).toHaveLength(3);
+});
+```
 
 ### Route Testing
 ```typescript

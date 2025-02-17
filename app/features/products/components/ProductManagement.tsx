@@ -86,6 +86,16 @@ export function ProductManagement({
       supabase.auth.setSession(initialSession);
     }
     fetchProducts();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      fetchProducts();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [fetchProducts, initialSession, supabase.auth]);
 
   const handleAddProduct = async (formData: ProductFormData) => {
