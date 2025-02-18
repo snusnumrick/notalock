@@ -1,11 +1,7 @@
 import type { ActionFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
-import {
-  requireAdmin,
-  createSupabaseClient,
-  processImage,
-  type ImageProcessingOptions,
-} from '~/server/middleware';
+import { requireAdmin, processImage, type ImageProcessingOptions } from '~/server/middleware';
+import { createSupabaseClient } from '~/server/services/supabase.server';
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {

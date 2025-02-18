@@ -8,7 +8,7 @@ import {
   useRouteError,
   isRouteErrorResponse,
 } from '@remix-run/react';
-import { createSupabaseClient } from '~/server/middleware';
+import { createSupabaseClient } from '~/server/services/supabase.server';
 import { useState } from 'react';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';

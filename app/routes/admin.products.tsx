@@ -3,7 +3,7 @@ import type { LoaderFunctionArgs } from '@remix-run/node';
 import { useLoaderData, isRouteErrorResponse, useRouteError } from '@remix-run/react';
 import { ProductManagement } from '~/features/products/components/ProductManagement';
 import { requireAdmin } from '~/server/middleware/auth.server';
-import { createSupabaseClient } from '~/server/middleware/supabase.server';
+import { createSupabaseClient } from '~/server/services/supabase.server';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {

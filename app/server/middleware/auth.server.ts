@@ -1,6 +1,6 @@
 import { redirect } from '@remix-run/node';
 import type { User } from '@supabase/supabase-js';
-import { createSupabaseClient } from './supabase.server';
+import { createSupabaseClient } from '../services/supabase.server';
 
 export interface AuthUser extends User {
   role?: string;

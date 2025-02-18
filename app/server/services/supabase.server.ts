@@ -1,36 +1,86 @@
-// app/services/supabase.server.ts
 import { createServerClient } from '@supabase/ssr';
 
-export const createSupabaseServerClient = ({
-  request,
-  response,
-}: {
-  request: Request;
-  response: Response;
-}) => {
-  if (!process.env.SUPABASE_URL) throw new Error('SUPABASE_URL is required');
-  if (!process.env.SUPABASE_ANON_KEY) throw new Error('SUPABASE_ANON_KEY is required');
+type CookieHandler = {
+  get: (key: string) => string | null;
+  set: (key: string, value: string, options?: { maxAge?: number }) => void;
+  remove: (key: string) => void;
+};
+
+/**
+ * Creates a Supabase client with cookie handling for server-side operations
+ */
+export function createSupabaseClient(request: Request, response?: Response) {
+  const cookies = request.headers.get('Cookie') ?? '';
+  response = response || new Response();
+
+  const cookieHandlers: CookieHandler = {
+    get: (key: string) => {
+      const cookie = cookies.split(';').find(c => c.trim().startsWith(`${key}=`));
+      return cookie ? decodeURIComponent(cookie.split('=')[1]) : null;
+    },
+    set: (key: string, value: string, options?: { maxAge?: number }) => {
+      // Ensure we're not setting duplicate cookies
+      response!.headers.delete('Set-Cookie');
+      response!.headers.append(
+        'Set-Cookie',
+        `${key}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Secure${
+          options?.maxAge ? `; Max-Age=${options.maxAge}` : '; Max-Age=3600'
+        }`
+      );
+    },
+    remove: (key: string) => {
+      response!.headers.append(
+        'Set-Cookie',
+        `${key}=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+      );
+    },
+  };
+
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+    throw new Error('Missing Supabase environment variables');
+  }
 
   return createServerClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
-    cookies: {
-      get: key => {
-        const cookies = request.headers.get('Cookie');
-        if (!cookies) return undefined;
-        const cookie = cookies.split(';').find(c => c.trim().startsWith(`${key}=`));
-        if (!cookie) return undefined;
-        return decodeURIComponent(cookie.split('=')[1]);
-      },
-      set: (key, value, options) => {
-        response.headers.append(
-          'Set-Cookie',
-          `${key}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax${
-            options?.maxAge ? `; Max-Age=${options.maxAge}` : ''
-          }`
-        );
-      },
-      remove: key => {
-        response.headers.append('Set-Cookie', `${key}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
-      },
+    cookies: cookieHandlers,
+    auth: {
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+      autoRefreshToken: true,
+      persistSession: true,
+      storageKey: 'sb-session',
     },
   });
-};
+}
+
+/**
+ * Helper to get the current session from a request
+ */
+export async function getSupabaseSession(request: Request) {
+  const response = new Response();
+  const supabase = createSupabaseClient(request, response);
+
+  try {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      // If there's an error getting the session, clean up cookies
+      const cookieNames = ['sb-access-token', 'sb-refresh-token', 'sb-session'];
+      cookieNames.forEach(name => {
+        response.headers.append(
+          'Set-Cookie',
+          `${name}=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+        );
+      });
+
+      return { session: null, response };
+    }
+
+    return { session, response };
+  } catch (error) {
+    console.error('Error getting session:', error);
+    return { session: null, response };
+  }
+}

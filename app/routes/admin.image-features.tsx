@@ -10,7 +10,7 @@ import ProductGallery from '~/features/products/components/ProductGallery';
 import type { ProductImage } from '~/features/products/types/product.types';
 import { ProductImageService } from '~/features/products/api/productImageService';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { createSupabaseClient } from '~/server/middleware';
+import { createSupabaseClient } from '~/server/services/supabase.server';
 
 // Create an adapter that extends the ProductImageService class
 class FormSubmitImageService extends ProductImageService {

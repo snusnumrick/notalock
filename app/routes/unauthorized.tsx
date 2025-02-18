@@ -1,7 +1,7 @@
 import { json, redirect } from '@remix-run/node';
 import { Form, Link } from '@remix-run/react';
 import type { ActionFunctionArgs } from '@remix-run/node';
-import { createSupabaseClient } from '~/server/middleware';
+import { createSupabaseClient } from '~/server/services/supabase.server';
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const response = new Response();

@@ -1,6 +1,6 @@
 export * from './auth.server';
 export * from './image.server';
-export * from './supabase.server';
+// Supabase client is now in services directory
 export * from './error-handler.server';
 export * from './error.server';
 

@@ -1,6 +1,6 @@
 import { type LoaderFunctionArgs, type TypedResponse, json } from '@remix-run/node';
 import { useLoaderData, useNavigation } from '@remix-run/react';
-import { createSupabaseClient } from '~/server/middleware/supabase.server';
+import { createSupabaseClient } from '~/server/services/supabase.server';
 import type { Product, ProductImage } from '~/features/products/types/product.types';
 import ProductGallery from '~/features/products/components/ProductGallery';
 import { ProductInfo } from '~/features/products/components/ProductInfo';

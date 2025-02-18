@@ -12,7 +12,7 @@ import {
 import * as build from '@remix-run/node';
 import type { LoaderFunctionArgs } from '@remix-run/node';
 import stylesheet from '~/styles/tailwind.css';
-import { createSupabaseServerClient } from '~/server/services/supabase.server';
+import { createSupabaseClient } from '~/server/services/supabase.server';
 import { Session } from '@supabase/supabase-js';
 
 export const links = () => [{ rel: 'stylesheet', href: stylesheet }];
@@ -26,7 +26,7 @@ export const meta = () => {
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const response = new Response();
-  const supabase = createSupabaseServerClient({ request, response });
+  const supabase = createSupabaseClient(request, response);
   const {
     data: { session: supabaseSession },
   } = await supabase.auth.getSession();

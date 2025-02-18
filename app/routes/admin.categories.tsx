@@ -4,7 +4,7 @@ import { requireAdmin } from '~/server/middleware/auth.server';
 import { CategoryManagement } from '~/features/categories/components/CategoryManagement';
 import { CategoryService } from '~/features/categories/services/categoryService';
 import { useSupabase } from '~/lib/supabase';
-import { createSupabaseClient } from '~/server/middleware/supabase.server';
+import { createSupabaseClient } from '~/server/services/supabase.server';
 
 export const loader: LoaderFunction = async ({ request }) => {
   console.log('Starting admin categories loader');
