@@ -4,10 +4,9 @@ import type { CustomerFilterOptions } from '../components/ProductFilter';
 import { getCategories } from '~/features/categories/api/categories.server';
 
 export async function productsLoader({ request }: LoaderFunctionArgs) {
+  console.log('=== Products Loader ===');
   const url = new URL(request.url);
-  const page = Number.isNaN(parseInt(url.searchParams.get('page') || ''))
-    ? 1
-    : parseInt(url.searchParams.get('page') || '1');
+  const cursor = url.searchParams.get('cursor') || undefined;
   const limit = Number.isNaN(parseInt(url.searchParams.get('limit') || ''))
     ? 12
     : parseInt(url.searchParams.get('limit') || '12');
@@ -33,22 +32,21 @@ export async function productsLoader({ request }: LoaderFunctionArgs) {
   // Fetch products and categories in parallel
   const [productsData, categories] = await Promise.all([
     getProducts({
-      page,
       limit,
+      cursor,
       filters,
       isAdmin: false,
     }),
     getCategories({ activeOnly: true }),
   ]);
 
-  const { products, total } = productsData;
-  const totalPages = Math.ceil(total / limit);
+  const { products, total, nextCursor } = productsData;
 
   return {
     products,
     total,
-    currentPage: page,
-    totalPages,
+    nextCursor,
+    initialLoad: !cursor,
     filters,
     categories: categories.map(cat => ({
       id: cat.id,

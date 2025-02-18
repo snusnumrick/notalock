@@ -81,13 +81,13 @@ export function ErrorBoundary() {
   }
 
   return (
-    <html lang="en" className="h-full">
+    <html lang="en">
       <head>
         <title>Error - Notalock Store</title>
         <Meta />
         <Links />
       </head>
-      <body className="h-full bg-gray-50">
+      <body className="bg-gray-50">
         <div className="min-h-screen px-4 py-16 sm:px-6 sm:py-24 md:grid md:place-items-center lg:px-8">
           <div className="mx-auto max-w-max">
             <main className="sm:flex">
@@ -123,14 +123,14 @@ export default function App() {
   const { env } = useLoaderData<LoaderData>();
 
   return (
-    <html lang="en" className="h-full">
+    <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
       </head>
-      <body className="h-full">
+      <body>
         <Outlet />
         <ScrollRestoration />
         <script

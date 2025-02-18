@@ -29,6 +29,9 @@ CREATE INDEX idx_products_sku ON products(sku);
 CREATE INDEX idx_products_active ON products(is_active);
 CREATE INDEX idx_products_featured ON products(featured);
 CREATE INDEX idx_products_has_variants ON products(has_variants);
+CREATE INDEX idx_products_retail_price ON products(retail_price, id);
+CREATE INDEX idx_products_name ON products(name, id);
+CREATE INDEX idx_products_created_at ON products(created_at, id);
 ```
 
 ### product_categories
