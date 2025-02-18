@@ -13,3 +13,8 @@ yarn-error.log*
 /public/build
 .idea
 /build
+
+/coverage
+.env
+.aider*
+*.bak
