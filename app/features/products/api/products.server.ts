@@ -1,26 +1,46 @@
 import { getSupabase } from '~/lib/supabase';
-import type { Product } from '../types/product.types';
-import type { FilterOptions } from '../components/ProductSearch';
 import type { CustomerFilterOptions } from '../components/ProductFilter';
+import type { FilterOptions } from '../components/ProductSearch';
 
-export async function getProducts({
-  page = 1,
-  limit = 12,
-  categoryId = null,
-  filters = {},
-  isAdmin = false,
-}: {
-  page?: number;
+interface GetProductsOptions {
   limit?: number;
+  cursor?: string;
   categoryId?: string | null;
   filters?: FilterOptions | CustomerFilterOptions;
   isAdmin?: boolean;
-} = {}) {
-  const supabase = getSupabase();
-  const offset = (page - 1) * limit;
+}
 
-  let query = supabase.from('products').select(
-    `
+interface CursorData {
+  id: string;
+  retail_price: number | null;
+  name: string;
+  created_at: string;
+  featured?: boolean;
+}
+
+export async function getProducts({
+  limit = 12,
+  cursor,
+  categoryId = null,
+  filters = {},
+  isAdmin = false,
+}: GetProductsOptions) {
+  const supabase = getSupabase();
+  console.log('=== getProducts ===');
+  console.log('Limit:', limit);
+  console.log('Incoming cursor:', cursor);
+
+  // Get total count of active products (separate query)
+  const totalQuery = supabase
+    .from('products')
+    .select('id', { count: 'exact' })
+    .eq('is_active', true);
+
+  // Build products query
+  let productsQuery = supabase
+    .from('products')
+    .select(
+      `
       id,
       name,
       description,
@@ -32,147 +52,139 @@ export async function getProducts({
       is_active,
       featured,
       has_variants,
-      categories:product_categories!inner(
+      created_at,
+      categories:product_categories(
         category:categories(
           id,
           name
         )
       )
-    `,
-    { count: 'exact' }
-  );
+    `
+    )
+    .eq('is_active', true);
 
-  // Always filter for active products in customer view
-  if (!isAdmin) {
-    query = query.eq('is_active', true);
+  // Apply cursor-based pagination
+  let decodedCursor: CursorData | null = null;
+  if (cursor) {
+    try {
+      decodedCursor = JSON.parse(atob(cursor));
+      console.log('Decoded cursor:', decodedCursor);
+      productsQuery = productsQuery.gt('id', decodedCursor.id);
+    } catch (error) {
+      console.error('Error parsing cursor:', error);
+    }
   }
 
-  if (isAdmin) {
-    // Admin-specific filters
-    const adminFilters = filters as FilterOptions;
+  // Apply customer filters
+  const customerFilters = filters as CustomerFilterOptions;
+  if (customerFilters.minPrice !== undefined) {
+    productsQuery = productsQuery.gte('retail_price', customerFilters.minPrice);
+    totalQuery.gte('retail_price', customerFilters.minPrice);
+  }
 
-    if (adminFilters.search) {
-      query = query.ilike('name', `%${adminFilters.search}%`);
-    }
+  if (customerFilters.maxPrice !== undefined) {
+    productsQuery = productsQuery.lte('retail_price', customerFilters.maxPrice);
+    totalQuery.lte('retail_price', customerFilters.maxPrice);
+  }
 
-    if (adminFilters.minPrice !== undefined) {
-      query = query.gte('retail_price', adminFilters.minPrice);
-    }
-
-    if (adminFilters.maxPrice !== undefined) {
-      query = query.lte('retail_price', adminFilters.maxPrice);
-    }
-
-    if (adminFilters.minStock !== undefined) {
-      query = query.gte('stock', adminFilters.minStock);
-    }
-
-    if (adminFilters.maxStock !== undefined) {
-      query = query.lte('stock', adminFilters.maxStock);
-    }
-
-    if (adminFilters.isActive !== undefined) {
-      query = query.eq('is_active', adminFilters.isActive);
-    }
-
-    if (adminFilters.hasVariants !== undefined) {
-      try {
-        query = query.eq('has_variants', adminFilters.hasVariants);
-      } catch (error) {
-        console.warn('has_variants column not available yet, skipping filter');
-      }
-    }
-
-    if (adminFilters.sortBy) {
-      const sortField = {
-        name: 'name',
-        price: 'retail_price',
-        stock: 'stock',
-        created: 'created_at',
-      }[adminFilters.sortBy];
-
-      if (sortField) {
-        query = query.order(sortField, {
-          ascending: adminFilters.sortOrder === 'asc',
-        });
-      }
-    }
-  } else {
-    // Customer-specific filters
-    const customerFilters = filters as CustomerFilterOptions;
-
-    if (customerFilters.minPrice !== undefined) {
-      query = query.gte('retail_price', customerFilters.minPrice);
-    }
-
-    if (customerFilters.maxPrice !== undefined) {
-      query = query.lte('retail_price', customerFilters.maxPrice);
-    }
-
-    if (customerFilters.inStockOnly) {
-      query = query.gt('stock', 0);
-    }
-
-    // Apply sorting
-    switch (customerFilters.sortOrder) {
-      case 'price_asc':
-        query = query.order('retail_price', { ascending: true });
-        break;
-      case 'price_desc':
-        query = query.order('retail_price', { ascending: false });
-        break;
-      case 'newest':
-        query = query.order('created_at', { ascending: false });
-        break;
-      case 'featured':
-      default:
-        // Default sorting for customer view
-        query = query
-          .order('featured', { ascending: false })
-          .order('created_at', { ascending: false });
-        break;
-    }
+  if (customerFilters.inStockOnly) {
+    productsQuery = productsQuery.gt('stock', 0);
+    totalQuery.gt('stock', 0);
   }
 
   // Common category filter
-  if (categoryId || (filters as CustomerFilterOptions).categoryId) {
-    const catId = categoryId || (filters as CustomerFilterOptions).categoryId;
-    query = query.eq('product_categories.category_id', catId);
+  if (categoryId || customerFilters.categoryId) {
+    const catId = categoryId || customerFilters.categoryId;
+    productsQuery = productsQuery.eq('categories.category.id', catId);
+    totalQuery.eq('categories.category.id', catId);
   }
 
-  const { data, error, count } = await query.range(offset, offset + limit - 1);
+  // Always add base ordering
+  productsQuery = productsQuery.order('id');
 
-  if (error) {
-    console.error('Supabase error:', error);
-    throw new Error('Failed to fetch products from database');
+  // Apply customer sorting
+  switch (customerFilters.sortOrder) {
+    case 'price_asc':
+      productsQuery = productsQuery.order('retail_price', { ascending: true });
+      break;
+    case 'price_desc':
+      productsQuery = productsQuery.order('retail_price', { ascending: false });
+      break;
+    case 'newest':
+      productsQuery = productsQuery.order('created_at', { ascending: false });
+      break;
+    case 'featured':
+    default:
+      productsQuery = productsQuery
+        .order('featured', { ascending: false })
+        .order('created_at', { ascending: false });
+      break;
   }
 
-  if (!data) {
-    return {
-      products: [],
-      total: 0,
+  // Apply limit last
+  productsQuery = productsQuery.limit(limit);
+
+  // Execute both queries in parallel
+  const [productsResponse, totalResponse] = await Promise.all([productsQuery, totalQuery]);
+
+  if (productsResponse.error) {
+    console.error('Error fetching products:', productsResponse.error);
+    throw new Error('Failed to fetch products');
+  }
+
+  if (totalResponse.error) {
+    console.error('Error fetching total count:', totalResponse.error);
+    throw new Error('Failed to fetch total count');
+  }
+
+  const products =
+    productsResponse.data?.map(product => ({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.retail_price || 0,
+      image_url: product.image_url,
+      sku: product.sku,
+      stock: product.stock,
+      featured: product.featured,
+      created_at: product.created_at,
+      hasVariants: product.has_variants ?? false,
+      categories: (product.categories || [])
+        .map(cp =>
+          cp?.category
+            ? {
+                id: cp.category.id,
+                name: cp.category.name,
+              }
+            : null
+        )
+        .filter(Boolean),
+    })) || [];
+
+  // Generate next cursor only if we might have more products
+  let nextCursor = null;
+  if (products.length === limit && products.length > 0) {
+    const lastProduct = products[products.length - 1];
+    const cursorData: CursorData = {
+      id: lastProduct.id,
+      retail_price: lastProduct.price,
+      name: lastProduct.name,
+      created_at: lastProduct.created_at,
+      featured: lastProduct.featured,
     };
+    nextCursor = btoa(JSON.stringify(cursorData));
   }
 
-  const products = data.map(product => ({
-    id: product.id,
-    name: product.name,
-    description: product.description,
-    price: product.retail_price,
-    thumbnailUrl: product.image_url,
-    sku: product.sku,
-    stock: product.stock,
-    hasVariants: product.has_variants ?? false,
-    categories: product.categories
-      .map(cp => ({
-        id: cp.category.id,
-        name: cp.category.name,
-      }))
-      .filter(category => category.id && category.name),
-  }));
+  console.log('Products fetched:', products.length);
+  console.log('First product ID:', products[0]?.id);
+  console.log('Last product ID:', products[products.length - 1]?.id);
+  console.log('Total products:', totalResponse.count);
+  console.log('Next cursor:', nextCursor);
+  console.log('=== End getProducts ===');
 
   return {
     products,
-    total: count || 0,
+    total: totalResponse.count || 0,
+    nextCursor,
   };
 }
