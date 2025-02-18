@@ -495,6 +495,40 @@ const submitButton = screen.getByRole('button', {
 const emailInput = screen.getByLabelText('Email address');
 ```
 
+### Singleton Pattern Testing
+```typescript
+// Testing a singleton service
+describe('SingletonService', () => {
+  beforeEach(() => {
+    // Clear singleton instance before each test
+    (getService as any).instance = null;
+    // Reset mock call counts
+    createMockService.mockClear();
+  });
+
+  it('should reuse the same instance', () => {
+    // First call creates instance
+    const firstInstance = getService();
+    
+    // Clear mocks after first instance creation
+    createMockService.mockClear();
+
+    // Second call should reuse instance
+    const secondInstance = getService();
+
+    // Verify instance was reused
+    expect(firstInstance).toBe(secondInstance);
+    expect(createMockService).not.toHaveBeenCalled();
+  });
+});
+```
+
+Key points for testing singletons:
+- Clear the singleton instance before each test
+- Track mock calls correctly by clearing at the right time
+- Verify both instance creation and reuse
+- Avoid clearing mocks too early
+
 ### Asynchronous Testing Example
 ```typescript
 // Bad: Multiple assertions in waitFor
