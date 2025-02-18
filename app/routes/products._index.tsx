@@ -63,7 +63,7 @@ export default function Products() {
         return uniqueProducts.length > 0 ? [...prev, ...uniqueProducts] : prev;
       });
     }
-  }, [products, initialLoad, searchParams]);
+  }, [products, initialLoad, searchParams, navigation.formData]);
 
   useEffect(() => {
     if (navigation.state === 'loading') {
@@ -73,19 +73,25 @@ export default function Products() {
 
   const handleFilterChange = useCallback(
     (newFilters: CustomerFilterOptions) => {
-      const updatedParams = new URLSearchParams(searchParams);
-      updatedParams.delete('cursor');
+      // Reset to first page when filters change
+      const updatedParams = new URLSearchParams();
       isInitialLoadRef.current = true;
 
+      // Only add non-empty filters to URL
       Object.entries(newFilters).forEach(([key, value]) => {
-        if (value === undefined || value === '') {
-          updatedParams.delete(key);
-        } else {
+        if (value !== undefined && value !== '') {
           updatedParams.set(key, value.toString());
         }
       });
 
+      // Preserve view parameter if it exists
+      const currentView = searchParams.get('view');
+      if (currentView) {
+        updatedParams.set('view', currentView);
+      }
+
       setSearchParams(updatedParams);
+      window.scrollTo(0, 0);
     },
     [searchParams, setSearchParams]
   );

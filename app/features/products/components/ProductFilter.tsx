@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Filter } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
@@ -39,6 +39,11 @@ export default function ProductFilter({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<CustomerFilterOptions>(defaultFilters);
 
+  // Update filters when defaultFilters change
+  useEffect(() => {
+    setFilters(defaultFilters);
+  }, [defaultFilters]);
+
   const handleFilterChange = (newFilters: Partial<CustomerFilterOptions>) => {
     const updatedFilters = { ...filters, ...newFilters };
     setFilters(updatedFilters);
@@ -71,6 +76,7 @@ export default function ProductFilter({
           <Input
             type="number"
             placeholder="Min"
+            aria-label="Minimum price"
             value={filters.minPrice || ''}
             onChange={e =>
               handleFilterChange({
@@ -81,6 +87,7 @@ export default function ProductFilter({
           <Input
             type="number"
             placeholder="Max"
+            aria-label="Maximum price"
             value={filters.maxPrice || ''}
             onChange={e =>
               handleFilterChange({
@@ -157,7 +164,10 @@ export default function ProductFilter({
               <Filter className="h-4 w-4 mr-2" />
               Filters
               {getActiveFilterCount() > 0 && (
-                <span className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
+                <span
+                  data-testid="filter-count-badge"
+                  className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
+                >
                   {getActiveFilterCount()}
                 </span>
               )}
@@ -178,6 +188,7 @@ export default function ProductFilter({
                     variant="destructive"
                     onClick={clearFilters}
                     className="w-full h-12 text-base"
+                    aria-label="Reset all filters"
                   >
                     Reset all filters
                   </Button>
@@ -195,8 +206,14 @@ export default function ProductFilter({
       <div className="flex justify-between items-center">
         <h3 className="font-semibold">Filters</h3>
         {getActiveFilterCount() > 0 && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 px-2">
-            Reset
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="h-8 px-2"
+            aria-label="Reset all filters"
+          >
+            Reset all filters
           </Button>
         )}
       </div>
