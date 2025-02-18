@@ -54,3 +54,11 @@ window.matchMedia = vi.fn().mockImplementation(query => ({
   removeEventListener: vi.fn(),
   dispatchEvent: vi.fn(),
 }));
+
+// Mock console.error to keep test output clean while still allowing error testing
+const originalConsoleError = console.error;
+vi.spyOn(console, 'error').mockImplementation((...args) => {
+  if (process.env.DEBUG) {
+    originalConsoleError(...args);
+  }
+});

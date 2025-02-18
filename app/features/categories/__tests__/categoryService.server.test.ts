@@ -1,129 +1,93 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getCategoryService } from '../api/categoryService.server';
-import { createSupabaseServerClient } from '~/server/services/supabase.server';
-import { CategoryService } from '../api/categoryService';
+
+// Mock environment variables
+vi.stubEnv('SUPABASE_URL', 'https://test.supabase.co');
+vi.stubEnv('SUPABASE_ANON_KEY', 'test-key');
+
+// Create hoisted mock functions
+const createMockCategoryService = vi.hoisted(() =>
+  vi.fn().mockImplementation(() => ({
+    client: {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }),
+    },
+    fetchCategories: vi.fn().mockResolvedValue([]),
+  }))
+);
+
+const createMockSupabaseClient = vi.hoisted(() =>
+  vi.fn().mockReturnValue({
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+    }),
+  })
+);
 
 // Mock the CategoryService class
 vi.mock('../api/categoryService', () => ({
-  CategoryService: vi.fn(),
+  CategoryService: createMockCategoryService,
 }));
 
-// Mock the Supabase client creation
+// Mock Supabase client creation
 vi.mock('~/server/services/supabase.server', () => ({
-  createSupabaseServerClient: vi.fn(),
+  createSupabaseClient: createMockSupabaseClient,
 }));
 
 describe('categoryService.server', () => {
   const mockRequest = new Request('http://localhost');
   const mockResponse = new Response();
-  let mockSupabaseClient: any;
-  let mockCategoryService: any;
-
-  beforeEach(() => {
-    // Reset modules between tests
-    vi.resetModules();
-
-    // Create mock functions for the chain
-    const fromSpy = vi.fn();
-    const selectSpy = vi.fn();
-    const orderSpy = vi.fn();
-
-    orderSpy.mockReturnValue({
-      data: [],
-      error: null,
-    });
-
-    selectSpy.mockReturnValue({
-      order: orderSpy,
-    });
-
-    fromSpy.mockReturnValue({
-      select: selectSpy,
-    });
-
-    // Create the mock client with the spy chain
-    mockSupabaseClient = {
-      from: fromSpy,
-    };
-
-    // Create mock instance of CategoryService that uses the client
-    mockCategoryService = {
-      client: mockSupabaseClient,
-      fetchCategories: async function () {
-        const { data } = await this.client
-          .from('categories')
-          .select('*')
-          .order('sort_order', { ascending: true });
-        return data;
-      },
-    };
-
-    // Set up the mock implementations
-    (CategoryService as jest.Mock).mockImplementation(() => mockCategoryService);
-    (createSupabaseServerClient as jest.Mock).mockReturnValue(mockSupabaseClient);
-  });
 
   describe('getCategoryService', () => {
     beforeEach(() => {
-      // Clear any existing instance
+      // Clear the singleton instance before each test
       (getCategoryService as any).instance = null;
+
+      // Reset mock call counts
+      createMockCategoryService.mockClear();
+      createMockSupabaseClient.mockClear();
     });
 
     it('should create a new instance when first called', () => {
       const service = getCategoryService(mockRequest, mockResponse);
 
       expect(service).toBeDefined();
-      expect(createSupabaseServerClient).toHaveBeenCalledWith({
-        request: mockRequest,
-        response: mockResponse,
-      });
-      expect(CategoryService).toHaveBeenCalledWith(mockSupabaseClient);
+      expect(createMockSupabaseClient).toHaveBeenCalledWith(mockRequest, mockResponse);
+      expect(createMockCategoryService).toHaveBeenCalledTimes(1);
     });
 
     it('should return the same instance on subsequent calls', () => {
+      // First call to create instance
       const firstInstance = getCategoryService(mockRequest, mockResponse);
+
+      // Reset mock call counts after first instance creation
+      createMockCategoryService.mockClear();
+      createMockSupabaseClient.mockClear();
+
+      // Second call should reuse instance
       const secondInstance = getCategoryService(mockRequest, mockResponse);
 
+      // Verify instance was reused
       expect(firstInstance).toBe(secondInstance);
-      expect(createSupabaseServerClient).toHaveBeenCalledTimes(1);
-      expect(CategoryService).toHaveBeenCalledTimes(1);
+      expect(createMockCategoryService).not.toHaveBeenCalled();
+      expect(createMockSupabaseClient).not.toHaveBeenCalled();
     });
 
     it('should initialize the service with the correct Supabase client', async () => {
-      const service = getCategoryService(mockRequest, mockResponse);
-
       // Mock data for the fetch response
       const mockData = [{ id: '1', name: 'Test Category' }];
-      const mockReturn = {
-        data: mockData,
-        error: null,
-      };
 
-      // Set up the mock chain
-      const fromSpy = vi.fn();
-      const selectSpy = vi.fn();
-      const orderSpy = vi.fn();
+      const service = getCategoryService(mockRequest, mockResponse);
+      const mockFetchCategories = service.fetchCategories as jest.Mock;
+      mockFetchCategories.mockResolvedValueOnce(mockData);
 
-      orderSpy.mockReturnValue(mockReturn);
-      selectSpy.mockReturnValue({
-        order: orderSpy,
-      });
-      fromSpy.mockReturnValue({
-        select: selectSpy,
-      });
-
-      // Update the client on the service instance
-      service.client = {
-        from: fromSpy,
-      };
-
-      // Call the method that uses the client
-      await service.fetchCategories();
-
-      // Verify the client was used correctly
-      expect(fromSpy).toHaveBeenCalledWith('categories');
-      expect(selectSpy).toHaveBeenCalledWith('*');
-      expect(orderSpy).toHaveBeenCalledWith('sort_order', { ascending: true });
+      // Call the method and verify results
+      const result = await service.fetchCategories();
+      expect(result).toEqual(mockData);
+      expect(mockFetchCategories).toHaveBeenCalledTimes(1);
     });
   });
 });

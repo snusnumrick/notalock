@@ -6,7 +6,6 @@ import { CategoryService } from '../categoryService';
 const TestWrapper = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
 
 describe('Category UI Components', () => {
-  let categoryService: CategoryService;
   let mockSupabase: any;
 
   beforeEach(() => {
@@ -23,7 +22,7 @@ describe('Category UI Components', () => {
       single: vi.fn().mockReturnThis(),
     };
 
-    categoryService = new CategoryService(mockSupabase);
+    new CategoryService(mockSupabase);
   });
 
   describe('Category Management', () => {

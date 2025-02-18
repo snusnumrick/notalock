@@ -35,6 +35,7 @@ describe('productsLoader', () => {
     (getProducts as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       products: mockProducts,
       total: 1,
+      nextCursor: null,
     });
 
     (getCategories as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockCategories);
@@ -43,7 +44,7 @@ describe('productsLoader', () => {
     const result = await productsLoader({ request, params: {}, context: {} });
 
     expect(getProducts).toHaveBeenCalledWith({
-      page: 1,
+      cursor: undefined,
       limit: 12,
       filters: {
         minPrice: undefined,
@@ -60,8 +61,8 @@ describe('productsLoader', () => {
     expect(result).toEqual({
       products: mockProducts,
       total: 1,
-      currentPage: 1,
-      totalPages: 1,
+      nextCursor: null,
+      initialLoad: true,
       filters: {
         minPrice: undefined,
         maxPrice: undefined,
@@ -81,21 +82,23 @@ describe('productsLoader', () => {
   it('should parse URL parameters correctly', async () => {
     const mockProducts = [];
     const mockCategories = [];
+    const mockNextCursor = 'next-cursor-value';
 
     (getProducts as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       products: mockProducts,
       total: 0,
+      nextCursor: mockNextCursor,
     });
 
     (getCategories as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockCategories);
 
     const request = new Request(
-      'http://test.com?page=2&limit=24&minPrice=10&maxPrice=100&categoryId=cat1&inStockOnly=true&sortOrder=price_asc'
+      'http://test.com?cursor=current-cursor&limit=24&minPrice=10&maxPrice=100&categoryId=cat1&inStockOnly=true&sortOrder=price_asc'
     );
     const result = await productsLoader({ request, params: {}, context: {} });
 
     expect(getProducts).toHaveBeenCalledWith({
-      page: 2,
+      cursor: 'current-cursor',
       limit: 24,
       filters: {
         minPrice: 10,
@@ -107,7 +110,8 @@ describe('productsLoader', () => {
       isAdmin: false,
     });
 
-    expect(result.currentPage).toBe(2);
+    expect(result.nextCursor).toBe(mockNextCursor);
+    expect(result.initialLoad).toBe(false);
     expect(result.filters).toEqual({
       minPrice: 10,
       maxPrice: 100,
@@ -124,17 +128,16 @@ describe('productsLoader', () => {
     (getProducts as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       products: mockProducts,
       total: 0,
+      nextCursor: null,
     });
 
     (getCategories as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockCategories);
 
-    const request = new Request(
-      'http://test.com?page=invalid&limit=invalid&minPrice=invalid&maxPrice=invalid'
-    );
+    const request = new Request('http://test.com?limit=invalid&minPrice=invalid&maxPrice=invalid');
     const result = await productsLoader({ request, params: {}, context: {} });
 
     expect(getProducts).toHaveBeenCalledWith({
-      page: 1,
+      cursor: undefined,
       limit: 12,
       filters: {
         minPrice: undefined,
@@ -146,21 +149,7 @@ describe('productsLoader', () => {
       isAdmin: false,
     });
 
-    expect(result.currentPage).toBe(1);
-  });
-
-  it('should calculate total pages correctly', async () => {
-    (getProducts as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      products: [],
-      total: 50,
-    });
-
-    (getCategories as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-
-    const request = new Request('http://test.com?limit=10');
-    const result = await productsLoader({ request, params: {}, context: {} });
-
-    expect(result.totalPages).toBe(5);
+    expect(result.initialLoad).toBe(true);
   });
 
   it('should handle concurrent data fetching failures', async () => {
@@ -180,6 +169,7 @@ describe('productsLoader', () => {
     (getProducts as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       products: [],
       total: 0,
+      nextCursor: null,
     });
 
     (getCategories as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([]);
@@ -200,6 +190,7 @@ describe('productsLoader', () => {
     (getProducts as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       products: [],
       total: 0,
+      nextCursor: null,
     });
 
     (getCategories as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([]);

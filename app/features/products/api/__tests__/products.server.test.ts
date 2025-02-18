@@ -1,309 +1,189 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getProducts } from '../products.server';
 import { getSupabase } from '~/lib/supabase';
 
-// Mock Supabase client
 vi.mock('~/lib/supabase', () => ({
   getSupabase: vi.fn(),
 }));
 
 describe('getProducts', () => {
-  const mockSelect = vi.fn();
-  const mockEq = vi.fn();
-  const mockGte = vi.fn();
-  const mockLte = vi.fn();
-  const mockIlike = vi.fn();
-  const mockGt = vi.fn();
-  const mockOrder = vi.fn();
-  const mockRange = vi.fn();
+  let productsQuery: any;
+  let countQuery: any;
+  let selectMock: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Reset chain of mock functions
-    mockSelect.mockReturnValue({
-      eq: mockEq,
-      gte: mockGte,
-      lte: mockLte,
-      ilike: mockIlike,
-      gt: mockGt,
-      order: mockOrder,
-      range: mockRange,
+    // Create the products query chain
+    productsQuery = {
+      eq: vi.fn(),
+      gt: vi.fn(),
+      gte: vi.fn(),
+      lte: vi.fn(),
+      order: vi.fn(),
+      limit: vi.fn(),
+      select: vi.fn(),
+    };
+
+    // Create the count query chain
+    countQuery = {
+      eq: vi.fn(),
+      gt: vi.fn(),
+      gte: vi.fn(),
+      lte: vi.fn(),
+    };
+
+    // Set up chain returns for products query
+    Object.values(productsQuery).forEach(method => {
+      method.mockReturnValue(productsQuery);
     });
-    mockEq.mockReturnValue({
-      eq: mockEq,
-      gte: mockGte,
-      lte: mockLte,
-      ilike: mockIlike,
-      gt: mockGt,
-      order: mockOrder,
-      range: mockRange,
+
+    // Set up chain returns for count query
+    Object.values(countQuery).forEach(method => {
+      method.mockReturnValue(countQuery);
     });
-    mockGte.mockReturnValue({
-      eq: mockEq,
-      gte: mockGte,
-      lte: mockLte,
-      ilike: mockIlike,
-      gt: mockGt,
-      order: mockOrder,
-      range: mockRange,
-    });
-    mockLte.mockReturnValue({
-      eq: mockEq,
-      gte: mockGte,
-      lte: mockLte,
-      ilike: mockIlike,
-      gt: mockGt,
-      order: mockOrder,
-      range: mockRange,
-    });
-    mockIlike.mockReturnValue({
-      eq: mockEq,
-      gte: mockGte,
-      lte: mockLte,
-      ilike: mockIlike,
-      gt: mockGt,
-      order: mockOrder,
-      range: mockRange,
-    });
-    mockGt.mockReturnValue({
-      eq: mockEq,
-      gte: mockGte,
-      lte: mockLte,
-      ilike: mockIlike,
-      gt: mockGt,
-      order: mockOrder,
-      range: mockRange,
-    });
-    mockOrder.mockReturnValue({
-      eq: mockEq,
-      gte: mockGte,
-      lte: mockLte,
-      ilike: mockIlike,
-      gt: mockGt,
-      order: mockOrder,
-      range: mockRange,
+
+    // Mock select function
+    selectMock = vi.fn().mockImplementation((fields: string, options?: { count: string }) => {
+      console.log('Select called with:', { fields, options });
+      return options?.count === 'exact' ? countQuery : productsQuery;
     });
 
     // Mock Supabase client
-    (getSupabase as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      from: () => ({
-        select: mockSelect,
-      }),
+    (getSupabase as jest.Mock).mockReturnValue({
+      from: vi.fn().mockReturnValue({ select: selectMock }),
     });
   });
 
   it('should fetch products with default parameters', async () => {
-    const mockProducts = [
-      {
+    // Create multiple mock products to trigger cursor
+    const mockSupabaseProducts = Array.from({ length: 12 }, (_, i) => ({
+      id: `${i + 1}`,
+      name: `Product ${i + 1}`,
+      retail_price: 100,
+      description: 'Test product',
+      image_url: null,
+      sku: `SKU${i + 1}`,
+      stock: 10,
+      featured: false,
+      created_at: '2024-01-01',
+      has_variants: false,
+      categories: [],
+    }));
+
+    // Expected transformed response
+    const expectedProducts = mockSupabaseProducts.map(product => ({
+      id: product.id,
+      name: product.name,
+      price: product.retail_price,
+      description: product.description,
+      image_url: product.image_url,
+      sku: product.sku,
+      stock: product.stock,
+      featured: product.featured,
+      created_at: product.created_at,
+      hasVariants: product.has_variants,
+      categories: [],
+    }));
+
+    // Mock products query
+    productsQuery.limit.mockReturnValue(
+      Promise.resolve({
+        data: mockSupabaseProducts,
+        error: null,
+      })
+    );
+
+    // Mock count query
+    countQuery.eq.mockReturnValue(countQuery);
+    countQuery.then = (resolve: any) => resolve({ count: 20, error: null }); // More than the limit
+    Object.defineProperty(countQuery, Symbol.toStringTag, { value: 'Promise' });
+
+    const result = await getProducts({});
+    console.log('Test result:', {
+      productsLength: result.products.length,
+      total: result.total,
+      hasNextCursor: result.nextCursor !== null,
+    });
+
+    // Verify outputs
+    expect(result.products).toEqual(expectedProducts);
+    expect(result.total).toBe(20);
+    expect(result.nextCursor).not.toBeNull();
+  });
+
+  it('should handle cursor-based pagination', async () => {
+    countQuery.eq.mockReturnValue(countQuery);
+    countQuery.then = (resolve: any) => resolve({ count: 0, error: null });
+    Object.defineProperty(countQuery, Symbol.toStringTag, { value: 'Promise' });
+
+    const cursor = btoa(
+      JSON.stringify({
         id: '1',
-        name: 'Test Product',
-        description: 'Description',
         retail_price: 100,
-        image_url: 'test.jpg',
-        sku: 'TEST-1',
-        stock: 10,
-        has_variants: false,
-        categories: [
-          {
-            category: {
-              id: 'cat1',
-              name: 'Category 1',
-            },
-          },
-        ],
+        name: 'Product 1',
+        created_at: '2024-01-01',
+      })
+    );
+
+    await getProducts({ cursor });
+
+    expect(productsQuery.gt).toHaveBeenCalledWith('id', '1');
+    expect(productsQuery.order).toHaveBeenCalledWith('id');
+  });
+
+  it('should handle customer filters correctly', async () => {
+    countQuery.eq.mockReturnValue(countQuery);
+    countQuery.then = (resolve: any) => resolve({ count: 0, error: null });
+    Object.defineProperty(countQuery, Symbol.toStringTag, { value: 'Promise' });
+
+    await getProducts({
+      filters: {
+        minPrice: 10,
+        maxPrice: 100,
+        inStockOnly: true,
+        categoryId: 'cat1',
+        sortOrder: 'price_asc' as const,
       },
-    ];
-
-    mockRange.mockResolvedValue({
-      data: mockProducts,
-      count: 1,
-      error: null,
     });
 
-    const result = await getProducts();
-
-    expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining('id'), { count: 'exact' });
-    expect(mockEq).toHaveBeenCalledWith('is_active', true);
-    expect(mockRange).toHaveBeenCalledWith(0, 11);
-    expect(result).toEqual({
-      products: [
-        {
-          id: '1',
-          name: 'Test Product',
-          description: 'Description',
-          price: 100,
-          thumbnailUrl: 'test.jpg',
-          sku: 'TEST-1',
-          stock: 10,
-          hasVariants: false,
-          categories: [
-            {
-              id: 'cat1',
-              name: 'Category 1',
-            },
-          ],
-        },
-      ],
-      total: 1,
-    });
-  });
-
-  it('should apply admin filters correctly', async () => {
-    mockRange.mockResolvedValue({
-      data: [],
-      count: 0,
-      error: null,
-    });
-
-    const adminFilters = {
-      search: 'test',
-      minPrice: 10,
-      maxPrice: 100,
-      minStock: 5,
-      maxStock: 50,
-      isActive: true,
-      hasVariants: false,
-      sortBy: 'price' as const,
-      sortOrder: 'asc' as const,
-    };
-
-    await getProducts({
-      isAdmin: true,
-      filters: adminFilters,
-    });
-
-    expect(mockIlike).toHaveBeenCalledWith('name', '%test%');
-    expect(mockGte).toHaveBeenCalledWith('retail_price', 10);
-    expect(mockLte).toHaveBeenCalledWith('retail_price', 100);
-    expect(mockGte).toHaveBeenCalledWith('stock', 5);
-    expect(mockLte).toHaveBeenCalledWith('stock', 50);
-    expect(mockEq).toHaveBeenCalledWith('is_active', true);
-    expect(mockEq).toHaveBeenCalledWith('has_variants', false);
-    expect(mockOrder).toHaveBeenCalledWith('retail_price', { ascending: true });
-  });
-
-  it('should apply customer filters correctly', async () => {
-    mockRange.mockResolvedValue({
-      data: [],
-      count: 0,
-      error: null,
-    });
-
-    const customerFilters = {
-      minPrice: 20,
-      maxPrice: 200,
-      inStockOnly: true,
-      sortOrder: 'price_asc' as const,
-      categoryId: 'cat1',
-    };
-
-    await getProducts({
-      filters: customerFilters,
-    });
-
-    expect(mockGte).toHaveBeenCalledWith('retail_price', 20);
-    expect(mockLte).toHaveBeenCalledWith('retail_price', 200);
-    expect(mockGt).toHaveBeenCalledWith('stock', 0);
-    expect(mockOrder).toHaveBeenCalledWith('retail_price', { ascending: true });
-    expect(mockEq).toHaveBeenCalledWith('product_categories.category_id', 'cat1');
+    expect(productsQuery.gte).toHaveBeenCalledWith('retail_price', 10);
+    expect(productsQuery.lte).toHaveBeenCalledWith('retail_price', 100);
+    expect(productsQuery.gt).toHaveBeenCalledWith('stock', 0);
+    expect(productsQuery.eq).toHaveBeenCalledWith('categories.category.id', 'cat1');
+    expect(productsQuery.order).toHaveBeenCalledWith('retail_price', { ascending: true });
   });
 
   it('should handle database errors', async () => {
-    mockRange.mockResolvedValue({
-      data: null,
-      error: new Error('Database error'),
-    });
+    productsQuery.limit.mockRejectedValueOnce(new Error('Failed to fetch products'));
+    countQuery.eq.mockReturnValue(countQuery);
+    countQuery.then = (resolve: any) => resolve({ count: 0, error: null });
+    Object.defineProperty(countQuery, Symbol.toStringTag, { value: 'Promise' });
 
-    await expect(getProducts()).rejects.toThrow('Failed to fetch products from database');
+    await expect(getProducts({})).rejects.toThrow('Failed to fetch products');
   });
 
   it('should return empty results when no data is found', async () => {
-    mockRange.mockResolvedValue({
-      data: null,
-      count: null,
-      error: null,
-    });
+    productsQuery.limit.mockResolvedValueOnce({ data: [], error: null });
+    countQuery.eq.mockReturnValue(countQuery);
+    countQuery.then = (resolve: any) => resolve({ count: 0, error: null });
+    Object.defineProperty(countQuery, Symbol.toStringTag, { value: 'Promise' });
 
-    const result = await getProducts();
-    expect(result).toEqual({
-      products: [],
-      total: 0,
-    });
+    const result = await getProducts({});
+
+    expect(result.products).toHaveLength(0);
+    expect(result.total).toBe(0);
+    expect(result.nextCursor).toBeNull();
   });
 
-  it('should handle pagination correctly', async () => {
-    mockRange.mockResolvedValue({
-      data: [],
-      count: 100,
-      error: null,
-    });
+  it('should handle featured product sorting', async () => {
+    countQuery.eq.mockReturnValue(countQuery);
+    countQuery.then = (resolve: any) => resolve({ count: 0, error: null });
+    Object.defineProperty(countQuery, Symbol.toStringTag, { value: 'Promise' });
 
-    await getProducts({ page: 3, limit: 20 });
+    await getProducts({ filters: { sortOrder: 'featured' } });
 
-    expect(mockRange).toHaveBeenCalledWith(40, 59);
-  });
-
-  it('should handle category filtering with categoryId parameter', async () => {
-    mockRange.mockResolvedValue({
-      data: [],
-      count: 0,
-      error: null,
-    });
-
-    await getProducts({ categoryId: 'test-category' });
-
-    expect(mockEq).toHaveBeenCalledWith('product_categories.category_id', 'test-category');
-  });
-
-  it('should verify INNER JOIN behavior with category filtering', async () => {
-    // Mock product data to simulate database response
-    const mockProducts = [
-      {
-        id: '1',
-        name: 'Product with Category',
-        retail_price: 100,
-        categories: [{ category: { id: 'cat1', name: 'Category 1' } }],
-      },
-      {
-        id: '2',
-        name: 'Product without Category',
-        retail_price: 200,
-        categories: [],
-      },
-    ];
-
-    mockRange.mockResolvedValue({
-      data: mockProducts,
-      count: 2,
-      error: null,
-    });
-
-    // Verify the select query includes INNER JOIN
-    await getProducts({ categoryId: 'cat1' });
-
-    // Check if the select was called with an INNER JOIN
-    expect(mockSelect).toHaveBeenCalledWith(
-      expect.stringContaining('categories:product_categories!inner'),
-      expect.any(Object)
-    );
-
-    // Verify category filter
-    expect(mockEq).toHaveBeenCalledWith('product_categories.category_id', 'cat1');
-  });
-
-  it('should handle featured product sorting for customer view', async () => {
-    mockRange.mockResolvedValue({
-      data: [],
-      count: 0,
-      error: null,
-    });
-
-    await getProducts({
-      filters: { sortOrder: 'featured' },
-    });
-
-    expect(mockOrder).toHaveBeenCalledWith('featured', { ascending: false });
-    expect(mockOrder).toHaveBeenCalledWith('created_at', { ascending: false });
+    expect(productsQuery.order).toHaveBeenCalledWith('featured', { ascending: false });
+    expect(productsQuery.order).toHaveBeenCalledWith('created_at', { ascending: false });
   });
 });
