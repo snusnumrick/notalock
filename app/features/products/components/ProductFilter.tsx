@@ -112,19 +112,20 @@ export default function ProductFilter({
 
     const formData = new FormData();
 
+    // Copy all current filter values except cursor and the changing price field
+    searchParams.forEach((paramValue, key) => {
+      if (key !== 'cursor' && key !== field) {
+        formData.set(key, paramValue);
+      }
+    });
+
     if (field === 'minPrice') {
       setMinPrice(value);
-      formData.set('minPrice', value);
-      if (maxPrice) formData.set('maxPrice', maxPrice);
+      if (value) formData.set('minPrice', value);
     } else {
       setMaxPrice(value);
-      if (minPrice) formData.set('minPrice', minPrice);
-      formData.set('maxPrice', value);
+      if (value) formData.set('maxPrice', value);
     }
-
-    if (categoryId !== 'all') formData.set('categoryId', categoryId);
-    if (inStockOnly) formData.set('inStockOnly', 'true');
-    formData.set('sortOrder', sortOrder);
 
     debouncedSubmit(formData);
   };
@@ -135,24 +136,35 @@ export default function ProductFilter({
   ) => {
     const formData = new FormData();
 
+    // Copy all current filter values except cursor
+    searchParams.forEach((paramValue, key) => {
+      if (key !== 'cursor') {
+        formData.set(key, paramValue);
+      }
+    });
+
+    // Update the changed field
     if (field === 'categoryId') {
       setCategoryId(value as string);
       if (value !== 'all') {
         formData.set('categoryId', value as string);
         onFilterChange({ ...defaultFilters, categoryId: value as string });
       } else {
+        formData.delete('categoryId');
         onFilterChange({ ...defaultFilters, categoryId: undefined });
       }
     } else if (field === 'inStockOnly') {
       setInStockOnly(value as boolean);
-      if (value) formData.set('inStockOnly', 'true');
+      if (value) {
+        formData.set('inStockOnly', 'true');
+      } else {
+        formData.delete('inStockOnly');
+      }
+      onFilterChange({ ...defaultFilters, inStockOnly: value as boolean });
     } else if (field === 'sortOrder') {
       setSortOrder((value as CustomerFilterOptions['sortOrder']) || 'featured');
       formData.set('sortOrder', value as string);
     }
-
-    if (minPrice) formData.set('minPrice', minPrice);
-    if (maxPrice) formData.set('maxPrice', maxPrice);
 
     submit(formData, {
       method: 'get',
@@ -194,7 +206,6 @@ export default function ProductFilter({
       preventScrollReset: true,
       replace: true,
     });
-    // setLocalValues({ minPrice: '', maxPrice: '' });
     onFilterChange({});
   };
 
@@ -256,12 +267,12 @@ export default function ProductFilter({
 
       {/* In Stock Only Switch */}
       <div className="flex items-center justify-between">
-        <Label>Show In Stock Only</Label>
+        <Label htmlFor="inStockOnly">Show In Stock Only</Label>
         <Switch
-          type="checkbox"
+          id="inStockOnly"
           name="inStockOnly"
           checked={inStockOnly}
-          onChange={e => handleOtherChanges(e.target.checked, 'inStockOnly')}
+          onCheckedChange={checked => handleOtherChanges(checked, 'inStockOnly')}
         />
       </div>
 

@@ -4,7 +4,7 @@ import type { CustomerFilterOptions } from '../components/ProductFilter';
 import { getCategories } from '~/features/categories/api/categories.server';
 
 export async function productsLoader({ request }: LoaderFunctionArgs) {
-  console.log('=== Products Loader ===');
+  // console.log('=== Products Loader ===');
   const url = new URL(request.url);
   const cursor = url.searchParams.get('cursor') || undefined;
   const limit = Number.isNaN(parseInt(url.searchParams.get('limit') || ''))

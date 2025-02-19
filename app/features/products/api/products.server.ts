@@ -70,39 +70,44 @@ export async function getProducts({
     }
 
     if (customerFilters.inStockOnly) {
-      productsQuery = productsQuery.gt('stock', 0);
+      productsQuery = productsQuery.gt('stock', 0); // Stock must be greater than 0 to be considered in stock
     }
 
+    // Handle category filtering with proper filter application
     if (categoryId || customerFilters.categoryId) {
       const catId = categoryId || customerFilters.categoryId;
-      // Create a new query with inner joins for category filtering
-      productsQuery = supabase
-        .from('products')
-        .select(
-          `
-          *,
-          product_categories!inner(category:categories!inner(*))
-        `,
-          { count: 'exact' }
-        )
-        .eq('is_active', true)
-        .eq('product_categories.category_id', catId);
+      // Start a new query that includes category filtering
+      let baseQuery = supabase.from('products').select(
+        `
+        *,
+        product_categories!inner(category:categories!inner(*))
+      `,
+        { count: 'exact' }
+      );
 
-      // Reapply cursor if it exists
-      if (decodedCursor) {
-        productsQuery = productsQuery.gt('id', decodedCursor.id);
-      }
+      // Apply all filters to the base query in a consistent order
+      baseQuery = baseQuery.eq('is_active', true).eq('product_categories.category_id', catId);
 
-      // Reapply other filters
+      // Apply price filters if they exist
       if (customerFilters.minPrice !== undefined) {
-        productsQuery = productsQuery.gte('retail_price', customerFilters.minPrice);
+        baseQuery = baseQuery.gte('retail_price', customerFilters.minPrice);
       }
       if (customerFilters.maxPrice !== undefined) {
-        productsQuery = productsQuery.lte('retail_price', customerFilters.maxPrice);
+        baseQuery = baseQuery.lte('retail_price', customerFilters.maxPrice);
       }
+
+      // Apply stock filter if enabled
       if (customerFilters.inStockOnly) {
-        productsQuery = productsQuery.gt('stock', 0);
+        baseQuery = baseQuery.gt('stock', 0); // Stock must be greater than 0 to be considered in stock
       }
+
+      // Apply cursor pagination last
+      if (decodedCursor) {
+        baseQuery = baseQuery.gt('id', decodedCursor.id);
+      }
+
+      // Update the main query
+      productsQuery = baseQuery;
     }
 
     // Apply customer sorting

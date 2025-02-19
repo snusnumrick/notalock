@@ -44,19 +44,22 @@ export default function Products() {
   useEffect(() => {
     const hasCursor = searchParams.has('cursor');
     const isNavigatingBack = navigation.formData?.get('_action') === 'back';
+    const isFilterChange = searchParams.has('inStockOnly') && !hasCursor;
 
     if (isNavigatingBack) {
       window.scrollTo({
         top: lastScrollPosition.current,
         behavior: 'instant',
       });
-    } else if (!hasCursor || initialLoad) {
+    } else if (!hasCursor || initialLoad || isFilterChange) {
+      // Reset products list when filter changes or on initial load
       setAllProducts(products);
-      if (isInitialLoadRef.current) {
+      if (isInitialLoadRef.current || isFilterChange) {
         window.scrollTo(0, 0);
         isInitialLoadRef.current = false;
       }
     } else if (products.length > 0) {
+      // Append products for pagination
       setAllProducts(prev => {
         const uniqueProducts = products.filter(
           newProduct => !prev.some(existingProduct => existingProduct.id === newProduct.id)
