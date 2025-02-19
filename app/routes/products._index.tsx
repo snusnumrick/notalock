@@ -168,7 +168,14 @@ export default function Products() {
                   setSearchParams={setSearchParams}
                 />
               ) : (
-                <ProductList products={allProducts} />
+                <ProductList
+                  products={allProducts}
+                  nextCursor={nextCursor}
+                  isInitialLoad={initialLoad}
+                  total={productTotal.current}
+                  searchParams={searchParams}
+                  setSearchParams={setSearchParams}
+                />
               )}
             </main>
           </div>
