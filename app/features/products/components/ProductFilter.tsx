@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Form, useSubmit, useSearchParams } from '@remix-run/react';
+import { useSubmit, useSearchParams } from '@remix-run/react';
 import { Filter } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
@@ -250,19 +250,23 @@ export default function ProductFilter({
       {/* Category Selection */}
       <div className="space-y-2">
         <Label>Category</Label>
-        <select
+        <Select
           name="categoryId"
           value={categoryId}
-          onChange={e => handleOtherChanges(e.target.value, 'categoryId')}
-          className="w-full rounded-md border border-input bg-background px-3 py-2"
+          onValueChange={value => handleOtherChanges(value, 'categoryId')}
         >
-          <option value="all">All Categories</option>
-          {categories.map(category => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map(category => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* In Stock Only Switch */}
@@ -279,17 +283,21 @@ export default function ProductFilter({
       {/* Sort Options */}
       <div className="space-y-2">
         <Label>Sort By</Label>
-        <select
+        <Select
           name="sortOrder"
           value={sortOrder}
-          onChange={e => handleOtherChanges(e.target.value, 'sortOrder')}
-          className="w-full rounded-md border border-input bg-background px-3 py-2"
+          onValueChange={value => handleOtherChanges(value, 'sortOrder')}
         >
-          <option value="featured">Featured</option>
-          <option value="price_asc">Price: Low to High</option>
-          <option value="price_desc">Price: High to Low</option>
-          <option value="newest">Newest First</option>
-        </select>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select sorting" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="featured">Featured</SelectItem>
+            <SelectItem value="price_asc">Price: Low to High</SelectItem>
+            <SelectItem value="price_desc">Price: High to Low</SelectItem>
+            <SelectItem value="newest">Newest First</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
