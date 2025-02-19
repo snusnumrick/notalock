@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Form, useSubmit, useSearchParams } from '@remix-run/react';
 import { Filter } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
@@ -36,34 +37,173 @@ export default function ProductFilter({
   categories,
   isMobile = false,
 }: ProductFilterProps) {
+  const [searchParams] = useSearchParams();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filters, setFilters] = useState<CustomerFilterOptions>(defaultFilters);
+  const submitTimeoutRef = useRef<NodeJS.Timeout>();
+  const minPriceRef = useRef<HTMLInputElement>(null);
+  const maxPriceRef = useRef<HTMLInputElement>(null);
+  const lastFocusedInput = useRef<'minPrice' | 'maxPrice' | null>(null);
+  const lastCaretPosition = useRef<number | null>(null);
 
-  // Update filters when defaultFilters change
+  const initialMinPrice = searchParams.get('minPrice') || defaultFilters.minPrice?.toString() || '';
+  const initialMaxPrice = searchParams.get('maxPrice') || defaultFilters.maxPrice?.toString() || '';
+  const initialCategoryId = searchParams.get('categoryId') || defaultFilters.categoryId || 'all';
+  const initialInStockOnly =
+    searchParams.get('inStockOnly') === 'true' || defaultFilters.inStockOnly || false;
+  const initialSortOrder =
+    (searchParams.get('sortOrder') as CustomerFilterOptions['sortOrder']) ||
+    defaultFilters.sortOrder ||
+    'featured';
+
+  const [minPrice, setMinPrice] = useState(initialMinPrice);
+  const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
+  const [categoryId, setCategoryId] = useState(initialCategoryId);
+  const [inStockOnly, setInStockOnly] = useState(initialInStockOnly);
+  const [sortOrder, setSortOrder] = useState(initialSortOrder);
+  const submit = useSubmit();
+
+  // Restore focus after render
   useEffect(() => {
-    setFilters(defaultFilters);
-  }, [defaultFilters]);
+    if (lastFocusedInput.current === 'minPrice' && minPriceRef.current) {
+      minPriceRef.current.focus();
+      if (lastCaretPosition.current !== null) {
+        minPriceRef.current.setSelectionRange(lastCaretPosition.current, lastCaretPosition.current);
+      }
+    } else if (lastFocusedInput.current === 'maxPrice' && maxPriceRef.current) {
+      maxPriceRef.current.focus();
+      if (lastCaretPosition.current !== null) {
+        maxPriceRef.current.setSelectionRange(lastCaretPosition.current, lastCaretPosition.current);
+      }
+    }
+  });
 
-  const handleFilterChange = (newFilters: Partial<CustomerFilterOptions>) => {
-    const updatedFilters = { ...filters, ...newFilters };
-    setFilters(updatedFilters);
-    onFilterChange(updatedFilters);
+  const debouncedSubmit = (formData: FormData) => {
+    if (submitTimeoutRef.current) {
+      clearTimeout(submitTimeoutRef.current);
+    }
+
+    submitTimeoutRef.current = setTimeout(() => {
+      if (formData.get('categoryId') === 'all') {
+        formData.delete('categoryId');
+      }
+
+      for (const [key, value] of formData.entries()) {
+        if (!value || value === '') {
+          formData.delete(key);
+        }
+      }
+
+      submit(formData, {
+        method: 'get',
+        preventScrollReset: true,
+        replace: true,
+      });
+    }, 500);
+  };
+
+  const handlePriceInput = (
+    e: React.FormEvent<HTMLInputElement>,
+    field: 'minPrice' | 'maxPrice'
+  ) => {
+    const input = e.currentTarget;
+    lastFocusedInput.current = field;
+    lastCaretPosition.current = input.selectionStart;
+    const value = input.value;
+
+    const formData = new FormData();
+
+    if (field === 'minPrice') {
+      setMinPrice(value);
+      formData.set('minPrice', value);
+      if (maxPrice) formData.set('maxPrice', maxPrice);
+    } else {
+      setMaxPrice(value);
+      if (minPrice) formData.set('minPrice', minPrice);
+      formData.set('maxPrice', value);
+    }
+
+    if (categoryId !== 'all') formData.set('categoryId', categoryId);
+    if (inStockOnly) formData.set('inStockOnly', 'true');
+    formData.set('sortOrder', sortOrder);
+
+    debouncedSubmit(formData);
+  };
+
+  const handleOtherChanges = (
+    value: string | boolean,
+    field: 'categoryId' | 'inStockOnly' | 'sortOrder'
+  ) => {
+    const formData = new FormData();
+
+    if (field === 'categoryId') {
+      setCategoryId(value as string);
+      if (value !== 'all') {
+        formData.set('categoryId', value as string);
+        onFilterChange({ ...defaultFilters, categoryId: value as string });
+      } else {
+        onFilterChange({ ...defaultFilters, categoryId: undefined });
+      }
+    } else if (field === 'inStockOnly') {
+      setInStockOnly(value as boolean);
+      if (value) formData.set('inStockOnly', 'true');
+    } else if (field === 'sortOrder') {
+      setSortOrder((value as CustomerFilterOptions['sortOrder']) || 'featured');
+      formData.set('sortOrder', value as string);
+    }
+
+    if (minPrice) formData.set('minPrice', minPrice);
+    if (maxPrice) formData.set('maxPrice', maxPrice);
+
+    submit(formData, {
+      method: 'get',
+      preventScrollReset: true,
+      replace: true,
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleBlur = () => {
+    // Wait to see if we're moving to another price input
+    setTimeout(() => {
+      if (
+        document.activeElement !== minPriceRef.current &&
+        document.activeElement !== maxPriceRef.current
+      ) {
+        lastFocusedInput.current = null;
+        lastCaretPosition.current = null;
+      }
+    }, 0);
   };
 
   const clearFilters = () => {
-    setFilters({});
+    setCategoryId('all');
+    setInStockOnly(false);
+    setMinPrice('');
+    setMaxPrice('');
+    const formData = new FormData();
+    formData.set('sortOrder', sortOrder);
+    submit(formData, {
+      method: 'get',
+      preventScrollReset: true,
+      replace: true,
+    });
+    // setLocalValues({ minPrice: '', maxPrice: '' });
     onFilterChange({});
   };
 
   const getActiveFilterCount = () => {
     let count = 0;
-
-    // Count only actually applied filters
-    if (filters.minPrice !== undefined) count++;
-    if (filters.maxPrice !== undefined) count++;
-    if (filters.categoryId !== undefined) count++;
-    if (filters.inStockOnly === true) count++; // Only count if true, since false is default
-
+    if (defaultFilters.minPrice !== undefined) count++;
+    if (defaultFilters.maxPrice !== undefined) count++;
+    if (defaultFilters.categoryId !== undefined) count++;
+    if (defaultFilters.inStockOnly === true) count++;
     return count;
   };
 
@@ -75,25 +215,23 @@ export default function ProductFilter({
         <div className="grid grid-cols-2 gap-4">
           <Input
             type="number"
+            name="minPrice"
             placeholder="Min"
             aria-label="Minimum price"
-            value={filters.minPrice || ''}
-            onChange={e =>
-              handleFilterChange({
-                minPrice: e.target.value ? parseFloat(e.target.value) : undefined,
-              })
-            }
+            value={minPrice}
+            onChange={e => handlePriceInput(e, 'minPrice')}
+            onBlur={handleBlur}
+            ref={minPriceRef}
           />
           <Input
             type="number"
+            name="maxPrice"
             placeholder="Max"
             aria-label="Maximum price"
-            value={filters.maxPrice || ''}
-            onChange={e =>
-              handleFilterChange({
-                maxPrice: e.target.value ? parseFloat(e.target.value) : undefined,
-              })
-            }
+            value={maxPrice}
+            onChange={e => handlePriceInput(e, 'maxPrice')}
+            onBlur={handleBlur}
+            ref={maxPriceRef}
           />
         </div>
       </div>
@@ -101,56 +239,46 @@ export default function ProductFilter({
       {/* Category Selection */}
       <div className="space-y-2">
         <Label>Category</Label>
-        <Select
-          value={filters.categoryId || 'all'}
-          onValueChange={value =>
-            handleFilterChange({ categoryId: value === 'all' ? undefined : value })
-          }
+        <select
+          name="categoryId"
+          value={categoryId}
+          onChange={e => handleOtherChanges(e.target.value, 'categoryId')}
+          className="w-full rounded-md border border-input bg-background px-3 py-2"
         >
-          <SelectTrigger>
-            <SelectValue placeholder="Select category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map(category => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <option value="all">All Categories</option>
+          {categories.map(category => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* In Stock Only Switch */}
       <div className="flex items-center justify-between">
         <Label>Show In Stock Only</Label>
         <Switch
-          checked={filters.inStockOnly || false}
-          onCheckedChange={checked => handleFilterChange({ inStockOnly: checked })}
+          type="checkbox"
+          name="inStockOnly"
+          checked={inStockOnly}
+          onChange={e => handleOtherChanges(e.target.checked, 'inStockOnly')}
         />
       </div>
 
       {/* Sort Options */}
       <div className="space-y-2">
         <Label>Sort By</Label>
-        <Select
-          value={filters.sortOrder || 'featured'}
-          onValueChange={value =>
-            handleFilterChange({
-              sortOrder: (value as CustomerFilterOptions['sortOrder']) || undefined,
-            })
-          }
+        <select
+          name="sortOrder"
+          value={sortOrder}
+          onChange={e => handleOtherChanges(e.target.value, 'sortOrder')}
+          className="w-full rounded-md border border-input bg-background px-3 py-2"
         >
-          <SelectTrigger>
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="featured">Featured</SelectItem>
-            <SelectItem value="price_asc">Price: Low to High</SelectItem>
-            <SelectItem value="price_desc">Price: High to Low</SelectItem>
-            <SelectItem value="newest">Newest First</SelectItem>
-          </SelectContent>
-        </Select>
+          <option value="featured">Featured</option>
+          <option value="price_asc">Price: Low to High</option>
+          <option value="price_desc">Price: High to Low</option>
+          <option value="newest">Newest First</option>
+        </select>
       </div>
     </div>
   );
