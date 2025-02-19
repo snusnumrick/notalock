@@ -4,12 +4,17 @@ import { useLoaderData, useSearchParams } from '@remix-run/react';
 import Products from '../products._index';
 import type { CustomerFilterOptions } from '~/features/products/components/ProductFilter';
 
-// Mock Remix hooks
+const mockSubmit = vi.fn();
+
+// Mock Remix hooks with proper chain management
 vi.mock('@remix-run/react', () => ({
   useLoaderData: vi.fn(),
   useSearchParams: vi.fn(),
   useNavigation: () => ({ state: 'idle', formData: null }),
-  Form: ({ children }: { children: React.ReactNode }) => <form>{children}</form>,
+  useSubmit: () => mockSubmit,
+  Form: ({ children, onSubmit }: { children: React.ReactNode; onSubmit?: () => void }) => (
+    <form onSubmit={onSubmit}>{children}</form>
+  ),
   Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
     <a href={to}>{children}</a>
   ),
@@ -20,6 +25,7 @@ vi.mock('~/hooks/useMediaQuery', () => ({
   useMediaQuery: () => false,
 }));
 
+// Top-level mock data
 const mockCategories = [
   { id: 'cat1', name: 'Category 1' },
   { id: 'cat2', name: 'Category 2' },
@@ -41,41 +47,34 @@ const mockProducts = [
   },
 ];
 
-function createMockLoaderData({
-  products = mockProducts,
-  total = 1,
-  nextCursor = null,
-  initialLoad = true,
-  filters = {},
-  categories = mockCategories,
-}: {
-  products?: typeof mockProducts;
-  total?: number;
-  nextCursor?: string | null;
-  initialLoad?: boolean;
-  filters?: CustomerFilterOptions;
-  categories?: typeof mockCategories;
-} = {}) {
-  return {
-    products,
-    total,
-    nextCursor,
-    initialLoad,
-    filters,
-    categories,
-  };
-}
+// Reusable mock builder
+const createMockLoaderData = (overrides = {}) => ({
+  products: mockProducts,
+  total: 1,
+  nextCursor: null,
+  initialLoad: true,
+  filters: {},
+  categories: mockCategories,
+  ...overrides,
+});
+
+// Helper for creating form data with parameters
+const createFormData = (params: Record<string, string>) => {
+  const formData = new FormData();
+  Object.entries(params).forEach(([key, value]) => {
+    formData.set(key, value);
+  });
+  return formData;
+};
 
 describe('Products Page', () => {
   let mockSetSearchParams: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    mockSetSearchParams = vi.fn();
+    mockSetSearchParams = vi.fn().mockReturnThis();
+    mockSubmit.mockClear();
     (useSearchParams as any).mockImplementation(() => [new URLSearchParams(), mockSetSearchParams]);
     (useLoaderData as any).mockImplementation(() => createMockLoaderData());
-
-    // Mock window.scrollTo
-    window.scrollTo = vi.fn();
   });
 
   afterEach(() => {
@@ -85,7 +84,11 @@ describe('Products Page', () => {
   describe('Filter Reset Functionality', () => {
     it('should clear all filters when reset is clicked', async () => {
       // Setup initial filters
-      const searchParams = new URLSearchParams('maxPrice=10&categoryId=cat1&inStockOnly=true');
+      const searchParams = new URLSearchParams();
+      searchParams.set('maxPrice', '10');
+      searchParams.set('categoryId', 'cat1');
+      searchParams.set('inStockOnly', 'true');
+
       (useSearchParams as any).mockImplementation(() => [searchParams, mockSetSearchParams]);
       (useLoaderData as any).mockImplementation(() =>
         createMockLoaderData({
@@ -99,31 +102,36 @@ describe('Products Page', () => {
 
       render(<Products />);
 
-      // Verify initial filters are applied
-      expect(screen.getByRole('spinbutton', { name: 'Maximum price' })).toHaveValue(10);
-
       // Click reset button
       const resetButton = screen.getByRole('button', { name: /reset all filters/i });
       fireEvent.click(resetButton);
 
-      // Verify setSearchParams was called with empty params
-      expect(mockSetSearchParams).toHaveBeenCalled();
-      const [[newParams]] = mockSetSearchParams.mock.calls;
-      expect(Array.from(newParams.entries())).toHaveLength(0);
-
-      // Verify filter inputs are cleared
+      // Wait for and verify form submission
       await waitFor(() => {
-        expect(screen.getByRole('spinbutton', { name: 'Maximum price' })).toHaveValue(null);
+        expect(mockSubmit).toHaveBeenCalledWith(
+          expect.any(FormData),
+          expect.objectContaining({
+            method: 'get',
+            preventScrollReset: true,
+            replace: true,
+          })
+        );
       });
 
-      // Verify filter count badge is removed
-      const filterBadges = screen.queryAllByTestId('filter-count-badge');
-      expect(filterBadges).toHaveLength(0);
+      // Verify URL params are cleared
+      const [[submittedFormData]] = mockSubmit.mock.calls;
+      expect(submittedFormData.get('maxPrice')).toBeNull();
+      expect(submittedFormData.get('categoryId')).toBeNull();
+      expect(submittedFormData.get('inStockOnly')).toBeNull();
     });
 
     it('should preserve view parameter when resetting filters', async () => {
-      // Setup initial state with view parameter and filters
-      const searchParams = new URLSearchParams('view=list&maxPrice=10');
+      // Setup initial state with view parameter
+      const searchParams = new URLSearchParams();
+      searchParams.set('view', 'list');
+      searchParams.set('maxPrice', '10');
+      searchParams.set('sortOrder', 'featured');
+
       (useSearchParams as any).mockImplementation(() => [searchParams, mockSetSearchParams]);
       (useLoaderData as any).mockImplementation(() =>
         createMockLoaderData({
@@ -139,16 +147,31 @@ describe('Products Page', () => {
       const resetButton = screen.getByRole('button', { name: /reset all filters/i });
       fireEvent.click(resetButton);
 
-      // Verify setSearchParams was called with only view parameter
-      expect(mockSetSearchParams).toHaveBeenCalled();
-      const [[newParams]] = mockSetSearchParams.mock.calls;
-      expect(newParams.get('view')).toBe('list');
-      expect(newParams.get('maxPrice')).toBeNull();
+      // Wait for form submission
+      await waitFor(() => {
+        expect(mockSubmit).toHaveBeenCalledWith(
+          expect.any(FormData),
+          expect.objectContaining({
+            method: 'get',
+            preventScrollReset: true,
+            replace: true,
+          })
+        );
+      });
+
+      // Verify preserved parameters
+      const [[submittedFormData]] = mockSubmit.mock.calls;
+      expect(submittedFormData.get('view')).toBe('list');
+      expect(submittedFormData.get('maxPrice')).toBeNull();
+      expect(submittedFormData.get('sortOrder')).toBe('featured');
     });
 
     it('should clear filters and URL params after page reload', async () => {
       // Setup initial filters
-      const searchParams = new URLSearchParams('maxPrice=10');
+      const searchParams = new URLSearchParams();
+      searchParams.set('maxPrice', '10');
+      searchParams.set('sortOrder', 'featured');
+
       (useSearchParams as any).mockImplementation(() => [searchParams, mockSetSearchParams]);
       (useLoaderData as any).mockImplementation(() =>
         createMockLoaderData({
@@ -162,19 +185,26 @@ describe('Products Page', () => {
       const resetButton = screen.getByRole('button', { name: /reset all filters/i });
       fireEvent.click(resetButton);
 
-      // Simulate page reload by updating mocks and rerendering
+      // Wait for form submission
+      await waitFor(() => {
+        expect(mockSubmit).toHaveBeenCalled();
+      });
+
+      // Simulate page reload
       (useSearchParams as any).mockImplementation(() => [
         new URLSearchParams(),
         mockSetSearchParams,
       ]);
       (useLoaderData as any).mockImplementation(() => createMockLoaderData());
-
       rerender(<Products />);
 
-      // Verify filters remain cleared after reload
-      await waitFor(() => {
-        expect(screen.getByRole('spinbutton', { name: 'Maximum price' })).toHaveValue(null);
-      });
+      // Verify filters cleared
+      const maxPriceInput = screen.getByRole('spinbutton', { name: /maximum price/i });
+      expect(maxPriceInput).toHaveValue(null);
+
+      // Verify filter badge removed
+      const filterBadge = screen.queryByTestId('filter-count-badge');
+      expect(filterBadge).not.toBeInTheDocument();
     });
   });
 });

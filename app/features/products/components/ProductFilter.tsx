@@ -182,8 +182,8 @@ export default function ProductFilter({
   }, []);
 
   const handleBlur = () => {
-    // Wait to see if we're moving to another price input
-    setTimeout(() => {
+    // We need to use requestAnimationFrame to ensure we check focus state after React's updates
+    requestAnimationFrame(() => {
       if (
         document.activeElement !== minPriceRef.current &&
         document.activeElement !== maxPriceRef.current
@@ -191,7 +191,7 @@ export default function ProductFilter({
         lastFocusedInput.current = null;
         lastCaretPosition.current = null;
       }
-    }, 0);
+    });
   };
 
   const clearFilters = () => {
@@ -200,7 +200,14 @@ export default function ProductFilter({
     setMinPrice('');
     setMaxPrice('');
     const formData = new FormData();
+
+    const currentView = searchParams.get('view');
+    if (currentView) {
+      formData.set('view', currentView);
+    }
+
     formData.set('sortOrder', sortOrder);
+
     submit(formData, {
       method: 'get',
       preventScrollReset: true,
@@ -225,6 +232,7 @@ export default function ProductFilter({
         <Label>Price Range</Label>
         <div className="grid grid-cols-2 gap-4">
           <Input
+            id="minPrice"
             type="number"
             name="minPrice"
             placeholder="Min"
@@ -235,6 +243,7 @@ export default function ProductFilter({
             ref={minPriceRef}
           />
           <Input
+            id="maxPrice"
             type="number"
             name="maxPrice"
             placeholder="Max"
@@ -299,6 +308,12 @@ export default function ProductFilter({
           </SelectContent>
         </Select>
       </div>
+
+      {/*      {getActiveFilterCount() > 0 && (
+        <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 px-2 w-full">
+          Reset all filters
+        </Button>
+      )}*/}
     </div>
   );
 
