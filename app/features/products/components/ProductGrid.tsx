@@ -63,12 +63,9 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   useEffect(() => {
     if (!hasMore) return;
 
-    let lastScrollY = window.scrollY;
     let ticking = false;
 
     const handleScroll = () => {
-      lastScrollY = window.scrollY;
-
       if (!ticking) {
         window.requestAnimationFrame(() => {
           if (sentinel.current && !loadingRef.current && hasMore) {

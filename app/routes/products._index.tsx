@@ -32,6 +32,7 @@ export default function Products() {
   const lastScrollPosition = useRef<number>(0);
   const isInitialLoadRef = useRef(true);
   const productTotal = useRef(total);
+  const updateParamsTimeout = useRef<NodeJS.Timeout>();
 
   // Update total when it changes (due to filters)
   useEffect(() => {
@@ -73,28 +74,43 @@ export default function Products() {
 
   const handleFilterChange = useCallback(
     (newFilters: CustomerFilterOptions) => {
-      // Reset to first page when filters change
-      const updatedParams = new URLSearchParams();
-      isInitialLoadRef.current = true;
-
-      // Only add non-empty filters to URL
-      Object.entries(newFilters).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') {
-          updatedParams.set(key, value.toString());
-        }
-      });
-
-      // Preserve view parameter if it exists
-      const currentView = searchParams.get('view');
-      if (currentView) {
-        updatedParams.set('view', currentView);
+      // Clear any pending updates
+      if (updateParamsTimeout.current) {
+        clearTimeout(updateParamsTimeout.current);
       }
 
-      setSearchParams(updatedParams);
-      window.scrollTo(0, 0);
+      // Debounce the URL updates
+      updateParamsTimeout.current = setTimeout(() => {
+        const updatedParams = new URLSearchParams();
+        isInitialLoadRef.current = true;
+
+        // Only add non-empty filters to URL
+        Object.entries(newFilters).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') {
+            updatedParams.set(key, value.toString());
+          }
+        });
+
+        // Preserve view parameter if it exists
+        const currentView = searchParams.get('view');
+        if (currentView) {
+          updatedParams.set('view', currentView);
+        }
+
+        setSearchParams(updatedParams);
+      }, 50); // Small delay to ensure we don't conflict with filter component's debounce
     },
     [searchParams, setSearchParams]
   );
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (updateParamsTimeout.current) {
+        clearTimeout(updateParamsTimeout.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (isMobile && view === 'list') {
