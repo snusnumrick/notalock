@@ -20,7 +20,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
                 <div className="w-40 h-40 flex-shrink-0">
                   <div className="aspect-square w-full relative overflow-hidden rounded-lg">
                     <img
-                      src={product.thumbnailUrl}
+                      src={product.image_url || '/images/placeholder-product.png'}
                       alt={product.name}
                       className="object-cover w-full h-full"
                     />
