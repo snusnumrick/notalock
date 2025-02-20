@@ -125,7 +125,7 @@ export default function Products() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col gap-6">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center md:fixed md:z-10 md:bg-background md:w-[calc(100%-2rem)] md:max-w-screen-2xl md:py-4">
             <div className="space-y-1">
               <h1 className="text-2xl font-bold">Products</h1>
               <p className="text-sm text-gray-500">
@@ -135,9 +135,9 @@ export default function Products() {
             {!isMobile && <ViewToggle view={view} onViewChange={setView} />}
           </div>
 
-          <div className="flex flex-col md:flex-row gap-6">
+          <div className="flex flex-col md:flex-row gap-6 md:pt-20">
             {!isMobile && (
-              <aside className="md:w-64 shrink-0">
+              <aside className="md:w-64 shrink-0 md:fixed md:top-32 md:bottom-0 md:overflow-y-auto md:pb-8">
                 <ProductFilter
                   onFilterChange={handleFilterChange}
                   defaultFilters={filters}
@@ -157,7 +157,7 @@ export default function Products() {
               </div>
             )}
 
-            <main className="flex-1">
+            <main className="flex-1 md:ml-72">
               {view === 'grid' ? (
                 <ProductGrid
                   products={allProducts}
