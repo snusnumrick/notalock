@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, X } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '~/components/ui/sheet';
@@ -12,6 +12,7 @@ import {
 } from '~/components/ui/select';
 import { Label } from '~/components/ui/label';
 import { Switch } from '~/components/ui/switch';
+import { Separator } from '~/components/ui/separator';
 
 export interface FilterOptions {
   search?: string;
@@ -54,7 +55,14 @@ export default function ProductSearch({ onFilterChange, defaultFilters = {} }: P
   };
 
   const getActiveFilterCount = () => {
-    return Object.values(filters).filter(value => value !== undefined).length;
+    let count = 0;
+    if (filters.minPrice !== undefined) count++;
+    if (filters.maxPrice !== undefined) count++;
+    if (filters.minStock !== undefined) count++;
+    if (filters.maxStock !== undefined) count++;
+    if (filters.isActive === true) count++;
+    if (filters.hasVariants === true) count++;
+    return count;
   };
 
   return (
@@ -85,10 +93,6 @@ export default function ProductSearch({ onFilterChange, defaultFilters = {} }: P
           <SheetHeader>
             <div className="flex items-center justify-between">
               <SheetTitle>Filters</SheetTitle>
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 px-2 lg:px-3">
-                Reset
-                {/*<X className="ml-2 h-4 w-4" />*/}
-              </Button>
             </div>
           </SheetHeader>
 
@@ -203,6 +207,19 @@ export default function ProductSearch({ onFilterChange, defaultFilters = {} }: P
                 </Select>
               )}
             </div>
+            {getActiveFilterCount() > 0 && (
+              <div className="mt-6 pb-8">
+                <Separator className="mb-6" />
+                <Button
+                  variant="destructive"
+                  onClick={clearFilters}
+                  className="w-full h-12 text-base"
+                  aria-label="Reset all filters"
+                >
+                  Reset all filters
+                </Button>
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>

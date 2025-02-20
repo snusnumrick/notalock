@@ -10,8 +10,8 @@ import type { CustomerFilterOptions } from '~/features/products/components/Produ
 import { productsLoader } from '~/features/products/api/loaders';
 import { useMediaQuery } from '~/hooks/useMediaQuery';
 
-export const loader: LoaderFunction = async ({ request }) => {
-  return productsLoader({ request });
+export const loader: LoaderFunction = async ({ request, params, context }) => {
+  return productsLoader({ request, params, context });
 };
 
 export default function Products() {

@@ -132,7 +132,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
               <CardContent className="p-4">
                 <h3 className="font-semibold text-lg line-clamp-1">{product.name}</h3>
                 <p className="text-sm text-gray-600 mt-1 line-clamp-2">{product.description}</p>
-                {product.categories?.length > 0 && (
+                {product.categories && product.categories.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {product.categories.map(category => (
                       <Badge key={category.id} variant="secondary">
@@ -143,7 +143,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                 )}
               </CardContent>
               <CardFooter className="p-4 pt-0">
-                <p className="font-bold text-lg">{formattedPrice(product.price)}</p>
+                <p className="font-bold text-lg">{formattedPrice(product.retail_price)}</p>
               </CardFooter>
             </Card>
           </Link>

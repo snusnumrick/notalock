@@ -130,7 +130,7 @@ export const ProductList: React.FC<ProductListProps> = ({
                         <p className="text-sm text-gray-600 mt-2 line-clamp-3">
                           {product.description}
                         </p>
-                        {product.categories.length > 0 && (
+                        {product.categories && product.categories.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
                             {product.categories.map(category => (
                               <Badge key={category.id} variant="secondary">
@@ -140,7 +140,7 @@ export const ProductList: React.FC<ProductListProps> = ({
                           </div>
                         )}
                       </div>
-                      <p className="font-bold text-lg">{formattedPrice(product.price)}</p>
+                      <p className="font-bold text-lg">{formattedPrice(product.retail_price)}</p>
                     </div>
                   </div>
                 </div>

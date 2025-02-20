@@ -2,7 +2,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import { useLoaderData, useSearchParams } from '@remix-run/react';
 import Products from '../products._index';
-import type { CustomerFilterOptions } from '~/features/products/components/ProductFilter';
 
 const mockSubmit = vi.fn();
 
@@ -57,15 +56,6 @@ const createMockLoaderData = (overrides = {}) => ({
   categories: mockCategories,
   ...overrides,
 });
-
-// Helper for creating form data with parameters
-const createFormData = (params: Record<string, string>) => {
-  const formData = new FormData();
-  Object.entries(params).forEach(([key, value]) => {
-    formData.set(key, value);
-  });
-  return formData;
-};
 
 describe('Products Page', () => {
   let mockSetSearchParams: ReturnType<typeof vi.fn>;

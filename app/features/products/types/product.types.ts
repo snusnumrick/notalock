@@ -18,10 +18,8 @@ export interface Product {
   image_url: string | null;
   images?: ProductImage[];
   categories?: {
-    category: {
-      id: string;
-      name: string;
-    };
+    id: string;
+    name: string;
   }[];
 }
 

@@ -219,7 +219,12 @@ export class ProductService {
 
       // Apply sorting
       if (filters.sortBy) {
-        const sortField = filters.sortBy === 'created' ? 'created_at' : filters.sortBy;
+        const sortField =
+          filters.sortBy === 'created'
+            ? 'created_at'
+            : filters.sortBy === 'price'
+              ? 'retail_price'
+              : filters.sortBy;
         query = query.order(sortField, {
           ascending: filters.sortOrder === 'asc',
         });
