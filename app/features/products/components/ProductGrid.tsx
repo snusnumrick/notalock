@@ -3,12 +3,12 @@ import { Link, useNavigation } from '@remix-run/react';
 import { Card, CardContent, CardFooter, CardHeader } from '~/components/ui/card';
 import { Badge } from '~/components/ui/badge';
 import { formattedPrice } from '~/lib/utils';
-import type { Product } from '../types/product.types';
+import type { TransformedProduct } from '../types/product.types';
 import { ProductGridSkeleton } from './ProductCardSkeleton';
 import type { SetURLSearchParams } from 'react-router-dom';
 
 interface ProductGridProps {
-  products: Product[];
+  products: TransformedProduct[];
   nextCursor?: string | null;
   isInitialLoad?: boolean;
   total: number;
@@ -143,7 +143,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                 )}
               </CardContent>
               <CardFooter className="p-4 pt-0">
-                <p className="font-bold text-lg">{formattedPrice(product.retail_price)}</p>
+                <p className="font-bold text-lg">{formattedPrice(product.price)}</p>
               </CardFooter>
             </Card>
           </Link>

@@ -93,7 +93,7 @@ describe('Products Page', () => {
       render(<Products />);
 
       // Click reset button
-      const resetButton = screen.getByRole('button', { name: /reset all filters/i });
+      const resetButton = screen.getByTestId('reset_desktop');
       fireEvent.click(resetButton);
 
       // Wait for and verify form submission
@@ -134,7 +134,7 @@ describe('Products Page', () => {
       render(<Products />);
 
       // Click reset button
-      const resetButton = screen.getByRole('button', { name: /reset all filters/i });
+      const resetButton = screen.getByTestId('reset_desktop');
       fireEvent.click(resetButton);
 
       // Wait for form submission
@@ -172,7 +172,7 @@ describe('Products Page', () => {
       const { rerender } = render(<Products />);
 
       // Click reset button
-      const resetButton = screen.getByRole('button', { name: /reset all filters/i });
+      const resetButton = screen.getByTestId('reset_desktop');
       fireEvent.click(resetButton);
 
       // Wait for form submission

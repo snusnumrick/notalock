@@ -309,11 +309,17 @@ export default function ProductFilter({
         </Select>
       </div>
 
-      {/*      {getActiveFilterCount() > 0 && (
-        <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 px-2 w-full">
+      {getActiveFilterCount() > 0 && (
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={clearFilters}
+          data-testid="reset_desktop"
+          className="h-8 px-2 w-full"
+        >
           Reset all filters
         </Button>
-      )}*/}
+      )}
     </div>
   );
 
@@ -348,6 +354,7 @@ export default function ProductFilter({
                   <Separator className="mb-6" />
                   <Button
                     variant="destructive"
+                    data-testid="reset_mobile"
                     onClick={clearFilters}
                     className="w-full h-12 text-base"
                     aria-label="Reset all filters"

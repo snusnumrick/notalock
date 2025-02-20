@@ -23,6 +23,23 @@ export interface Product {
   }[];
 }
 
+export interface TransformedProduct {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image_url: string;
+  sku: string;
+  stock: number;
+  featured: boolean;
+  created_at: string;
+  hasVariants: boolean;
+  categories: Array<{
+    id: string;
+    name: string;
+  }>;
+}
+
 export interface LoaderData {
   session: Session | null;
   profile: { role: string } | null;

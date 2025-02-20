@@ -1,6 +1,7 @@
 import { getSupabase } from '~/lib/supabase';
 import type { CustomerFilterOptions } from '../components/ProductFilter';
 import type { FilterOptions } from '../components/ProductSearch';
+import { TransformedProduct } from '../types/product.types';
 
 interface GetProductsOptions {
   limit?: number;
@@ -196,7 +197,7 @@ export async function getProducts({
   }
 
   // Map response
-  const products =
+  const products: TransformedProduct[] =
     productsResponse.data?.map(product => ({
       id: product.id,
       name: product.name,
