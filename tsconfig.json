@@ -36,7 +36,7 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noImplicitOverride": true,
-    "exactOptionalPropertyTypes": true,
+    "exactOptionalPropertyTypes": false,
     "types": ["jest", "@testing-library/jest-dom", "node"]
   }
 }

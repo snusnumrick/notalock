@@ -52,7 +52,9 @@ export async function getProducts({
     try {
       decodedCursor = JSON.parse(atob(cursor));
       console.log('Decoded cursor:', decodedCursor);
-      productsQuery = productsQuery.gt('id', decodedCursor.id);
+      if (decodedCursor) {
+        productsQuery = productsQuery.gt('id', decodedCursor.id);
+      }
     } catch (error) {
       console.error('Error parsing cursor:', error);
     }
@@ -133,37 +135,30 @@ export async function getProducts({
     const adminFilters = filters as FilterOptions;
     if (adminFilters.search) {
       productsQuery = productsQuery.ilike('name', `%${adminFilters.search}%`);
-      totalQuery.ilike('name', `%${adminFilters.search}%`);
     }
 
     if (adminFilters.minPrice !== undefined) {
       productsQuery = productsQuery.gte('retail_price', adminFilters.minPrice);
-      totalQuery.gte('retail_price', adminFilters.minPrice);
     }
 
     if (adminFilters.maxPrice !== undefined) {
       productsQuery = productsQuery.lte('retail_price', adminFilters.maxPrice);
-      totalQuery.lte('retail_price', adminFilters.maxPrice);
     }
 
     if (adminFilters.minStock !== undefined) {
       productsQuery = productsQuery.gte('stock', adminFilters.minStock);
-      totalQuery.gte('stock', adminFilters.minStock);
     }
 
     if (adminFilters.maxStock !== undefined) {
       productsQuery = productsQuery.lte('stock', adminFilters.maxStock);
-      totalQuery.lte('stock', adminFilters.maxStock);
     }
 
     if (adminFilters.isActive !== undefined) {
       productsQuery = productsQuery.eq('is_active', adminFilters.isActive);
-      totalQuery.eq('is_active', adminFilters.isActive);
     }
 
     if (adminFilters.hasVariants !== undefined) {
       productsQuery = productsQuery.eq('has_variants', adminFilters.hasVariants);
-      totalQuery.eq('has_variants', adminFilters.hasVariants);
     }
 
     // Apply admin sorting
@@ -214,7 +209,7 @@ export async function getProducts({
       created_at: product.created_at,
       hasVariants: product.has_variants ?? false,
       categories: (product.product_categories || [])
-        .map(pc =>
+        .map((pc: { category?: { id: string; name: string } }) =>
           pc?.category
             ? {
                 id: pc.category.id,

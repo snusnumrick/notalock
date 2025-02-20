@@ -87,7 +87,7 @@ export default function ProductSearch({ onFilterChange, defaultFilters = {} }: P
               <SheetTitle>Filters</SheetTitle>
               <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 px-2 lg:px-3">
                 Reset
-                <X className="ml-2 h-4 w-4" />
+                {/*<X className="ml-2 h-4 w-4" />*/}
               </Button>
             </div>
           </SheetHeader>

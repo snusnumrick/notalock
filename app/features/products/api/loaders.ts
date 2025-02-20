@@ -48,7 +48,7 @@ export async function productsLoader({ request }: LoaderFunctionArgs) {
     nextCursor,
     initialLoad: !cursor,
     filters,
-    categories: categories.map(cat => ({
+    categories: categories.map((cat: { id: string; name: string }) => ({
       id: cat.id,
       name: cat.name,
     })),
