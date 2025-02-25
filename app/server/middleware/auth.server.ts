@@ -45,6 +45,7 @@ export async function requireAdmin(request: Request): Promise<AuthResult> {
   console.log('app/server/middleware/auth.server.ts -Starting requireAdmin check');
   const { user, response } = await requireAuth(request);
   const supabase = createSupabaseClient(request, response);
+  const url = new URL(request.url);
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')

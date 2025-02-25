@@ -4,10 +4,10 @@ import { useNavigation, Link } from '@remix-run/react';
 import { Card, CardContent } from '~/components/ui/card';
 import { Badge } from '~/components/ui/badge';
 import { formattedPrice } from '~/lib/utils';
-import type { Product } from '../types/product.types';
+import { TransformedProduct } from '../types/product.types';
 
 interface ProductListProps {
-  products: Product[];
+  products: TransformedProduct[];
   nextCursor?: string | null;
   isInitialLoad?: boolean;
   total: number;
@@ -140,7 +140,7 @@ export const ProductList: React.FC<ProductListProps> = ({
                           </div>
                         )}
                       </div>
-                      <p className="font-bold text-lg">{formattedPrice(product.retail_price)}</p>
+                      <p className="font-bold text-lg">{formattedPrice(product.price)}</p>
                     </div>
                   </div>
                 </div>

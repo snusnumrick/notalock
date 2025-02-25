@@ -12,7 +12,7 @@ interface CategorySplitViewProps {
   onEdit: (category: Category) => void;
   onDelete: (id: string) => void;
   onToggleActive: (id: string, isActive: boolean) => void;
-  onReorder: (updates: { id: string; position: number }[]) => void;
+  onReorder: (updates: { id: string; position: number }[]) => Promise<void>;
 }
 
 export function CategorySplitView({

@@ -1,5 +1,10 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { Link, useNavigation } from '@remix-run/react';
+import { useRetry } from '~/hooks/useRetry';
+import { Alert, AlertDescription } from '~/components/ui/alert';
+import { Button } from '~/components/ui/button';
+import { ReloadIcon } from '@radix-ui/react-icons';
+import { AuthApiError } from '@supabase/supabase-js';
+import { Link, useNavigation, useNavigate } from '@remix-run/react';
 import { Card, CardContent, CardFooter, CardHeader } from '~/components/ui/card';
 import { Badge } from '~/components/ui/badge';
 import { formattedPrice } from '~/lib/utils';
@@ -27,6 +32,18 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   const navigation = useNavigation();
   const sentinel = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
+  const unmountedRef = useRef(false);
+
+  // Track unmounted state for cleanup
+  useEffect(() => {
+    // console.log('ProductGrid mounted');
+    unmountedRef.current = false;
+    return () => {
+      // console.log('ProductGrid unmounting');
+      unmountedRef.current = true;
+    };
+  }, []);
+
   const isLoading = navigation.state !== 'idle';
   const hasMore = products.length < total && nextCursor !== null;
 
@@ -37,62 +54,125 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
     }
   }, [navigation.state]);
 
-  const loadMore = useCallback(() => {
-    if (!nextCursor || loadingRef.current || !hasMore) {
-      return;
-    }
-
-    // Prevent multiple simultaneous load requests
-    loadingRef.current = true;
-
+  // Function to update search params
+  const updateSearchParams = useCallback(async () => {
     const newParams = new URLSearchParams(searchParams);
-    newParams.set('cursor', nextCursor);
+    newParams.set('cursor', nextCursor!);
 
     // Calculate remaining items and adjust the limit if needed
     const remaining = total - products.length;
     if (remaining < 12) {
       newParams.set('limit', remaining.toString());
     }
+    // console.log('remaining', remaining);
 
-    setSearchParams(newParams, {
+    return setSearchParams(newParams, {
       preventScrollReset: true,
       replace: true,
     });
-  }, [nextCursor, hasMore, searchParams, setSearchParams, products.length, total]);
+  }, [nextCursor, searchParams, setSearchParams, products.length, total]);
 
-  useEffect(() => {
-    if (!hasMore) return;
+  // Set up retry mechanism
+  const {
+    execute: executeLoadMore,
+    state: retryState,
+    reset: resetRetry,
+  } = useRetry(updateSearchParams, {
+    maxAttempts: 3,
+    initialDelay: 1000,
+    backoffFactor: 2,
+    maxDelay: 5000,
+  });
 
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          if (sentinel.current && !loadingRef.current && hasMore) {
-            const rect = sentinel.current.getBoundingClientRect();
-            const buffer = window.innerHeight + 100;
-            if (rect.top <= buffer) {
-              loadMore();
-            }
-          }
-          ticking = false;
-        });
-        ticking = true;
+  const navigate = useNavigate();
+  const handleLoadError = useCallback(
+    (error: Error) => {
+      // Handle auth errors by redirecting to login
+      if (error instanceof AuthApiError && error.status === 400) {
+        navigate('/auth/login');
+        return;
       }
-    };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+      // Log other errors
+      if (error.message !== 'Operation cancelled') {
+        console.error('Failed to load more products:', error);
+      }
+    },
+    [navigate]
+  );
 
-    // Initial check for small content
-    if (
-      sentinel.current &&
-      sentinel.current.getBoundingClientRect().top <= window.innerHeight + 100
-    ) {
-      loadMore();
+  const loadMore = useCallback(async () => {
+    const shouldSkip = !nextCursor || loadingRef.current || !hasMore || unmountedRef.current;
+
+    /*
+    console.log('loadMore called:', {
+      nextCursor,
+      loading: loadingRef.current,
+      hasMore,
+      unmounted: unmountedRef.current,
+      shouldSkip,
+    });
+*/
+
+    if (shouldSkip) {
+      return;
     }
 
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [loadMore, hasMore]);
+    // Prevent multiple simultaneous load requests
+    loadingRef.current = true;
+
+    try {
+      await executeLoadMore();
+    } catch (error) {
+      if (error instanceof Error) {
+        handleLoadError(error);
+      }
+    }
+  }, [nextCursor, hasMore, executeLoadMore, handleLoadError]);
+
+  // Reset retry state when navigation is successful
+  useEffect(() => {
+    if (navigation.state === 'idle' && retryState.attempt > 0) {
+      resetRetry();
+    }
+  }, [navigation.state, retryState.attempt, resetRetry]);
+
+  // Set up intersection observer
+  useEffect(() => {
+    if (!hasMore || !sentinel.current) return;
+
+    const currentSentinel = sentinel.current;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const shouldLoad =
+          entry?.isIntersecting && !loadingRef.current && hasMore && !unmountedRef.current;
+
+        /*        console.log('IntersectionObserver update:', {
+          isIntersecting: entry?.isIntersecting,
+          loading: loadingRef.current,
+          hasMore,
+          unmounted: unmountedRef.current,
+          shouldLoad,
+        });*/
+
+        if (shouldLoad) {
+          void loadMore();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '200px',
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(currentSentinel);
+
+    return () => {
+      observer.unobserve(currentSentinel);
+      observer.disconnect();
+    };
+  }, [hasMore, loadMore]);
 
   if (isInitialLoad && products.length === 0) {
     return (
@@ -152,11 +232,35 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 
       {/* Loading indicator and sentinel */}
       {hasMore && (
-        <div
-          ref={sentinel}
-          className="py-8 text-center"
-          style={{ visibility: isLoading ? 'visible' : 'hidden' }}
-        >
+        <div ref={sentinel} className="h-4 my-8" data-testid="load-more-sentinel">
+          {retryState.isRetrying && (
+            <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
+              <Alert variant="destructive" className="max-w-lg mx-auto">
+                <AlertDescription className="flex items-center gap-2">
+                  <ReloadIcon className="animate-spin h-4 w-4" />
+                  Retrying... Attempt {retryState.attempt} of 3
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+          {retryState.error && (
+            <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
+              <Alert variant="destructive" className="max-w-lg mx-auto">
+                <AlertDescription>Failed to load more products. Please try again.</AlertDescription>
+              </Alert>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  resetRetry();
+                  loadMore();
+                }}
+                className="flex items-center gap-2"
+              >
+                <ReloadIcon className="h-4 w-4" />
+                Retry
+              </Button>
+            </div>
+          )}
           {isLoading && (
             <div className="w-full animate-in fade-in duration-300">
               <ProductGridSkeleton count={4} />

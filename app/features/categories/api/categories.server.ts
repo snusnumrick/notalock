@@ -1,4 +1,5 @@
 import { getSupabase } from '~/lib/supabase';
+import type { Category } from '~/features/products/types/product.types.ts';
 
 interface GetCategoriesOptions {
   activeOnly?: boolean;
@@ -10,7 +11,7 @@ export async function getCategories({
   activeOnly = false,
   parentId = null,
   includeChildren = false,
-}: GetCategoriesOptions = {}) {
+}: GetCategoriesOptions = {}): Promise<Category[]> {
   const supabase = getSupabase();
 
   let query = supabase
@@ -73,20 +74,15 @@ export async function getCategories({
 
   if (includeChildren) {
     // For each category, fetch its children
-    const categoriesWithChildren = await Promise.all(
+    return await Promise.all(
       categories.map(async category => {
-        const children = await getCategories({
-          activeOnly,
+        const children: Category[] = await getCategories({
           parentId: category.id,
           includeChildren: true,
         });
-        return {
-          ...category,
-          children,
-        };
+        return { ...category, children };
       })
     );
-    return categoriesWithChildren;
   }
 
   return categories;

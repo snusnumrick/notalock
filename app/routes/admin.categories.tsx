@@ -35,7 +35,7 @@ export default function AdminCategoriesRoute() {
     supabase.auth.setSession(session);
   }
 
-  const categoryService = new CategoryService(supabase);
+  const categoryService = new CategoryService(supabase, session);
 
   return (
     <div className="container py-8">

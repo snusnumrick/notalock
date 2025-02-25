@@ -11,6 +11,8 @@ export async function productsLoader({ request }: LoaderFunctionArgs) {
     ? 12
     : parseInt(url.searchParams.get('limit') || '12');
 
+  const sortOrder = url.searchParams.get('sortOrder') as CustomerFilterOptions['sortOrder'];
+
   // Parse customer filter parameters
   const filters: CustomerFilterOptions = {
     minPrice: url.searchParams.get('minPrice')
@@ -25,9 +27,10 @@ export async function productsLoader({ request }: LoaderFunctionArgs) {
       : undefined,
     categoryId: url.searchParams.get('categoryId') || url.searchParams.get('category') || undefined,
     inStockOnly: url.searchParams.get('inStockOnly') === 'true',
-    sortOrder:
-      (url.searchParams.get('sortOrder') as CustomerFilterOptions['sortOrder']) || undefined,
+    sortOrder: sortOrder || undefined,
   };
+
+  // console.log('Loading products with filters:', { filters, cursor, sortOrder });
 
   // Fetch products and categories in parallel
   const [productsData, categories] = await Promise.all([

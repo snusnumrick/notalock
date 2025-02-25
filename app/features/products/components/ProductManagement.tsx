@@ -255,7 +255,7 @@ export function ProductManagement({
                     <td className="p-4">{product.sku}</td>
                     <td className="p-4">{product.name}</td>
                     <td className="p-4">
-                      {product.categories?.map(({ category }) => category.name).join(', ') || '-'}
+                      {product.categories?.map(category => category.name).join(', ') || '-'}
                     </td>
                     <td className="p-4 text-right">
                       ${product.retail_price?.toFixed(2) ?? '0.00'}
@@ -322,7 +322,7 @@ export function ProductManagement({
               business_price: editingProduct.business_price?.toString() ?? '0',
               stock: editingProduct.stock?.toString() ?? '0',
               is_active: editingProduct.is_active ?? true,
-              category_ids: editingProduct.categories?.map(({ category }) => category.id) ?? [],
+              category_ids: editingProduct.categories?.map(category => category.id) ?? [],
             },
           })}
           supabaseClient={supabase}

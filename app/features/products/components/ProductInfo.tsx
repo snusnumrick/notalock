@@ -22,7 +22,9 @@ export function ProductInfo({ product, onAddToCart }: ProductInfoProps) {
         <div className="flex justify-between items-center">
           <div>
             <p className="text-lg font-medium text-gray-900">Retail Price</p>
-            <p className="text-2xl font-bold text-blue-600">${product.retail_price.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-blue-600">
+              ${product.retail_price?.toFixed(2) ?? 'N/A'}
+            </p>
           </div>
           <div className="text-right">
             <p className="text-lg font-medium text-gray-900">Stock</p>

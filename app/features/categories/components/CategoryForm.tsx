@@ -14,6 +14,13 @@ import { Input } from '~/components/ui/input';
 import { Textarea } from '~/components/ui/textarea';
 import { Button } from '~/components/ui/button';
 import { Switch } from '~/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/components/ui/select';
 import type { Category, CategoryFormData } from '../types/category.types';
 
 const categoryFormSchema = z.object({
@@ -38,7 +45,7 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
     name: initialData?.name ?? '',
     slug: initialData?.slug ?? '',
     description: initialData?.description ?? '',
-    parent_id: initialData?.parent_id ?? '',
+    parent_id: initialData?.parent_id ?? undefined,
     sort_order: initialData?.sort_order ?? 0,
     is_visible: initialData?.is_visible ?? true,
     is_highlighted: initialData?.is_highlighted ?? false,
@@ -56,10 +63,10 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
         name: data.name,
         slug: data.slug || '',
         description: data.description || '',
-        is_visible: typeof data.is_visible === 'boolean' ? data.is_visible : true,
-        is_highlighted: typeof data.is_highlighted === 'boolean' ? data.is_highlighted : false,
+        is_visible: data.is_visible,
+        is_highlighted: data.is_highlighted,
         highlight_priority: data.highlight_priority ?? 0,
-        parent_id: data.parent_id || '',
+        parent_id: data.parent_id || null,
         sort_order: data.sort_order ?? 0,
       };
 
@@ -77,7 +84,11 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form
+        onSubmit={form.handleSubmit(handleSubmit)}
+        className="space-y-6"
+        aria-label={submitButtonText}
+      >
         <FormField
           control={form.control}
           name="name"
@@ -127,20 +138,21 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Parent Category</FormLabel>
-                <FormControl>
-                  <select
-                    data-testid="parent-category-select"
-                    {...field}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">None</option>
+                <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a parent category" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="null">None</SelectItem>
                     {categories.map(category => (
-                      <option key={category.id} value={category.id}>
+                      <SelectItem key={category.id} value={category.id}>
                         {category.name}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
-                </FormControl>
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -195,6 +207,7 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
                     <Input
                       type="number"
                       min="0"
+                      aria-label="Display Priority"
                       {...field}
                       onChange={e => field.onChange(parseInt(e.target.value) || 0)}
                     />

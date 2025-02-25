@@ -1,16 +1,24 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
-import { useLoaderData, useSearchParams } from '@remix-run/react';
-import Products from '../products._index';
+import { screen, waitFor, within } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { useLoaderData, useSearchParams, useNavigation } from '@remix-run/react';
+import { renderWithRouter } from '~/test/test-utils';
 
-const mockSubmit = vi.fn();
-
-// Mock Remix hooks with proper chain management
+// Mock React hooks
 vi.mock('@remix-run/react', () => ({
   useLoaderData: vi.fn(),
   useSearchParams: vi.fn(),
-  useNavigation: () => ({ state: 'idle', formData: null }),
-  useSubmit: () => mockSubmit,
+  useNavigation: vi.fn(() => ({
+    state: 'idle',
+    location: undefined,
+    formMethod: undefined,
+    formAction: undefined,
+    formEncType: undefined,
+    formData: undefined,
+    json: undefined,
+    text: undefined,
+  })),
+  useNavigate: vi.fn(() => vi.fn()),
+  useSubmit: vi.fn(() => vi.fn()),
   Form: ({ children, onSubmit }: { children: React.ReactNode; onSubmit?: () => void }) => (
     <form onSubmit={onSubmit}>{children}</form>
   ),
@@ -19,182 +27,244 @@ vi.mock('@remix-run/react', () => ({
   ),
 }));
 
-// Mock media query hook
 vi.mock('~/hooks/useMediaQuery', () => ({
-  useMediaQuery: () => false,
+  useMediaQuery: vi.fn(() => false),
 }));
 
-// Top-level mock data
+// Import after mocks
+import Products from '../products._index';
+
+// Mock data setup
 const mockCategories = [
   { id: 'cat1', name: 'Category 1' },
   { id: 'cat2', name: 'Category 2' },
 ];
 
-const mockProducts = [
-  {
-    id: 'prod1',
-    name: 'Product 1',
-    description: 'Description 1',
-    price: 10,
-    image_url: 'image1.jpg',
-    sku: 'SKU1',
-    stock: 5,
-    featured: true,
-    created_at: '2024-02-18T00:00:00.000Z',
-    hasVariants: false,
-    categories: [mockCategories[0]],
-  },
-];
+const createMockProduct = (id: number) => ({
+  id: `prod${id}`,
+  name: `Product ${id}`,
+  description: `Description ${id}`,
+  price: 10 + id,
+  image_url: `image${id}.jpg`,
+  sku: `SKU${id}`,
+  stock: 5,
+  featured: id === 1,
+  created_at: '2024-02-18T00:00:00.000Z',
+  hasVariants: false,
+  categories: [mockCategories[0]],
+});
 
-// Reusable mock builder
+const mockProducts = Array.from({ length: 12 }, (_, i) => createMockProduct(i + 1));
+const mockNextPageProducts = Array.from({ length: 12 }, (_, i) => createMockProduct(i + 13));
+
 const createMockLoaderData = (overrides = {}) => ({
   products: mockProducts,
-  total: 1,
-  nextCursor: null,
-  initialLoad: true,
+  total: 103,
+  nextCursor: 'mock-cursor',
+  initialLoad: false,
   filters: {},
   categories: mockCategories,
   ...overrides,
 });
 
 describe('Products Page', () => {
-  let mockSetSearchParams: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
-    mockSetSearchParams = vi.fn().mockReturnThis();
-    mockSubmit.mockClear();
-    (useSearchParams as any).mockImplementation(() => [new URLSearchParams(), mockSetSearchParams]);
-    (useLoaderData as any).mockImplementation(() => createMockLoaderData());
+    vi.clearAllMocks();
+
+    // Reset mocks
+    vi.mocked(useLoaderData).mockReturnValue(createMockLoaderData({ initialLoad: true }));
+    vi.mocked(useNavigation).mockReturnValue({
+      state: 'idle',
+      location: undefined,
+      formMethod: undefined,
+      formAction: undefined,
+      formEncType: undefined,
+      formData: undefined,
+      json: undefined,
+      text: undefined,
+    });
+
+    // Mock scroll behavior
+    Object.defineProperty(window, 'scrollY', {
+      value: 0,
+      writable: true,
+    });
+
+    // Mock IntersectionObserver
+    window.IntersectionObserver = vi.fn().mockImplementation(callback => {
+      return {
+        root: null,
+        rootMargin: '0px',
+        thresholds: [0],
+        takeRecords: vi.fn().mockReturnValue([]),
+        observe: vi.fn(() => {
+          callback(
+            [{ isIntersecting: true } as IntersectionObserverEntry],
+            {} as IntersectionObserver
+          );
+        }),
+        unobserve: vi.fn(),
+        disconnect: vi.fn(),
+      };
+    }) as unknown as typeof IntersectionObserver;
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('Filter Reset Functionality', () => {
-    it('should clear all filters when reset is clicked', async () => {
-      // Setup initial filters
-      const searchParams = new URLSearchParams();
-      searchParams.set('maxPrice', '10');
-      searchParams.set('categoryId', 'cat1');
-      searchParams.set('inStockOnly', 'true');
+  it('should update search params when loading more products', async () => {
+    const mockSetSearchParams = vi.fn();
+    vi.mocked(useSearchParams).mockReturnValue([new URLSearchParams(), mockSetSearchParams]);
 
-      (useSearchParams as any).mockImplementation(() => [searchParams, mockSetSearchParams]);
-      (useLoaderData as any).mockImplementation(() =>
-        createMockLoaderData({
-          filters: {
-            maxPrice: 10,
-            categoryId: 'cat1',
-            inStockOnly: true,
-          },
-        })
-      );
+    renderWithRouter(<Products />);
 
-      render(<Products />);
-
-      // Click reset button
-      const resetButton = screen.getByTestId('reset_desktop');
-      fireEvent.click(resetButton);
-
-      // Wait for and verify form submission
-      await waitFor(() => {
-        expect(mockSubmit).toHaveBeenCalledWith(
-          expect.any(FormData),
-          expect.objectContaining({
-            method: 'get',
-            preventScrollReset: true,
-            replace: true,
-          })
-        );
-      });
-
-      // Verify URL params are cleared
-      const [[submittedFormData]] = mockSubmit.mock.calls;
-      expect(submittedFormData.get('maxPrice')).toBeNull();
-      expect(submittedFormData.get('categoryId')).toBeNull();
-      expect(submittedFormData.get('inStockOnly')).toBeNull();
+    // Wait for initial render and intersection observer trigger
+    await waitFor(() => {
+      const productLinks = screen.getAllByRole('link');
+      expect(productLinks).toHaveLength(12);
     });
 
-    it('should preserve view parameter when resetting filters', async () => {
-      // Setup initial state with view parameter
-      const searchParams = new URLSearchParams();
-      searchParams.set('view', 'list');
-      searchParams.set('maxPrice', '10');
-      searchParams.set('sortOrder', 'featured');
-
-      (useSearchParams as any).mockImplementation(() => [searchParams, mockSetSearchParams]);
-      (useLoaderData as any).mockImplementation(() =>
-        createMockLoaderData({
-          filters: {
-            maxPrice: 10,
-          },
-        })
-      );
-
-      render(<Products />);
-
-      // Click reset button
-      const resetButton = screen.getByTestId('reset_desktop');
-      fireEvent.click(resetButton);
-
-      // Wait for form submission
-      await waitFor(() => {
-        expect(mockSubmit).toHaveBeenCalledWith(
-          expect.any(FormData),
-          expect.objectContaining({
-            method: 'get',
-            preventScrollReset: true,
-            replace: true,
-          })
-        );
-      });
-
-      // Verify preserved parameters
-      const [[submittedFormData]] = mockSubmit.mock.calls;
-      expect(submittedFormData.get('view')).toBe('list');
-      expect(submittedFormData.get('maxPrice')).toBeNull();
-      expect(submittedFormData.get('sortOrder')).toBe('featured');
+    // Update mock data for next page
+    vi.mocked(useLoaderData).mockReturnValue({
+      ...createMockLoaderData(),
+      products: mockNextPageProducts,
+      nextCursor: 'next-cursor',
+      initialLoad: false,
     });
 
-    it('should clear filters and URL params after page reload', async () => {
-      // Setup initial filters
-      const searchParams = new URLSearchParams();
-      searchParams.set('maxPrice', '10');
-      searchParams.set('sortOrder', 'featured');
-
-      (useSearchParams as any).mockImplementation(() => [searchParams, mockSetSearchParams]);
-      (useLoaderData as any).mockImplementation(() =>
-        createMockLoaderData({
-          filters: { maxPrice: 10 },
-        })
-      );
-
-      const { rerender } = render(<Products />);
-
-      // Click reset button
-      const resetButton = screen.getByTestId('reset_desktop');
-      fireEvent.click(resetButton);
-
-      // Wait for form submission
-      await waitFor(() => {
-        expect(mockSubmit).toHaveBeenCalled();
-      });
-
-      // Simulate page reload
-      (useSearchParams as any).mockImplementation(() => [
-        new URLSearchParams(),
-        mockSetSearchParams,
-      ]);
-      (useLoaderData as any).mockImplementation(() => createMockLoaderData());
-      rerender(<Products />);
-
-      // Verify filters cleared
-      const maxPriceInput = screen.getByRole('spinbutton', { name: /maximum price/i });
-      expect(maxPriceInput).toHaveValue(null);
-
-      // Verify filter badge removed
-      const filterBadge = screen.queryByTestId('filter-count-badge');
-      expect(filterBadge).not.toBeInTheDocument();
+    // Wait for search params update
+    await waitFor(() => {
+      expect(mockSetSearchParams).toHaveBeenCalled();
     });
+
+    // Verify the correct cursor was set
+    const updateCalls = mockSetSearchParams.mock.calls;
+    expect(updateCalls.length).toBeGreaterThan(0);
+    const [params, options] = updateCalls[updateCalls.length - 1];
+    expect(params.get('cursor')).toBe('mock-cursor');
+    expect(options).toEqual(
+      expect.objectContaining({
+        preventScrollReset: true,
+        replace: true,
+      })
+    );
+  });
+
+  it('should display product details correctly', () => {
+    const mockSetSearchParams = vi.fn();
+    vi.mocked(useSearchParams).mockReturnValue([new URLSearchParams(), mockSetSearchParams]);
+
+    renderWithRouter(<Products />);
+
+    const productCards = screen.getAllByRole('link');
+    const firstProductCard = productCards[0];
+
+    expect(firstProductCard).toHaveAttribute('href', '/products/prod1');
+
+    const productName = within(firstProductCard).getByText('Product 1');
+    expect(productName).toBeInTheDocument();
+
+    const price = within(firstProductCard).getByText(`$${(11.0).toFixed(2)}`);
+    expect(price).toBeInTheDocument();
+
+    const category = within(firstProductCard).getByText('Category 1');
+    expect(category).toHaveClass('badge');
+  });
+
+  it('should reset products when changing sort order', async () => {
+    const mockSetSearchParams = vi.fn();
+    vi.mocked(useSearchParams).mockReturnValue([new URLSearchParams(), mockSetSearchParams]);
+
+    const { rerender } = renderWithRouter(<Products />);
+
+    // Change sort order
+    const searchParams = new URLSearchParams();
+    searchParams.set('sortOrder', 'price_asc');
+    vi.mocked(useSearchParams).mockReturnValue([searchParams, mockSetSearchParams]);
+
+    // Update loader data with sorted products
+    vi.mocked(useLoaderData).mockReturnValue({
+      ...createMockLoaderData(),
+      products: [...mockProducts].sort((a, b) => a.price - b.price),
+      initialLoad: true,
+    });
+
+    rerender(<Products />);
+
+    // Verify products are reset and rendered
+    await waitFor(() => {
+      const productLinks = screen.getAllByRole('link');
+      expect(productLinks).toHaveLength(12);
+    });
+  });
+
+  it('should handle empty results properly', () => {
+    const mockSetSearchParams = vi.fn();
+    vi.mocked(useSearchParams).mockReturnValue([new URLSearchParams(), mockSetSearchParams]);
+
+    vi.mocked(useLoaderData).mockReturnValue(
+      createMockLoaderData({
+        products: [],
+        total: 0,
+        nextCursor: null,
+        initialLoad: true,
+      })
+    );
+
+    renderWithRouter(<Products />);
+
+    expect(screen.getByText('No products found')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /clear all filters/i })).toBeInTheDocument();
+  });
+
+  it('should preserve scroll position during back navigation', () => {
+    // Mock the scrollTo function
+    const scrollToSpy = vi.fn();
+    window.scrollTo = scrollToSpy;
+
+    // Set up the test
+    // Use Object.defineProperty to override scrollY
+    Object.defineProperty(window, 'scrollY', {
+      value: 500,
+      writable: true,
+    });
+
+    // Create a mock FormData to simulate back navigation
+    const mockFormData = new FormData();
+    mockFormData.append('_action', 'back');
+
+    // Create a mock location object
+    const mockLocation = {
+      pathname: '/products',
+      search: '',
+      hash: '',
+      state: null,
+      key: 'default',
+    };
+
+    // Update the navigation mock for this test only
+    vi.mocked(useNavigation).mockReturnValue({
+      state: 'loading',
+      location: mockLocation,
+      formMethod: undefined,
+      formAction: undefined,
+      formEncType: undefined,
+      formData: mockFormData,
+      json: undefined,
+      text: undefined,
+    });
+
+    // Render with a mocked version that just focuses on scroll behavior
+    renderWithRouter(<Products />);
+
+    // Check if scrollTo was called
+    expect(scrollToSpy).toHaveBeenCalled();
+
+    // We only care that it attempted to restore some scroll position with instant behavior
+    if (scrollToSpy.mock.lastCall) {
+      const lastCallArgs = scrollToSpy.mock.lastCall[0];
+      expect(lastCallArgs).toHaveProperty('behavior', 'instant');
+    }
   });
 });

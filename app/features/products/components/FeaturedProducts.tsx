@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
-import { Link } from '@remix-run/react';
+import { useEffect, useState, useCallback } from 'react';
+import { Link, useNavigate } from '@remix-run/react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '~/components/ui/card';
 import { createClient } from '@supabase/supabase-js';
 import { Badge } from '~/components/ui/badge';
+import { Button } from '~/components/ui/button';
 
 interface Product {
   id: string;
@@ -32,40 +33,70 @@ export function FeaturedProducts({ supabaseUrl, supabaseAnonKey }: FeaturedProdu
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  const fetchFeaturedProducts = useCallback(async () => {
+    try {
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+      const { data, error: supabaseError } = await supabase
+        .from('products')
+        .select(
+          `
+          id,
+          name,
+          description,
+          retail_price,
+          featured,
+          images:product_images(id, url, is_primary),
+          categories:product_categories(category:categories(id, name))
+        `
+        )
+        .eq('featured', true)
+        .limit(4);
+
+      if (supabaseError) throw supabaseError;
+
+      const formattedData = (data || []).map(product => {
+        // Safely extract valid categories
+        const validCategories = (product.categories || [])
+          .filter(cat => cat?.category && Array.isArray(cat.category) && cat.category.length > 0)
+          .map(cat => ({
+            category: {
+              id: cat.category[0].id,
+              name: cat.category[0].name,
+            },
+          }));
+
+        return {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          retail_price: product.retail_price,
+          featured: product.featured,
+          images: product.images || [],
+          categories: validCategories,
+        };
+      });
+
+      setProducts(formattedData);
+      setError(null);
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('JWT')) {
+        navigate('/auth/login');
+        return;
+      }
+
+      setError('Failed to load featured products. Please try again.');
+      console.error('Error fetching featured products:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [supabaseUrl, supabaseAnonKey, navigate]);
 
   useEffect(() => {
-    const fetchFeaturedProducts = async () => {
-      try {
-        const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-        const { data, error } = await supabase
-          .from('products')
-          .select(
-            `
-            id,
-            name,
-            description,
-            retail_price,
-            featured,
-            images:product_images(id, url, is_primary),
-            categories:product_categories!inner(category:categories(id, name))
-          `
-          )
-          .eq('featured', true)
-          .limit(4);
-
-        if (error) throw error;
-        setProducts(data || []);
-      } catch (err) {
-        setError('Failed to load featured products');
-        console.error('Error fetching featured products:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchFeaturedProducts();
-  }, [supabaseUrl, supabaseAnonKey]);
+  }, [supabaseUrl, supabaseAnonKey, fetchFeaturedProducts]);
 
   if (isLoading) {
     return (
@@ -91,7 +122,10 @@ export function FeaturedProducts({ supabaseUrl, supabaseAnonKey }: FeaturedProdu
     return (
       <section className="py-12 px-4 md:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
-          <p className="text-red-500">{error}</p>
+          <p className="text-red-500 mb-4">{error}</p>
+          <Button onClick={fetchFeaturedProducts} variant="outline">
+            Try Again
+          </Button>
         </div>
       </section>
     );
@@ -147,8 +181,8 @@ export function FeaturedProducts({ supabaseUrl, supabaseAnonKey }: FeaturedProdu
                   </CardContent>
                   <CardFooter className="p-4 pt-0">
                     <p className="text-xl font-bold">
-                      €
-                      {product.retail_price.toLocaleString('de-DE', {
+                      $
+                      {product.retail_price.toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}

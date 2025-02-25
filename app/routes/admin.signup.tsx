@@ -11,14 +11,6 @@ import { createSupabaseClient } from '~/server/services/supabase.server';
 import { useState } from 'react';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 
-type ActionData = {
-  fieldErrors?: {
-    email?: string;
-    password?: string;
-    confirmPassword?: string;
-  };
-};
-
 export const loader = async () => {
   // Check if it's from an allowed IP or development environment
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -64,8 +56,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     // Create admin user
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
+      email: email as string,
+      password: password as string,
       options: {
         emailRedirectTo: `${new URL(request.url).origin}/auth/callback`,
       },
@@ -130,9 +122,21 @@ export function ErrorBoundary() {
   return <AdminSignupForm errorMessage="An unexpected error occurred. Please try again." />;
 }
 
+type ActionData = {
+  message?: string;
+  fieldErrors?: {
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+  };
+};
+
 function AdminSignupForm({ errorMessage }: { errorMessage?: string }) {
   const navigation = useNavigation();
-  const actionData = useActionData<ActionData>();
+  const actionData = useActionData<{
+    message?: string;
+    fieldErrors?: { email?: string; password?: string; confirmPassword?: string };
+  }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

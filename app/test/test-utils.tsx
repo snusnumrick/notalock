@@ -1,21 +1,21 @@
-import { render as rtlRender, screen, waitFor, fireEvent } from '@testing-library/react';
-import type { RenderOptions } from '@testing-library/react';
-import type { ReactElement } from 'react';
-import { BrowserRouter } from 'react-router-dom';
+import { render } from '@testing-library/react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React from 'react';
 
-function customRender(
-  ui: ReactElement,
-  { route = '/', ...renderOptions }: RenderOptions & { route?: string } = {}
-) {
-  window.history.pushState({}, 'Test page', route);
-
-  function Wrapper({ children }: { children: React.ReactNode }) {
-    return <BrowserRouter>{children}</BrowserRouter>;
-  }
-
-  return {
-    ...rtlRender(ui, { wrapper: Wrapper, ...renderOptions }),
-  };
+interface RouteType {
+  path?: string;
+  element?: React.ReactNode;
 }
 
-export { customRender as render, screen, waitFor, fireEvent };
+export function renderWithRouter(ui: React.ReactNode, { routes = [] as RouteType[] } = {}) {
+  return render(
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={ui} />
+        {routes.map((route: RouteType, i) => (
+          <Route key={i} {...route} />
+        ))}
+      </Routes>
+    </BrowserRouter>
+  );
+}

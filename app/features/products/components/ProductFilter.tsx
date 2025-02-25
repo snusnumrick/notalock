@@ -62,7 +62,6 @@ export default function ProductFilter({
   const [sortOrder, setSortOrder] = useState(initialSortOrder);
   const submit = useSubmit();
 
-  // Restore focus after render
   useEffect(() => {
     if (lastFocusedInput.current === 'minPrice' && minPriceRef.current) {
       minPriceRef.current.focus();
@@ -112,9 +111,10 @@ export default function ProductFilter({
 
     const formData = new FormData();
 
-    // Copy all current filter values except cursor and the changing price field
+    // Copy non-clearing params
+    const preservedParams = ['limit', 'sortOrder', 'view', 'categoryId', 'inStockOnly'];
     searchParams.forEach((paramValue, key) => {
-      if (key !== 'cursor' && key !== field) {
+      if (preservedParams.includes(key)) {
         formData.set(key, paramValue);
       }
     });
@@ -122,9 +122,11 @@ export default function ProductFilter({
     if (field === 'minPrice') {
       setMinPrice(value);
       if (value) formData.set('minPrice', value);
+      if (maxPrice) formData.set('maxPrice', maxPrice);
     } else {
       setMaxPrice(value);
       if (value) formData.set('maxPrice', value);
+      if (minPrice) formData.set('minPrice', minPrice);
     }
 
     debouncedSubmit(formData);
@@ -135,40 +137,56 @@ export default function ProductFilter({
     field: 'categoryId' | 'inStockOnly' | 'sortOrder'
   ) => {
     const formData = new FormData();
+    let preventScrollReset = true;
 
-    // Copy all current filter values except cursor
-    searchParams.forEach((paramValue, key) => {
-      if (key !== 'cursor') {
-        formData.set(key, paramValue);
-      }
-    });
-
-    // Update the changed field
-    if (field === 'categoryId') {
-      setCategoryId(value as string);
-      if (value !== 'all') {
-        formData.set('categoryId', value as string);
-        onFilterChange({ ...defaultFilters, categoryId: value as string });
-      } else {
-        formData.delete('categoryId');
-        onFilterChange({ ...defaultFilters, categoryId: undefined });
-      }
-    } else if (field === 'inStockOnly') {
-      setInStockOnly(value as boolean);
-      if (value) {
-        formData.set('inStockOnly', 'true');
-      } else {
-        formData.delete('inStockOnly');
-      }
-      onFilterChange({ ...defaultFilters, inStockOnly: value as boolean });
-    } else if (field === 'sortOrder') {
+    if (field === 'sortOrder') {
+      // Handle sort order changes
       setSortOrder((value as CustomerFilterOptions['sortOrder']) || 'featured');
+
+      // Always include limit for consistent pagination
+      formData.set('limit', '12');
       formData.set('sortOrder', value as string);
+
+      // Preserve all other non-pagination params
+      const preservedParams = ['minPrice', 'maxPrice', 'categoryId', 'inStockOnly', 'view'];
+      searchParams.forEach((paramValue, key) => {
+        if (preservedParams.includes(key)) {
+          formData.set(key, paramValue);
+        }
+      });
+
+      preventScrollReset = false;
+    } else {
+      // Handle other filter changes
+      searchParams.forEach((paramValue, key) => {
+        if (key !== 'cursor') {
+          formData.set(key, paramValue);
+        }
+      });
+
+      if (field === 'categoryId') {
+        setCategoryId(value as string);
+        if (value !== 'all') {
+          formData.set('categoryId', value as string);
+          onFilterChange({ ...defaultFilters, categoryId: value as string });
+        } else {
+          formData.delete('categoryId');
+          onFilterChange({ ...defaultFilters, categoryId: undefined });
+        }
+      } else if (field === 'inStockOnly') {
+        setInStockOnly(value as boolean);
+        if (value) {
+          formData.set('inStockOnly', 'true');
+        } else {
+          formData.delete('inStockOnly');
+        }
+        onFilterChange({ ...defaultFilters, inStockOnly: value as boolean });
+      }
     }
 
     submit(formData, {
       method: 'get',
-      preventScrollReset: true,
+      preventScrollReset,
       replace: true,
     });
   };
@@ -182,7 +200,6 @@ export default function ProductFilter({
   }, []);
 
   const handleBlur = () => {
-    // We need to use requestAnimationFrame to ensure we check focus state after React's updates
     requestAnimationFrame(() => {
       if (
         document.activeElement !== minPriceRef.current &&
@@ -201,12 +218,13 @@ export default function ProductFilter({
     setMaxPrice('');
     const formData = new FormData();
 
+    formData.set('limit', '12');
+    formData.set('sortOrder', sortOrder);
+
     const currentView = searchParams.get('view');
     if (currentView) {
       formData.set('view', currentView);
     }
-
-    formData.set('sortOrder', sortOrder);
 
     submit(formData, {
       method: 'get',

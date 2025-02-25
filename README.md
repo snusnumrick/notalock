@@ -45,7 +45,7 @@ npm run dev
 
 ## Documentation
 
-Detailed documentation is available in the `docs` directory:
+Detailed documentation is available in the [docs](./docs/README.md) directory.
 
 ### Development
 - [Development Guidelines](./docs/development/guidelines.md)
