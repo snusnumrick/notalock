@@ -7,6 +7,7 @@
 - [Error Handling](development/error-handling.md)
 - [Middleware](development/middleware.md)
 - [Testing Guidlines](development/testing.md)
+- [Image Optimization Integration Guide](development/image-optimization-guide.md)
 
 ## Features
 - [Category Management](features/category-management.md)

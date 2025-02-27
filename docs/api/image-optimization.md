@@ -84,14 +84,71 @@ const optimizedBlob = await optimizer.optimizeImage(file, {
 });
 ```
 
-#### ServerImageOptimizer (Future)
+#### ServerImageOptimizer (Fully Implemented)
 Located at: `/app/features/products/api/optimization/serverOptimizer.ts`
 
-Server-side optimization (planned):
-- Advanced image processing
-- Format conversion
+Server-side optimization:
+- Advanced image processing with Sharp
+- Format conversion (JPEG, PNG, WebP)
 - Better compression
-- CDN integration
+- Dimension control
+- Client-side fallback for reliability
+
+```typescript
+const optimizer = new ServerImageOptimizer();
+const optimizedBlob = await optimizer.optimizeImage(file, {
+  maxWidth: 2000,
+  maxHeight: 2000,
+  quality: 85,
+  format: 'webp'
+});
+```
+
+## Server-Side Optimization
+
+### API Endpoint
+Located at: `/app/routes/api.images.optimize.ts`
+
+The API endpoint accepts `POST` requests with multipart form data containing:
+- `file`: The image file to optimize
+- `maxWidth`: Optional maximum width
+- `maxHeight`: Optional maximum height
+- `quality`: Optional quality percentage (1-100)
+- `format`: Optional output format (webp, jpeg, png)
+
+### Middleware
+Located at: `/app/server/middleware/image.server.ts`
+
+The server middleware uses Sharp for high-quality image processing with features:
+- Image resizing with aspect ratio preservation
+- Format conversion (WebP, JPEG, PNG)
+- Quality adjustment
+- Proper error handling
+
+### Integration System
+Located at: `/app/features/products/api/imageServiceProvider.ts`
+
+Provides factory functions to create properly configured image services:
+- `getImageService`: Creates an image service with optimal configuration
+- `getAdminImageService`: Creates a service optimized for admin operations (server-side)
+- `getCustomerImageService`: Creates a service optimized for customer operations (client-side)
+
+```typescript
+// In admin routes
+import { getAdminImageService } from '~/features/products/api/imageServiceProvider';
+
+// Get an image service with server-side optimization
+const imageService = getAdminImageService(supabase);
+```
+
+### Configuration System
+Located at: `/app/config/image-optimization.ts`
+
+Provides centralized configuration for image optimization:
+- Method selection (server, client, auto)
+- Quality presets (thumbnail, preview, full)
+- Format preferences
+- Server configuration options
 
 ## ProductImageService
 Located at: `/app/features/products/api/productImageService.ts`
@@ -99,12 +156,10 @@ Located at: `/app/features/products/api/productImageService.ts`
 Handles image upload and management:
 
 ```typescript
-// Default usage (client-side optimization)
-const service = new ProductImageService(supabaseClient);
+// Integration with the image service provider
+import { getImageService } from '~/features/products/api/imageServiceProvider';
 
-// With server-side optimization
-const serverOptimizer = new ServerImageOptimizer();
-const service = new ProductImageService(supabaseClient, serverOptimizer);
+const service = getImageService(supabaseClient);
 ```
 
 ### Features
@@ -125,23 +180,22 @@ const service = new ProductImageService(supabaseClient, serverOptimizer);
 
 ### Performance
 - Use client-side optimization for immediate feedback
-- Consider server-side optimization for better results
+- Use server-side optimization for better results
 - Clean up object URLs to prevent memory leaks
 - Implement proper error boundaries
 - Show loading states
 
 ## Future Improvements
 
-### Server-Side Optimization
-- Implement the server optimization API
-- Add format conversion
-- Improve compression
-- Add CDN integration
-- Add caching headers
-
 ### Enhanced Features
-- Batch optimization
-- Custom crop regions
-- Multiple size variants
-- Background removal
-- Metadata preservati
+- Add advanced format options (AVIF support)
+- Enhance middleware with metadata preservation
+- Add telemetry to track optimization metrics
+- Create developer documentation with usage examples
+
+### Production Optimization
+- Add CDN integration
+- Implement caching headers
+- Create size variants (thumbnail, preview, full)
+- Add responsive image generation
+- Implement lazy loading integration

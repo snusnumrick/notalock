@@ -16,6 +16,20 @@ export class ProductImageService {
     this.imageOptimizer = imageOptimizer;
   }
 
+  /**
+   * Optimizes an image using the configured optimizer
+   *
+   * @param file File to optimize
+   * @param options Optional optimization options
+   * @returns Optimized image blob
+   */
+  async optimizeImage(
+    file: File,
+    options?: { maxWidth?: number; maxHeight?: number; quality?: number; format?: string }
+  ): Promise<Blob> {
+    return this.imageOptimizer.optimizeImage(file, options);
+  }
+
   async existingPrimary(productId: string): Promise<boolean> {
     // Check if there's any primary image for this product
     const { data: existingPrimary, error: primaryCheckError } = await this.supabase

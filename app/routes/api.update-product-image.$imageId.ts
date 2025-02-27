@@ -1,7 +1,8 @@
 import type { ActionFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
-import { requireAdmin, processImage, type ImageProcessingOptions } from '~/server/middleware';
+import { requireAdmin } from '~/server/middleware';
 import { createSupabaseClient } from '~/server/services/supabase.server';
+import { getAdminImageService } from '~/features/products/api/imageServiceProvider';
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   console.log('Update image');
@@ -18,15 +19,13 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       throw json({ error: 'Image ID is required' }, { status: 400 });
     }
 
-    // Process the image with optimization
-    const options: ImageProcessingOptions = {
-      maxWidth: 2000,
-      maxHeight: 2000,
-      quality: 85,
-      format: 'webp',
-    };
+    // Get the form data and extract the file
+    const formData = await request.formData();
+    const file = formData.get('file');
 
-    const { buffer, contentType } = await processImage(request, options);
+    if (!file || !(file instanceof File)) {
+      throw json({ error: 'Image file is required' }, { status: 400 });
+    }
 
     // Get existing image details
     const { data: image, error: fetchError } = await supabase
@@ -39,16 +38,27 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       throw json({ error: 'Image not found' }, { status: 404 });
     }
 
-    // Upload new image
-    const { error: uploadError } = await supabase.storage
+    // Create image service with server-side optimization
+    const imageService = getAdminImageService(supabase);
+
+    // Get an optimized version of the image
+    const originalFile = file;
+    const optimizedBlob = await imageService.optimizeImage(originalFile);
+
+    // Convert blob to file for upload
+    const arrayBuffer = await optimizedBlob.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Update the storage with the optimized image
+    const { error: storageError } = await supabase.storage
       .from('product-images')
       .update(image.storage_path, buffer, {
-        contentType,
+        contentType: optimizedBlob.type,
         upsert: true,
       });
 
-    if (uploadError) {
-      throw json({ error: 'Failed to upload image' }, { status: 500 });
+    if (storageError) {
+      throw json({ error: 'Failed to update image in storage' }, { status: 500 });
     }
 
     // Update database record

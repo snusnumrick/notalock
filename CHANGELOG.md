@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Server-Side Image Optimization
+    - Added image optimization API endpoint at `/api/images/optimize`
+    - Implemented server middleware with Sharp for high-quality image processing
+    - Created `ServerImageOptimizer` for efficient server-side optimization
+    - Added client-side fallback for reliability
+    - Integrated with `ProductImageService` via `imageServiceProvider` utility
+    - Added configuration system in `config/image-optimization.ts`
+    - Added format auto-detection and WebP support
+    - Implemented feature flags for controlling optimization method
+    - Added integration tests for the optimization pipeline
+
 - Hero Banner Improvements:
   - Implemented banner image optimization for faster loading
   - Added support for banner images in Supabase bucket
