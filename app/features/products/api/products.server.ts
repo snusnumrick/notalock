@@ -33,9 +33,12 @@ export async function getProducts({
 }: GetProductsOptions) {
   const supabase = getSupabase();
 
-  // Function to create a base product query
-  const createBaseProductQuery = (): ProductsQuery => {
-    const productQueryString = `
+  // Build base query for products with categories
+  // The cast is necessary because Supabase's types don't perfectly align with our ProductsQuery type
+  let productsQuery = supabase
+    .from('products')
+    .select(
+      `
     *,
     product_categories (
       category:categories (
@@ -43,16 +46,10 @@ export async function getProducts({
         name
       )
     )
-  `;
-    // The cast is necessary because Supabase's types don't perfectly align with our ProductsQuery type
-    return supabase
-      .from('products')
-      .select(productQueryString, { count: 'exact' })
-      .eq('is_active', true) as unknown as ProductsQuery;
-  };
-
-  // Build base query for products with categories
-  let productsQuery = createBaseProductQuery();
+  `,
+      { count: 'exact' }
+    )
+    .eq('is_active', true) as unknown as ProductsQuery;
 
   // Decode cursor if present
   let decodedCursor: CursorData | null = null;
@@ -116,7 +113,13 @@ export async function getProducts({
     if (categoryId || customerFilters.categoryId) {
       const catId = categoryId || customerFilters.categoryId;
       // Start a new query that includes category filtering
-      let baseQuery = createBaseProductQuery();
+      let baseQuery = supabase.from('products').select(
+        `
+        *,
+        product_categories!inner(category:categories!inner(*))
+      `,
+        { count: 'exact' }
+      ) as unknown as ProductsQuery;
 
       // Apply category filter
       if (catId) {
@@ -261,14 +264,14 @@ export async function getProducts({
 
   // Log response for debugging
   /*  console.log('Products response:', {
-    count: productsResponse.count,
-    receivedCount: productsResponse.data?.length,
-    data: productsResponse.data?.map(p => ({
-      id: p.id,
-      featured: p.featured,
-      created_at: p.created_at,
-    })),
-  });*/
+      count: productsResponse.count,
+      receivedCount: productsResponse.data?.length,
+      data: productsResponse.data?.map(p => ({
+        id: p.id,
+        featured: p.featured,
+        created_at: p.created_at,
+      })),
+    });*/
 
   // Transform response
   const transformedProducts = (productsResponse.data || []).map(
@@ -304,10 +307,10 @@ export async function getProducts({
         featured: lastProduct.featured,
       };
       /*      console.log('Setting next cursor:', {
-        ...cursorData,
-        currentCount: transformedProducts.length,
-        total: productsResponse.count,
-      });*/
+              ...cursorData,
+              currentCount: transformedProducts.length,
+              total: productsResponse.count,
+            });*/
       nextCursor = btoa(JSON.stringify(cursorData));
     }
   }
