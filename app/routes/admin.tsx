@@ -96,6 +96,9 @@ export default function AdminLayout() {
                 <Link to="/admin/categories" className={getLinkClassName('/admin/categories')}>
                   Categories
                 </Link>
+                <Link to="/admin/hero-banners" className={getLinkClassName('/admin/hero-banners')}>
+                  Hero Banners
+                </Link>
               </nav>
             </div>
           </div>

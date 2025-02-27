@@ -12,4 +12,5 @@ export default {
     v3_lazyRouteDiscovery: true,
     v3_singleFetch: true,
   },
+  sourcemap: process.env.NODE_ENV !== 'production',
 };

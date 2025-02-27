@@ -344,6 +344,62 @@ test("categories route", async () => {
 });
 ```
 
+## Testing Remix Components
+
+### Current Approach
+Currently, we test Remix components by mocking the necessary Remix imports directly:
+
+```typescript
+// Mock the Link component from Remix
+vi.mock('@remix-run/react', () => ({
+  Link: ({ to, children, className }) => (
+    <a href={to} className={className}>
+      {children}
+    </a>
+  ),
+  // Mock other Remix components/hooks as needed
+  useLoaderData: vi.fn(),
+  useActionData: vi.fn(),
+  Form: ({ children, method, action, onSubmit }) => (
+    <form method={method} action={action} onSubmit={onSubmit}>
+      {children}
+    </form>
+  )
+}));
+
+// Then in your test
+test("component with Remix dependencies", () => {
+  render(<YourRemixComponent />);
+  
+  // Make assertions
+  expect(screen.getByText("Some text")).toBeInTheDocument();
+});
+```
+
+### Future Direction
+In the future, we may adopt `@remix-run/testing` for more integrated testing of Remix routes and loaders:
+
+```typescript
+import { createRemixStub } from "@remix-run/testing";
+import { render, screen } from "@testing-library/react";
+
+test("categories route", async () => {
+  const RemixStub = createRemixStub([
+    {
+      path: "/categories",
+      Component: CategoriesRoute,
+      loader: categoriesLoader,
+    },
+  ]);
+
+  render(<RemixStub />);
+  
+  expect(await screen.findByRole("heading")).toHaveTextContent("Categories");
+});
+```
+
+> Note: This approach is not yet implemented in our codebase. Stick with the current approach until this is officially adopted.
+
 ## Related documents
 - [Development guidelines](./guidelines.md)
 - [Error handling testing](./error-handling.md)

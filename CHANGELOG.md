@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Hero Banner Improvements:
+    - Implemented banner image optimization for faster loading
+    - Added support for banner images in Supabase bucket
+    - Started development of banner image upload UI
+
 - Error Handling Improvements:
   - Added useRetry hook with exponential backoff
   - Implemented retry mechanism for failed product loads

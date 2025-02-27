@@ -2,6 +2,38 @@
 
 ## Remix Architecture Principles
 
+### Nested Route Pattern with Outlet
+
+In Remix, parent routes must include an `<Outlet />` component to render their child routes. Without this, child routes won't render even though their loaders may execute.
+
+```tsx
+// Parent route: app/routes/admin.products.tsx
+import { Outlet, useLoaderData, useLocation } from '@remix-run/react';
+
+export default function AdminProductsPage() {
+  const { products } = useLoaderData<typeof loader>();
+  const location = useLocation();
+  
+  return (
+    <div className="container py-8">
+      <h2 className="text-2xl font-bold">Products</h2>
+      
+      {/* Conditional rendering based on path */}
+      {location.pathname === '/admin/products' ? (
+        <ProductList products={products} />
+      ) : (
+        <Outlet /> {/* This is required to render child routes */}
+      )}
+    </div>
+  );
+}
+```
+
+**Common issues to watch for:**
+- Parent routes without an `<Outlet />` will not render child routes
+- Child route loaders may run successfully but their components won't render
+- Use conditional rendering with `useLocation()` when you want different behavior for index vs. child routes
+
 ### Route Module Pattern
 ```typescript
 // app/routes/admin.categories._index.tsx
@@ -78,94 +110,100 @@ export async function categoryLoader({ request }: LoaderArgs) {
 
 ## Authentication and Session Management
 
-### Session Handling Best Practices
+### Standardized Authentication Pattern
 
-1. Cookie Management
-   - Always use `getAll` and `setAll` for cookie handling with Supabase SSR
-   - Implement proper cookie attributes (SameSite, Secure, path)
-   - Handle cookie expiration appropriately
+All admin routes and API services should use the standard authentication middleware:
 
-2. Session State
-   - Maintain single source of truth for session state
-   - Pass session down from loaders to components
-   - Avoid duplicate session management in components
-   - Use session from loader instead of fetching again
+```typescript
+import { requireAdmin } from '~/server/middleware/auth.server';
 
-3. Component Architecture
-   ```typescript
-   // Route level - Handle session management here
-   export const loader = async ({ request }: LoaderFunctionArgs) => {
-     const { user, response } = await requireAdmin(request);
-     const supabase = createSupabaseClient(request, response);
-     const { data: { session } } = await supabase.auth.getSession();
-     
-     return json({ session });
-   };
+// In admin route loaders
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  try {
+    const { user, response } = await requireAdmin(request);
+    const supabase = createSupabaseClient(request, response);
+    
+    // Fetch data using supabase
+    const { data } = await supabase.from('resource').select('*');
+    
+    return json({ data }, {
+      headers: response.headers // Important: include response headers for auth cookies
+    });
+  } catch (error) {
+    // Handle redirects from auth middleware
+    if (error instanceof Response) {
+      throw error;
+    }
+    // Handle other errors
+    return json({ error: 'Failed to load data' }, { status: 500 });
+  }
+};
 
-   // Component level - Receive and use session
-   function MyComponent({ initialSession }: { initialSession: Session }) {
-     const supabase = useMemo(() => createBrowserClient(url, key, {
-       cookies: {
-         getAll: () => { /* ... */ },
-         setAll: cookies => { /* ... */ }
-       }
-     }), []);
+// In API action handlers
+export async function resourceAction({ request, response }: ActionArgs) {
+  try {
+    const { user } = await requireAdmin(request);
+    const formData = await request.formData();
+    
+    // Process action with authenticated user
+    // ...
+    
+    return json({ success: true }, {
+      headers: response.headers // Important: include response headers
+    });
+  } catch (error) {
+    if (error instanceof Response) {
+      throw error; // Let redirect responses pass through
+    }
+    
+    return json({ error: 'Action failed' }, { status: 500 });
+  }
+}
+```
 
-     // Pass session to service
-     const service = useMemo(
-       () => new MyService(supabase, initialSession),
-       [supabase, initialSession]
-     );
-   }
-
-   // Service level - Use provided session
-   class MyService {
-     constructor(
-       private supabase: SupabaseClient,
-       private session: Session
-     ) {}
-
-     async doSomething() {
-       // Use this.session directly, don't fetch it again
-     }
-   }
-   ```
+> **Important:** Always use the `requireAdmin` function from `~/server/middleware/auth.server`. Do not use any functions from `~/utils/auth.server` as they are deprecated.
 
 ### Anti-patterns to Avoid
 
-1. Session Management
-   - ❌ Don't mix client-side and server-side session management
-   - ❌ Don't call `getSession()` in components when session is available from loader
-   - ❌ Don't have services fetch their own session state
-   - ❌ Don't create multiple independent Supabase clients with different session states
+1. Authentication Implementation
+   - ❌ Don't use deprecated auth utilities from `~/utils/auth.server`
+   - ❌ Don't implement custom authentication logic when middleware exists
+   - ❌ Don't forget to include `response.headers` in json responses
+   - ❌ Don't mix different authentication approaches across routes
 
-2. Common Pitfalls
-   - Avoid infinite refresh loops from session updates
-   - Prevent "No active session found" errors by proper session passing
-   - Eliminate redundant session fetching
-   - Handle cookie expiration properly
+2. Session Management
+   - ❌ Don't create separate Supabase client instances unnecessarily
+   - ❌ Don't fetch session state multiple times in the same request
+   - ❌ Don't implement ad-hoc permission checks instead of using middleware
+   - ❌ Don't ignore potential response redirects from auth middleware
+
+3. Common Pitfalls
+   - Missing error handling for auth middleware redirects
+   - Forgetting to pass response headers in json responses
+   - Creating duplicate auth checking logic across routes
+   - Using inconsistent authentication patterns across the application
 
 ### Authentication Checklist
 
 Before implementing authentication in a feature:
 
-✓ Session Management
-  - [ ] Session is passed down from loader
-  - [ ] Single source of truth for session state
-  - [ ] Proper cookie handling configuration
-  - [ ] Clear separation of server/client session management
+✓ Authentication Implementation
+  - [ ] Using `requireAdmin` from `~/server/middleware/auth.server`
+  - [ ] Proper error handling for redirects in try/catch blocks
+  - [ ] Response headers included in all json responses
+  - [ ] Consistent pattern across all route handlers
 
-✓ Component Structure
-  - [ ] Components receive session via props
-  - [ ] Services receive session in constructor
-  - [ ] Proper error handling for session issues
-  - [ ] Loading states during authentication
+✓ Session Management
+  - [ ] Single Supabase client instance per request
+  - [ ] Session handled by middleware, not custom logic
+  - [ ] Clear error messages for authentication failures
+  - [ ] Proper handling of auth state in the UI
 
 ✓ Security Considerations
   - [ ] Proper RLS policies in place
-  - [ ] Session timeout handling
-  - [ ] Secure cookie configuration
+  - [ ] Appropriate route protection
   - [ ] CSRF protection
+  - [ ] No sensitive data exposed to unauthorized users
 
 ## Features Implementation
 
@@ -231,6 +269,73 @@ export function CategoryHighlightGrid() {
 }
 ```
 
+## Data Flow and Serialization in Remix
+
+### Direct vs. Nested Data Loading
+
+When fetching data in Remix route loaders, prefer direct service calls over nested loader functions to avoid serialization issues.
+
+```typescript
+// Recommended: Direct service call in route loader
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const response = new Response();
+  const service = getService(request, response);
+  const data = await service.fetchData();
+  
+  return json({ data });
+};
+
+// Avoid: Nested loader calls that return Response objects
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { data } = await nestedLoader({ request, response: new Response() });
+  
+  return json({ data }); // Data might not serialize correctly
+};
+```
+
+### Debugging Data Flow Issues
+
+When components aren't rendering data properly, use strategic console logging to identify where the data flow breaks down:
+
+1. Log data in the server-side loader
+2. Log data in the client-side component
+3. Compare the data structure between server and client
+
+```typescript
+// In the loader (server-side)
+console.log('Server data:', data);
+
+// In the component (client-side)
+const { data } = useLoaderData<typeof loader>();
+console.log('Client data:', data);
+```
+
+### Common Serialization Issues
+
+- **Dates**: JSON serialization converts dates to strings
+- **Binary data**: Cannot be properly serialized in JSON
+- **Circular references**: Will cause serialization errors
+- **Custom class instances**: Only serialized as plain objects
+- **Functions**: Cannot be serialized
+- **Response objects**: May not properly extract nested data
+
+### Best Practices for Data Flow
+
+1. Keep data structures simple and serializable
+2. Use direct service calls in route loaders
+3. Transform data into serializable format before returning from loaders
+4. Verify data flow with strategic console logging when troubleshooting
+5. Use TypeScript to ensure data shape consistency
+6. Consider using serialization libraries for complex data types
+
+### Anti-patterns to Avoid
+
+- ❌ Nested loader functions that return Response objects
+- ❌ Custom class instances in loader data
+- ❌ Circular references in data structures
+- ❌ Assuming data structure on client matches server exactly without verification
+- ❌ Complex nested data transformations that might break during serialization
+
 ## Performance Considerations
 
 ### Component Performance
@@ -258,6 +363,7 @@ export function CategoryHighlightGrid() {
    - Optimize joins
    - Implement pagination
    - Cache frequent queries
+
 
 ## Cursor-Based Pagination Patterns
 

@@ -701,54 +701,50 @@ const { error } = await supabase
 
 ### Permission Validation
 
-All privileged operations require proper permission checks:
+All privileged operations require proper permission checks using the standardized middleware:
 
 ```typescript
-async function requireAdmin(supabase: SupabaseClient) {
-  // Check for active session
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData?.session) {
-    throw new Error('No active session found');
-  }
+import { requireAdmin } from '~/server/middleware/auth.server';
 
-  // Verify admin role
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', sessionData.session.user.id)
-    .single();
+// In route loaders or actions
+async function protectedOperation(request: Request, response: Response) {
+  try {
+    // Get authenticated user with admin permissions
+    const { user } = await requireAdmin(request);
+    const supabase = createSupabaseClient(request, response);
 
-  if (profileError || profile?.role !== 'admin') {
-    throw new Error('User does not have admin permissions');
-  }
+    // Proceed with operation
+    const { data, error } = await supabase
+      .from('resource')
+      .select('*');
 
-  return sessionData.session;
-}
-
-// Usage in services
-class ProductService {
-  private currentSession: Session | null = null;
-
-  async deleteProduct(id: string): Promise<void> {
-    try {
-      // Ensure admin permissions
-      if (!this.currentSession) {
-        this.currentSession = await requireAdmin(this.supabase);
-      }
-
-      // Proceed with deletion
-      const { error } = await this.supabase
-        .from('products')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Delete failed:', error);
-      throw new Error(`Failed to delete product: ${error.message}`);
+    if (error) throw error;
+    
+    return json({ 
+      success: true,
+      data
+    }, {
+      headers: response.headers // Important for auth cookies
+    });
+  } catch (error) {
+    // Handle redirects from auth middleware
+    if (error instanceof Response) {
+      throw error;
     }
+    
+    console.error('Operation failed:', error);
+    return json({
+      success: false, 
+      error: 'Operation failed'
+    }, { 
+      status: 500,
+      headers: response.headers 
+    });
   }
 }
+```
+
+> **Important:** Always use `requireAdmin` from `~/server/middleware/auth.server`. The authentication utilities in `~/utils/auth.server` are deprecated and should not be used.
 ```
 
 ### Error Handling Best Practices
