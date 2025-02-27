@@ -129,9 +129,9 @@ export default function Products() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 relative">
         <div className="flex flex-col gap-6">
-          <div className="sticky top-0 z-10 bg-background py-4 w-full">
+          <div className="sticky top-20 z-30 bg-white py-4 w-full shadow-sm border-b">
             {isMobile ? (
               <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
@@ -149,7 +149,11 @@ export default function Products() {
                     categories={categories}
                     isMobile={true}
                   />
-                  <ViewToggle view={view} onViewChange={setView} />
+                  <ViewToggle
+                    view={view}
+                    onViewChange={setView}
+                    className="fixed top-32 right-4 z-[100]"
+                  />
                 </div>
               </div>
             ) : (
@@ -165,9 +169,9 @@ export default function Products() {
             )}
           </div>
 
-          <div className="flex flex-col md:flex-row gap-6">
+          <div className="flex flex-col md:flex-row gap-6 relative z-10">
             {!isMobile && (
-              <aside className="md:w-64 shrink-0 md:sticky md:top-24 md:h-[calc(100vh-6rem)] md:overflow-y-auto">
+              <aside className="md:w-64 shrink-0 md:sticky md:top-32 md:h-[calc(100vh-8rem)] md:overflow-y-auto">
                 <ProductFilter
                   onFilterChange={handleFilterChange}
                   defaultFilters={filters}
@@ -176,7 +180,7 @@ export default function Products() {
               </aside>
             )}
 
-            <main className="flex-1" data-testid="product-grid">
+            <main className="flex-1 relative" style={{ zIndex: 1 }} data-testid="product-grid">
               {view === 'grid' ? (
                 <ProductGrid
                   products={allProducts}

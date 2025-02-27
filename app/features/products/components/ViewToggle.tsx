@@ -5,11 +5,12 @@ import { LayoutGrid, List } from 'lucide-react';
 interface ViewToggleProps {
   view: 'grid' | 'list';
   onViewChange: (view: 'grid' | 'list') => void;
+  className?: string;
 }
 
-export const ViewToggle: React.FC<ViewToggleProps> = ({ view, onViewChange }) => {
+export const ViewToggle: React.FC<ViewToggleProps> = ({ view, onViewChange, className = '' }) => {
   return (
-    <div className="flex gap-2">
+    <div className={`inline-flex gap-2 relative bg-white p-1 rounded-md ${className}`}>
       <Button
         variant={view === 'grid' ? 'default' : 'outline'}
         size="icon"

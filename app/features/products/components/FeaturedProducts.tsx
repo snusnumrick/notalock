@@ -4,6 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '~/componen
 import { createClient } from '@supabase/supabase-js';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
+import { ShoppingCart, ImageIcon } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -100,7 +101,7 @@ export function FeaturedProducts({ supabaseUrl, supabaseAnonKey }: FeaturedProdu
 
   if (isLoading) {
     return (
-      <section className="py-12 px-4 md:px-6 lg:px-8">
+      <section className="py-16 px-4 md:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
@@ -138,9 +139,12 @@ export function FeaturedProducts({ supabaseUrl, supabaseAnonKey }: FeaturedProdu
   return (
     <section className="py-12 px-4 md:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl font-bold tracking-tight">Featured Products</h2>
-          <p className="mt-4 text-lg text-gray-600">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900 relative inline-block">
+            <span className="relative z-10">Featured Products</span>
+            <span className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 z-0"></span>
+          </h2>
+          <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
             Discover our selection of premium European door hardware
           </p>
         </div>
@@ -149,8 +153,8 @@ export function FeaturedProducts({ supabaseUrl, supabaseAnonKey }: FeaturedProdu
             const primaryImage = product.images.find(img => img.is_primary) || product.images[0];
 
             return (
-              <Link key={product.id} to={`/products/${product.id}`} className="group">
-                <Card className="h-full transition-transform duration-300 hover:scale-105">
+              <div key={product.id} className="group">
+                <Card className="h-full transition-all duration-300 hover:scale-105 hover:shadow-lg border border-gray-200 overflow-hidden">
                   <div className="aspect-square overflow-hidden rounded-t-lg">
                     {primaryImage ? (
                       <img
@@ -160,17 +164,19 @@ export function FeaturedProducts({ supabaseUrl, supabaseAnonKey }: FeaturedProdu
                       />
                     ) : (
                       <div className="h-full w-full bg-gray-100 flex items-center justify-center">
-                        <span className="text-gray-400">No image</span>
+                        <ImageIcon className="w-12 h-12 text-gray-300" />
                       </div>
                     )}
                   </div>
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-lg font-semibold line-clamp-2">
-                      {product.name}
-                    </CardTitle>
+                  <CardHeader className="p-4 pb-0">
+                    <Link to={`/products/${product.id}`}>
+                      <CardTitle className="text-lg font-semibold line-clamp-2 hover:text-blue-600 transition-colors">
+                        {product.name}
+                      </CardTitle>
+                    </Link>
                   </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
+                  <CardContent className="p-4 pt-2">
+                    <p className="text-sm text-gray-600 line-clamp-2 mb-3">{product.description}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {product.categories.map(({ category }) => (
                         <Badge key={category.id} variant="secondary">
@@ -179,17 +185,29 @@ export function FeaturedProducts({ supabaseUrl, supabaseAnonKey }: FeaturedProdu
                       ))}
                     </div>
                   </CardContent>
-                  <CardFooter className="p-4 pt-0">
-                    <p className="text-xl font-bold">
-                      $
-                      {product.retail_price.toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </p>
+                  <CardFooter className="p-4 pt-1 flex justify-between items-center">
+                    <div className="flex flex-col">
+                      <span className="text-xs text-gray-500 uppercase">Price</span>
+                      <p className="text-xl font-bold text-blue-700">
+                        $
+                        {product.retail_price.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </p>
+                    </div>
+                    <Link to={`/products/${product.id}`}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full transition-all hover:bg-blue-600 hover:text-white"
+                      >
+                        <ShoppingCart className="w-4 h-4 mr-1" /> View
+                      </Button>
+                    </Link>
                   </CardFooter>
                 </Card>
-              </Link>
+              </div>
             );
           })}
         </div>

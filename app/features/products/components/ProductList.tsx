@@ -107,7 +107,7 @@ export const ProductList: React.FC<ProductListProps> = ({
     );
   }
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 relative z-10">
       <div className="space-y-4">
         {products.map(product => (
           <Link key={product.id} to={`/products/${product.id}`}>

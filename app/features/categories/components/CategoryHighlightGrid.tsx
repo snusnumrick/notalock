@@ -3,7 +3,8 @@ import { Card, CardContent } from '~/components/ui/card';
 import { Skeleton } from '~/components/ui/skeleton';
 import { Link } from '@remix-run/react';
 import { Category } from '../types/category.types';
-import { Info } from 'lucide-react';
+import { Info, ArrowRight, LayoutPanelTop } from 'lucide-react';
+import { Button } from '~/components/ui/button';
 
 interface CategoryHighlightProps {
   categories: Category[];
@@ -78,17 +79,30 @@ const CategoryCard = ({ category, view }: { category: Category; view: 'grid' | '
       className="group block hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
     >
       <Card
-        className={`overflow-hidden h-full bg-white hover:bg-gray-50 transition-colors ${
+        className={`overflow-hidden h-full bg-white hover:shadow-md transition-all ${
           !isGrid ? 'flex' : ''
-        }`}
+        } group-hover:border-blue-200 border border-gray-200`}
       >
+        <div
+          className={`${!isGrid ? 'hidden md:flex w-16 bg-gradient-to-r from-blue-50 to-blue-100 items-center justify-center' : 'h-16 bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-center'}`}
+        >
+          <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-blue-600">
+            <LayoutPanelTop className="w-5 h-5" />
+          </div>
+        </div>
         <CardContent className={`p-6 ${!isGrid ? 'flex-1' : ''}`}>
-          <h3 className="text-xl font-semibold mb-3 group-hover:text-primary transition-colors">
+          <h3 className="text-xl font-semibold mb-3 group-hover:text-blue-600 transition-colors flex items-center justify-between">
             {category.name}
+            <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity ml-2 text-blue-600" />
           </h3>
           {category.description && (
-            <p className="text-muted-foreground line-clamp-2">{category.description}</p>
+            <p className="text-gray-600 line-clamp-2 mb-4">{category.description}</p>
           )}
+          <div className="mt-2">
+            <span className="text-sm text-blue-600 font-medium group-hover:underline">
+              Browse Products
+            </span>
+          </div>
         </CardContent>
       </Card>
     </Link>
@@ -118,10 +132,19 @@ export const CategoryHighlightGrid: React.FC<CategoryHighlightProps> = ({
       : 'flex flex-col gap-4';
 
   return (
-    <div className={containerClass}>
-      {visibleHighlightedCategories.map(category => (
-        <CategoryCard key={category.id} category={category} view={view} />
-      ))}
+    <div>
+      <div className={containerClass}>
+        {visibleHighlightedCategories.map(category => (
+          <CategoryCard key={category.id} category={category} view={view} />
+        ))}
+      </div>
+      <div className="mt-8 text-center">
+        <Button asChild className="px-6 transition-all hover:scale-105 hover:shadow-md">
+          <Link to="/categories">
+            View All Categories <ArrowRight className="ml-2 w-4 h-4" />
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 };

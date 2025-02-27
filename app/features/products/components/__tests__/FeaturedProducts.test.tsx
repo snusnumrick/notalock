@@ -65,6 +65,20 @@ vi.mock('~/components/ui/button', () => ({
   ),
 }));
 
+// Mock Lucide icons
+vi.mock('lucide-react', () => ({
+  ShoppingCart: ({ className }: { className?: string }) => (
+    <span className={className} data-testid="shopping-cart-icon">
+      ShoppingCart
+    </span>
+  ),
+  ImageIcon: ({ className }: { className?: string }) => (
+    <span className={className} data-testid="image-icon">
+      ImageIcon
+    </span>
+  ),
+}));
+
 // Mock Supabase client
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(),
@@ -217,8 +231,9 @@ describe('FeaturedProducts', () => {
 
       render(<FeaturedProducts supabaseUrl={mockSupabaseUrl} supabaseAnonKey={mockSupabaseKey} />);
 
-      const noImageText = await screen.findByText('No image');
-      expect(noImageText).toBeInTheDocument();
+      // Look for the ImageIcon instead of the text "No image"
+      const imageIcon = await screen.findByTestId('image-icon');
+      expect(imageIcon).toBeInTheDocument();
     });
   });
 });

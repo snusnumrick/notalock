@@ -6,12 +6,14 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
+  useLocation,
   useRouteError,
   isRouteErrorResponse,
 } from '@remix-run/react';
 import * as build from '@remix-run/node';
 import type { LoaderFunctionArgs } from '@remix-run/node';
 import stylesheet from '~/styles/tailwind.css';
+import { Footer } from '~/components/common/Footer';
 import { createSupabaseClient } from '~/server/services/supabase.server';
 import { Session } from '@supabase/supabase-js';
 
@@ -121,6 +123,8 @@ export function ErrorBoundary() {
 
 export default function App() {
   const { env } = useLoaderData<LoaderData>();
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   return (
     <html lang="en">
@@ -130,8 +134,9 @@ export default function App() {
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className="flex flex-col min-h-screen">
         <Outlet />
+        {!isAdminRoute && <Footer />}
         <ScrollRestoration />
         <script
           dangerouslySetInnerHTML={{

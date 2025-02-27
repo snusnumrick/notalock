@@ -11,9 +11,9 @@ export const meta: MetaFunction = () => {
 
 export default function ProductsLayout() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="bg-white flex-grow">
       <Header />
-      <main className="pt-16">
+      <main className="pt-24">
         <Outlet />
       </main>
     </div>
