@@ -17,6 +17,7 @@ vi.mock('~/lib/supabase', () => {
         gt: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        lt: vi.fn().mockReturnThis(),
         or: vi.fn().mockReturnThis(),
         ilike: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
@@ -62,6 +63,12 @@ const mockProducts = Array.from({ length: 12 }, (_, i) => ({
   ],
 }));
 
+// Products with multiple categories for testing category filtering
+const mockMultiCategoryProducts = Array.from({ length: 12 }, (_, i) => ({
+  ...mockProducts[i],
+  product_categories: [{ category: mockCategories[0] }, { category: mockCategories[1] }],
+}));
+
 describe('Products Server API', () => {
   let mockQueryBuilder: {
     select: ReturnType<typeof vi.fn>;
@@ -69,11 +76,14 @@ describe('Products Server API', () => {
     gt: ReturnType<typeof vi.fn>;
     gte: ReturnType<typeof vi.fn>;
     lte: ReturnType<typeof vi.fn>;
+    lt: ReturnType<typeof vi.fn>;
     or: ReturnType<typeof vi.fn>;
     ilike: ReturnType<typeof vi.fn>;
     order: ReturnType<typeof vi.fn>;
     limit: ReturnType<typeof vi.fn>;
   };
+
+  let mockSupabase: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -84,6 +94,7 @@ describe('Products Server API', () => {
       gt: vi.fn().mockReturnThis(),
       gte: vi.fn().mockReturnThis(),
       lte: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockReturnThis(),
       or: vi.fn().mockReturnThis(),
       ilike: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
@@ -95,7 +106,7 @@ describe('Products Server API', () => {
     };
 
     // Create a mock client with the necessary query builder
-    const mockSupabase = {
+    mockSupabase = {
       ...createMockSupabaseClient(),
       from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
@@ -105,6 +116,29 @@ describe('Products Server API', () => {
   });
 
   describe('getProducts', () => {
+    describe('category filtering', () => {
+      it('should verify category filtering functionality', async () => {
+        // Setup mock response
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockProducts,
+          count: 20,
+          error: null,
+        });
+
+        // Execute the category filter
+        const result = await getProducts({
+          categoryId: 'cat1',
+        });
+
+        // Verify basic functionality
+        expect(result.products).toHaveLength(mockProducts.length);
+        expect(mockSupabase.from).toHaveBeenCalledWith('products');
+
+        // Verify category filter was applied correctly
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('product_categories.category_id', 'cat1');
+      });
+    });
+
     it('should handle cursor-based pagination with featured sort order', async () => {
       // Setup mock response for first page
       mockQueryBuilder.limit.mockResolvedValueOnce({
@@ -289,6 +323,294 @@ describe('Products Server API', () => {
       });
 
       await expect(getProducts({})).rejects.toThrow('Failed to fetch products');
+    });
+
+    // NEW TESTS FOR CATEGORY FILTERING
+
+    describe('category filtering', () => {
+      it('should correctly apply category filter when provided as URL parameter', async () => {
+        // Setup required mocks
+        const fromSpy = vi.spyOn(mockSupabase, 'from');
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockProducts,
+          count: 50,
+          error: null,
+        });
+
+        await getProducts({
+          categoryId: 'cat1',
+        });
+
+        // Verify that the from method was called with 'products'
+        expect(fromSpy).toHaveBeenCalledWith('products');
+
+        // Verify select was called
+        expect(mockQueryBuilder.select).toHaveBeenCalled();
+
+        // Verify category filter was applied correctly - check exact field path
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('product_categories.category_id', 'cat1');
+
+        // Verify is_active filter is still applied when using category filtering
+        // This is crucial - the bug might be that we're not applying necessary filters
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('is_active', true);
+      });
+
+      it('should correctly apply category filter when provided in filters object', async () => {
+        // Setup required mocks
+        const fromSpy = vi.spyOn(mockSupabase, 'from');
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockProducts,
+          count: 50,
+          error: null,
+        });
+
+        await getProducts({
+          filters: {
+            categoryId: 'cat1',
+          },
+        });
+
+        // Verify that the from method was called with 'products'
+        expect(fromSpy).toHaveBeenCalledWith('products');
+
+        // Verify select was called
+        expect(mockQueryBuilder.select).toHaveBeenCalled();
+
+        // Verify category filter was applied correctly
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('product_categories.category_id', 'cat1');
+      });
+
+      it('should prioritize URL categoryId over filters object categoryId', async () => {
+        // Setup required mocks
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockProducts,
+          count: 50,
+          error: null,
+        });
+
+        await getProducts({
+          categoryId: 'cat1',
+          filters: {
+            categoryId: 'cat2', // This should be ignored in favor of the direct categoryId
+          },
+        });
+
+        // Verify the correct category ID was used
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('product_categories.category_id', 'cat1');
+        expect(mockQueryBuilder.eq).not.toHaveBeenCalledWith(
+          'product_categories.category_id',
+          'cat2'
+        );
+      });
+
+      it('should apply price filters in combination with category filter', async () => {
+        // Setup required mocks
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockProducts,
+          count: 50,
+          error: null,
+        });
+
+        await getProducts({
+          categoryId: 'cat1',
+          filters: {
+            minPrice: 10,
+            maxPrice: 100,
+          },
+        });
+
+        // Verify category filter was applied
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('product_categories.category_id', 'cat1');
+
+        // Verify price filters were applied along with category filter
+        expect(mockQueryBuilder.gte).toHaveBeenCalledWith('retail_price', 10);
+        expect(mockQueryBuilder.lte).toHaveBeenCalledWith('retail_price', 100);
+      });
+
+      it('should apply stock filter in combination with category filter', async () => {
+        // Setup required mocks
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockProducts,
+          count: 50,
+          error: null,
+        });
+
+        await getProducts({
+          categoryId: 'cat1',
+          filters: {
+            inStockOnly: true,
+          },
+        });
+
+        // Verify category filter was applied
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('product_categories.category_id', 'cat1');
+
+        // Verify stock filter was applied
+        expect(mockQueryBuilder.gt).toHaveBeenCalledWith('stock', 0);
+      });
+
+      it('should handle cursor pagination with category filter correctly', async () => {
+        // Setup required mocks for first page
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockProducts,
+          count: 50,
+          error: null,
+        });
+
+        const firstPage = await getProducts({
+          categoryId: 'cat1',
+        });
+
+        // For second page, verify cursor is applied correctly
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockProducts.map(p => ({ ...p, id: `next-${p.id}` })),
+          count: 50,
+          error: null,
+        });
+
+        // Reset mocks to track the next call clearly
+        vi.clearAllMocks();
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockProducts.map(p => ({ ...p, id: `next-${p.id}` })),
+          count: 50,
+          error: null,
+        });
+
+        // Get second page using cursor
+        await getProducts({
+          categoryId: 'cat1',
+          cursor: firstPage.nextCursor || undefined,
+        });
+
+        // Verify category filter was still applied
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('product_categories.category_id', 'cat1');
+
+        // Verify cursor pagination was applied with ID-based approach for category filtering
+        expect(mockQueryBuilder.gt).toHaveBeenCalled();
+      });
+
+      it('should handle the case where both price and category filters are applied along with cursor', async () => {
+        // Setup required mocks for first page
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockProducts,
+          count: 50,
+          error: null,
+        });
+
+        const firstPage = await getProducts({
+          categoryId: 'cat1',
+          filters: {
+            minPrice: 10,
+            maxPrice: 100,
+          },
+        });
+
+        // Reset mocks to track the next call clearly
+        vi.clearAllMocks();
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockProducts.map(p => ({ ...p, id: `next-${p.id}` })),
+          count: 50,
+          error: null,
+        });
+
+        // Get second page using cursor
+        await getProducts({
+          categoryId: 'cat1',
+          cursor: firstPage.nextCursor || undefined,
+          filters: {
+            minPrice: 10,
+            maxPrice: 100,
+          },
+        });
+
+        // Verify all filters were applied
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('product_categories.category_id', 'cat1');
+        expect(mockQueryBuilder.gte).toHaveBeenCalledWith('retail_price', 10);
+        expect(mockQueryBuilder.lte).toHaveBeenCalledWith('retail_price', 100);
+        expect(mockQueryBuilder.gt).toHaveBeenCalled(); // Cursor-based pagination
+
+        // Verify a select call was made
+        expect(mockQueryBuilder.select).toHaveBeenCalled();
+      });
+
+      it('should correctly transform products with multiple categories', async () => {
+        // Setup required mocks with multi-category products
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockMultiCategoryProducts,
+          count: 12,
+          error: null,
+        });
+
+        const result = await getProducts({});
+
+        // Check that the first product has both categories in transformed result
+        expect(result.products[0].categories).toHaveLength(2);
+        expect(result.products[0].categories[0].id).toBe('cat1');
+        expect(result.products[0].categories[1].id).toBe('cat2');
+      });
+
+      it('should handle sorting in combination with category filters', async () => {
+        // Setup required mocks
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockProducts,
+          count: 50,
+          error: null,
+        });
+
+        await getProducts({
+          categoryId: 'cat1',
+          filters: {
+            sortOrder: 'price_asc',
+          },
+        });
+
+        // Verify category filter was applied
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('product_categories.category_id', 'cat1');
+
+        // Verify sort order was applied
+        expect(mockQueryBuilder.order).toHaveBeenCalledWith('retail_price', { ascending: true });
+      });
+
+      it('should handle a null category value correctly', async () => {
+        // Setup required mocks
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: mockProducts,
+          count: 103,
+          error: null,
+        });
+
+        // Call with explicit null categoryId
+        await getProducts({
+          categoryId: null,
+        });
+
+        // Verify standard query path was used, not category filter path
+        expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+          expect.stringContaining('*,\n    product_categories'),
+          expect.anything()
+        );
+        // Category filter shouldn't be applied
+        expect(mockQueryBuilder.eq).not.toHaveBeenCalledWith(
+          'product_categories.category_id',
+          expect.anything()
+        );
+      });
+
+      it('should handle errors in the category filter query path', async () => {
+        // Setup mock error for category filter path
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: null,
+          count: null,
+          error: new Error('Database error in category filter'),
+        });
+
+        // Expect the query to throw an error
+        await expect(
+          getProducts({
+            categoryId: 'cat1',
+          })
+        ).rejects.toThrow('Failed to fetch products');
+      });
     });
   });
 });

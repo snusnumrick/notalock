@@ -5,6 +5,25 @@ export interface Category {
   name: string;
 }
 
+export interface ProductSummary {
+  id: string;
+  name: string;
+  retail_price: number | null;
+  thumbnail_url: string | null;
+}
+
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  name: string;
+  type?: string; // e.g., 'color', 'size', 'material'
+  sku?: string;
+  price_adjustment: number; // Added or subtracted from base price
+  stock?: number | null;
+  is_active?: boolean;
+  created_at?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -16,6 +35,7 @@ export interface Product {
   is_active: boolean | null;
   created_at: string;
   image_url: string | null;
+  manufacturer?: string | null;
   images?: ProductImage[];
   categories?: {
     id: string;

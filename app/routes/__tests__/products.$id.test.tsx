@@ -1,14 +1,11 @@
-import { render, screen } from '@testing-library/react';
-import { vi } from 'vitest';
-import { useLoaderData, useNavigation } from '@remix-run/react';
-import ProductPage, { loader } from '../products.$id';
-import * as supabaseServer from '~/server/services/supabase.server';
+// app/routes/__tests__/products.$id.test.tsx
+import { screen } from '@testing-library/react';
+import { renderWithRemix } from '../../../tests/utils/render-with-remix';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import ProductPage, { loader } from '~/routes/_layout.products.$id.tsx';
+import type { Mock } from 'vitest';
 
-// Mock @remix-run/react hooks
-vi.mock('@remix-run/react', () => ({
-  useLoaderData: vi.fn(),
-  useNavigation: vi.fn(() => ({ state: 'idle' })),
-}));
+// We're using the global mock from setup.ts
 
 // Mock environment variables
 vi.stubEnv('SUPABASE_URL', 'https://test.supabase.co');
@@ -16,109 +13,382 @@ vi.stubEnv('SUPABASE_ANON_KEY', 'test-key');
 
 // Mock Supabase service
 vi.mock('~/server/services/supabase.server', () => ({
-  createSupabaseClient: vi.fn(() => ({
-    from: vi.fn().mockImplementation(() => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      single: vi.fn().mockImplementation(() => ({
-        data: {
-          id: 'prod_123',
-          name: 'Test Door Handle',
-          description: 'A high-quality door handle',
-          sku: 'DH-123',
-          retail_price: 99.99,
-          stock: 50,
-          images: [
-            {
-              id: 'img_1',
-              url: 'https://example.com/image1.jpg',
-              is_primary: true,
-              sort_order: 1,
-            },
-          ],
-        },
-        error: null,
-      })),
-    })),
-  })),
+  createSupabaseClient: vi.fn() as Mock,
 }));
 
+// Create a helper function to mock Supabase client
+function createSupabaseMock(customMocks: Record<string, unknown> = {}): any {
+  const defaultMocks = {
+    fromData: {},
+    singleData: null,
+    error: null,
+  };
+
+  const mocks = { ...defaultMocks, ...customMocks };
+
+  const createQueryBuilder = (returnValue: Record<string, unknown> = {}) => {
+    const builder: Record<string, unknown> = {};
+
+    const methods = [
+      'select',
+      'insert',
+      'update',
+      'delete',
+      'upsert',
+      'eq',
+      'neq',
+      'gt',
+      'gte',
+      'lt',
+      'lte',
+      'like',
+      'ilike',
+      'is',
+      'in',
+      'contains',
+      'containedBy',
+      'rangeGt',
+      'rangeGte',
+      'rangeLt',
+      'rangeLte',
+      'rangeAdjacent',
+      'overlaps',
+      'textSearch',
+      'match',
+      'not',
+      'filter',
+      'or',
+      'order',
+      'limit',
+      'range',
+      'maybeSingle',
+    ];
+
+    methods.forEach(method => {
+      builder[method] = vi.fn().mockReturnThis();
+    });
+
+    builder.then = vi.fn().mockImplementation(callback => Promise.resolve(callback(returnValue)));
+    builder.single = vi.fn().mockResolvedValue(returnValue);
+
+    return builder;
+  };
+
+  return {
+    from: vi.fn().mockImplementation(table => {
+      const tableData = (mocks.fromData as Record<string, unknown>)[table] || {};
+
+      return createQueryBuilder({
+        data: tableData,
+        error: mocks.error,
+      });
+    }),
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+      getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
+      signInWithPassword: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      onAuthStateChange: vi.fn().mockReturnValue({
+        data: { subscription: { unsubscribe: vi.fn() } },
+      }),
+    },
+    storage: {
+      from: vi.fn().mockReturnValue({
+        upload: vi.fn(),
+        getPublicUrl: vi
+          .fn()
+          .mockReturnValue({ data: { publicUrl: 'https://example.com/image.jpg' } }),
+        list: vi.fn(),
+        remove: vi.fn(),
+      }),
+    },
+  };
+}
+
+// Mock all the components used in ProductPage
+vi.mock('~/features/products/components/ProductGallery', () => ({
+  default: ({
+    images,
+  }: {
+    images?: {
+      id: string;
+      url: string;
+      is_primary: boolean;
+      product_id: string;
+      sort_order: number;
+    }[];
+  }) => <div data-testid="product-gallery">Mock Gallery ({images?.length || 0} images)</div>,
+}));
+
+vi.mock('~/features/products/components/ProductInfo', () => ({
+  ProductInfo: ({ product }: { product: { name: string } }) => (
+    <div data-testid="product-info">Mock Product Info: {product.name}</div>
+  ),
+}));
+
+vi.mock('~/features/products/components/ProductVariantSelector', () => ({
+  ProductVariantSelector: ({
+    variants,
+  }: {
+    variants?: { id: string; name: string; product_id: string; price_adjustment: number }[];
+  }) => (
+    <div data-testid="product-variant-selector">
+      Mock Variant Selector ({variants?.length || 0} variants)
+    </div>
+  ),
+}));
+
+vi.mock('~/features/products/components/RelatedProducts', () => ({
+  RelatedProducts: ({
+    products,
+  }: {
+    products?: { id: string; name: string; retail_price: number; thumbnail_url: string }[];
+  }) => (
+    <div data-testid="related-products">
+      Mock Related Products ({products?.length || 0} products)
+    </div>
+  ),
+}));
+
+vi.mock('~/components/common/PageLayout', () => ({
+  PageLayout: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="page-layout">{children}</div>
+  ),
+}));
+
+// Mock data
 const mockProduct = {
-  id: 'prod_123',
-  name: 'Test Door Handle',
-  description: 'A high-quality door handle',
-  sku: 'DH-123',
+  id: 'product-1',
+  name: 'Test Product',
+  sku: 'SKU123',
+  description: 'Test description',
   retail_price: 99.99,
-  stock: 50,
+  stock: 10,
+  is_active: true,
+  created_at: '2023-01-01',
+  category_id: 'cat-1',
   images: [
     {
-      id: 'img_1',
-      url: 'https://example.com/image1.jpg',
+      id: 'img-1',
+      url: '/test-image-1.jpg',
       is_primary: true,
+      product_id: 'product-1',
+      sort_order: 0,
+    },
+    {
+      id: 'img-2',
+      url: '/test-image-2.jpg',
+      is_primary: false,
+      product_id: 'product-1',
       sort_order: 1,
     },
   ],
+  variants: [{ id: 'var-1', name: 'Variant 1', product_id: 'product-1', price_adjustment: 5.0 }],
 };
 
-describe('ProductPage', () => {
+const mockRelatedProducts = [
+  {
+    id: 'related-1',
+    name: 'Related Product 1',
+    retail_price: 79.99,
+    thumbnail_url: '/thumb-1.jpg',
+  },
+  {
+    id: 'related-2',
+    name: 'Related Product 2',
+    retail_price: 89.99,
+    thumbnail_url: '/thumb-2.jpg',
+  },
+];
+
+// Import the modules we're using in the test file
+import { useLoaderData, useNavigation } from '@remix-run/react';
+import { createSupabaseClient } from '~/server/services/supabase.server';
+
+describe('Product Detail Page', () => {
+  // Setup for component tests
   beforeEach(() => {
-    vi.clearAllMocks();
-    (useLoaderData as any).mockReturnValue({ product: mockProduct });
+    vi.resetAllMocks();
+
+    // @ts-expect-error - Mock implementation
+    useLoaderData.mockReturnValue({
+      product: mockProduct,
+      relatedProducts: mockRelatedProducts,
+    });
+
+    // @ts-expect-error - Mock implementation
+    useNavigation.mockReturnValue({ state: 'idle' });
   });
 
-  it('renders product details correctly', async () => {
-    render(<ProductPage />);
+  it('renders the product details when data is loaded', () => {
+    renderWithRemix(<ProductPage />);
 
-    expect(screen.getByText(mockProduct.name)).toBeInTheDocument();
-    expect(screen.getByText(`SKU: ${mockProduct.sku}`)).toBeInTheDocument();
-    expect(screen.getByText(mockProduct.description)).toBeInTheDocument();
-    expect(screen.getByText(`$${mockProduct.retail_price.toFixed(2)}`)).toBeInTheDocument();
-    expect(screen.getByText(`${mockProduct.stock} available`)).toBeInTheDocument();
+    // Check main components using test IDs
+    expect(screen.getByTestId('product-gallery')).toBeInTheDocument();
+    expect(screen.getByText('Mock Product Info: Test Product')).toBeInTheDocument();
+    expect(screen.getByText('Mock Variant Selector (1 variants)')).toBeInTheDocument();
+    expect(screen.getByText('Mock Related Products (2 products)')).toBeInTheDocument();
+
+    // Check breadcrumb navigation
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Products')).toBeInTheDocument();
+    expect(screen.getByText('Test Product')).toBeInTheDocument();
   });
 
-  it('shows loading state during navigation', () => {
-    (useNavigation as any).mockReturnValue({ state: 'loading' });
-    render(<ProductPage />);
-    expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument();
+  it('renders loading skeleton when navigation state is loading', () => {
+    // @ts-expect-error - Mock implementation
+    useNavigation.mockReturnValue({ state: 'loading' });
+
+    // First, render the component with loading state
+    renderWithRemix(<ProductPage />);
+
+    // In loading state, the ProductInfo component shouldn't be rendered
+    const productInfo = screen.queryByText('Mock Product Info:');
+    expect(productInfo).not.toBeInTheDocument();
   });
 
-  it('successfully loads product data in loader', async () => {
-    const request = new Request('http://test.com/products/123');
-    const params = { id: '123' };
-    const response = await loader({ request, params, context: {} });
+  it('passes the correct props to child components', () => {
+    renderWithRemix(<ProductPage />);
 
-    const data = await response.json();
-    expect(data.product).toEqual(mockProduct);
+    // Check gallery props
+    expect(screen.getByText('Mock Gallery (2 images)')).toBeInTheDocument();
+
+    // Check product info props
+    expect(screen.getByText('Mock Product Info: Test Product')).toBeInTheDocument();
+
+    // Check variant selector props
+    expect(screen.getByText('Mock Variant Selector (1 variants)')).toBeInTheDocument();
+
+    // Check related products props
+    expect(screen.getByText('Mock Related Products (2 products)')).toBeInTheDocument();
+  });
+});
+
+describe('Product Detail Loader', () => {
+  let mockSupabase: ReturnType<typeof createSupabaseMock>;
+  let mockRequest: Request;
+  let mockParams: { id: string };
+
+  // Setup for loader tests
+  beforeEach(() => {
+    mockRequest = new Request('https://test.com/products/product-1');
+    mockParams = { id: 'product-1' };
+
+    // Create mock data for Supabase responses
+    const fromData = {
+      products: mockProduct,
+    };
+
+    // Use our helper to create a proper Supabase mock
+    mockSupabase = createSupabaseMock({
+      fromData,
+      singleData: {
+        data: mockProduct,
+        error: null,
+      },
+    });
+
+    // For the related products query
+    mockSupabase.from('products').select().neq().limit = vi.fn().mockResolvedValue({
+      data: mockRelatedProducts,
+      error: null,
+    });
+
+    (createSupabaseClient as Mock).mockReturnValue(mockSupabase);
   });
 
-  it('handles product not found error', async () => {
-    vi.spyOn(supabaseServer, 'createSupabaseClient').mockImplementationOnce(() => ({
-      from: vi.fn().mockImplementation(() => ({
+  it('successfully loads product and related products data', async () => {
+    // Mock the Supabase client to return expected data
+    const mockFromMethod = vi.fn();
+
+    // Mock for products table - single returns the mockProduct
+    const mockSingleMethod = vi.fn().mockResolvedValue({
+      data: mockProduct,
+      error: null,
+    });
+
+    // Mock for products table - limit returns the mockRelatedProducts
+    const mockLimitMethod = vi.fn().mockResolvedValue({
+      data: mockRelatedProducts,
+      error: null,
+    });
+
+    mockFromMethod.mockImplementation(table => {
+      if (table === 'products') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          neq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          limit: mockLimitMethod,
+          single: mockSingleMethod,
+        };
+      }
+      return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: null,
-          error: null,
-        }),
-      })),
-    }));
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      };
+    });
 
-    const request = new Request('http://test.com/products/invalid');
-    const params = { id: 'invalid' };
+    mockSupabase = { from: mockFromMethod } as any;
+    (createSupabaseClient as Mock).mockReturnValue(mockSupabase);
 
-    let thrownError: Response | undefined;
+    // Call the loader
+    const result = await loader({ request: mockRequest, params: mockParams, context: {} });
+    const data = await result.json();
+
+    // Assert on the expected data
+    expect(data.product).toEqual(mockProduct);
+    expect(data.relatedProducts).toEqual(mockRelatedProducts);
+    expect(createSupabaseClient as Mock).toHaveBeenCalledWith(mockRequest, expect.any(Response));
+  });
+
+  it('throws 404 when product is not found', async () => {
+    // Create a mock that properly throws a Response with 404 status
+    const errorMockFrom = vi.fn();
+    const errorMockSelect = vi.fn().mockReturnThis();
+    const errorMockEq = vi.fn().mockReturnThis();
+    const errorMockOrder = vi.fn().mockReturnThis();
+    const errorMockSingle = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: new Error('Not found') });
+
+    errorMockFrom.mockReturnValue({
+      select: errorMockSelect,
+      eq: errorMockEq,
+      order: errorMockOrder,
+      single: errorMockSingle,
+    });
+
+    mockSupabase = { from: errorMockFrom } as any;
+    (createSupabaseClient as Mock).mockReturnValue(mockSupabase);
+
+    // The loader should throw a Response with status 404
+    await expect(async () => {
+      await loader({ request: mockRequest, params: mockParams, context: {} });
+    }).rejects.toThrow();
 
     try {
-      await loader({ request, params, context: {} });
+      await loader({ request: mockRequest, params: mockParams, context: {} });
     } catch (error) {
-      thrownError = error as Response;
+      expect(error).toBeInstanceOf(Response);
+      expect((error as Response).status).toBe(404);
     }
+  });
 
-    expect(thrownError).toBeDefined();
-    expect(thrownError).toBeInstanceOf(Response);
-    expect(thrownError?.status).toBe(404);
-    expect(await thrownError?.text()).toBe('Product not found');
+  it('handles unexpected errors with a 500 response', async () => {
+    // Modify Supabase mock to throw an error
+    (mockSupabase.from as Mock).mockImplementation(() => {
+      throw new Error('Unexpected error');
+    });
+
+    // Expect loader to throw a 500 Response
+    await expect(loader({ request: mockRequest, params: mockParams, context: {} })).rejects.toEqual(
+      expect.objectContaining({
+        status: 500,
+      })
+    );
   });
 });

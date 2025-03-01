@@ -8,6 +8,13 @@
   - Quality adjustment
   - Caching strategies
 
+## Cart & Checkout
+- [Cart API](./cart-api.md)
+  - Add items to cart
+  - Manage cart contents
+  - Cart session handling
+  - Anonymous & authenticated carts
+
 ## Product Management APIs
 - Product CRUD operations
 - Category management

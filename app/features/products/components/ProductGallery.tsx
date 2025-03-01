@@ -1,5 +1,5 @@
 // app/features/products/components/ProductGallery.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ZoomIn, X } from 'lucide-react';
 import { Dialog, DialogContent } from '~/components/ui/dialog';
 
@@ -18,12 +18,28 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // Get primary image first, then sort rest by sort_order
-  const sortedImages = React.useMemo(() => {
+  const sortedImages = useMemo(() => {
     if (!images.length) return [];
     const primaryImage = images.find(img => img.is_primary);
     const nonPrimaryImages = images.filter(img => !img.is_primary);
     return primaryImage ? [primaryImage, ...nonPrimaryImages] : images;
   }, [images]);
+
+  // Process image URLs for optimization
+  const processedImages = useMemo(() => {
+    return sortedImages.map(image => {
+      // Add query parameters for server-side optimization
+      // For example: ?width=800&format=webp
+      const mainImageUrl = `${image.url}?width=800&format=webp`;
+      const thumbnailUrl = `${image.url}?width=150&height=150&format=webp`;
+
+      return {
+        ...image,
+        optimizedUrl: mainImageUrl,
+        thumbnailUrl: thumbnailUrl,
+      };
+    });
+  }, [sortedImages]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientX);
@@ -71,11 +87,15 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
         role="presentation"
       >
         <img
-          src={sortedImages[currentImageIndex]?.url}
+          src={
+            processedImages[currentImageIndex]?.optimizedUrl ||
+            processedImages[currentImageIndex]?.url
+          }
           alt="Product"
           className={`w-full h-full object-contain transition-transform duration-300 ${
             isZoomed ? 'scale-150' : 'scale-100'
           }`}
+          loading="eager"
         />
 
         {/* Navigation Arrows */}
@@ -134,7 +154,7 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
 
       {/* Thumbnail Navigation */}
       <div className="grid grid-cols-5 gap-2" role="tablist" aria-label="Product thumbnails">
-        {sortedImages.map((image, index) => (
+        {processedImages.map((image, index) => (
           <button
             key={image.id}
             onClick={() => setCurrentImageIndex(index)}
@@ -148,9 +168,10 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
             aria-label={`View product image ${index + 1}`}
           >
             <img
-              src={image.url}
+              src={image.thumbnailUrl || image.url}
               alt={`Product thumbnail ${index + 1}`}
               className="w-full h-full object-contain"
+              loading="lazy"
             />
           </button>
         ))}
@@ -161,9 +182,13 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
         <DialogContent className="max-w-screen-lg w-full p-0">
           <div className="relative w-full aspect-square">
             <img
-              src={sortedImages[currentImageIndex]?.url}
+              src={
+                processedImages[currentImageIndex]?.optimizedUrl ||
+                processedImages[currentImageIndex]?.url
+              }
               alt="Product full size"
               className="w-full h-full object-contain"
+              loading="lazy"
             />
             <button
               onClick={() => setLightboxOpen(false)}

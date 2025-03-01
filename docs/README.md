@@ -12,7 +12,8 @@
 ## Features
 - [Category Management](features/category-management.md)
 - [Image Management](./features/image-management.md)
-- [Products management](features/product-management.md)
+- [Products Management](features/product-management.md)
+- [Product Detail Page](features/product-detail.md)
 
 ## Planning & Roadmap
 - [Development Roadmap](./roadmap/development-plan.md)

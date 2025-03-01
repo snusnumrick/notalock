@@ -8,7 +8,6 @@ import { getHeroBannerService } from '~/features/hero-banners/api';
 import { HeroSlider, HeroSliderSkeleton } from '~/features/hero-banners/components';
 import type { Category } from '~/features/categories/types/category.types';
 import type { HeroBanner } from '~/features/hero-banners/types/hero-banner.types';
-import { Header } from '~/components/common/Header';
 import { Suspense } from 'react';
 
 export const meta: MetaFunction = () => {
@@ -45,8 +44,6 @@ export const loader: LoaderFunction = async ({ request }) => {
   const heroBannerService = getHeroBannerService(request, response);
   const banners = await heroBannerService.fetchHeroBanners({ isActive: true });
 
-  // console.log('Directly fetched banners:', banners);
-
   return json<LoaderData>({
     supabaseUrl,
     supabaseAnonKey,
@@ -60,8 +57,6 @@ export default function Index() {
 
   return (
     <div className="bg-white flex-grow">
-      <Header />
-
       <main className="pt-24 relative">
         {/* Hero Slider */}
         <Suspense fallback={<HeroSliderSkeleton />}>

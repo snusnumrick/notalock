@@ -6,16 +6,18 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
-  useLocation,
   useRouteError,
   isRouteErrorResponse,
 } from '@remix-run/react';
 import * as build from '@remix-run/node';
 import type { LoaderFunctionArgs } from '@remix-run/node';
 import stylesheet from '~/styles/tailwind.css';
-import { Footer } from '~/components/common/Footer';
 import { createSupabaseClient } from '~/server/services/supabase.server';
 import { Session } from '@supabase/supabase-js';
+import { CartProvider } from '~/features/cart/context/CartContext';
+import { CartService } from '~/features/cart/api/cartService';
+import type { CartItem } from '~/features/cart/types/cart.types';
+import { useEffect } from 'react';
 
 export const links = () => [{ rel: 'stylesheet', href: stylesheet }];
 
@@ -45,10 +47,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
   }
 
+  // Fetch cart items
+  const cartService = new CartService(supabase);
+  const cartItems = await cartService.getCartItems();
+
   return build.json(
     {
       session: supabaseSession,
       profile,
+      cartItems,
       env: {
         SUPABASE_URL: process.env.SUPABASE_URL,
         SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
@@ -63,6 +70,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 interface LoaderData {
   session: Session | null;
   profile: { role: string } | null;
+  cartItems: CartItem[];
   env: {
     SUPABASE_URL: string | undefined;
     SUPABASE_ANON_KEY: string | undefined;
@@ -122,9 +130,59 @@ export function ErrorBoundary() {
 }
 
 export default function App() {
-  const { env } = useLoaderData<LoaderData>();
-  const location = useLocation();
-  const isAdminRoute = location.pathname.startsWith('/admin');
+  const { env, cartItems } = useLoaderData<LoaderData>();
+
+  // Ensure localStorage is consistent with CartProvider
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        // Check if we have localStorage data first
+        const storageKey = 'notalock_cart_data';
+        const savedCart = localStorage.getItem(storageKey);
+
+        // If localStorage has data, prioritize it
+        if (savedCart) {
+          try {
+            const parsedItems = JSON.parse(savedCart);
+            if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+              // Calculate total items
+              const totalItems = parsedItems.reduce((total, item) => total + item.quantity, 0);
+              // Dispatch count event
+              window.dispatchEvent(
+                new CustomEvent('cart-count-update', {
+                  detail: { count: totalItems },
+                })
+              );
+              console.log(
+                'Root - Sent cart count update from localStorage with count:',
+                totalItems
+              );
+              return; // Skip server cart handling if localStorage has items
+            }
+          } catch (parseError) {
+            console.error('Root - Error parsing localStorage cart:', parseError);
+          }
+        }
+
+        // If no localStorage data or invalid, check server data
+        if (cartItems && cartItems.length > 0) {
+          // Save server data to localStorage
+          localStorage.setItem(storageKey, JSON.stringify(cartItems));
+          // Calculate total items
+          const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+          // Dispatch count event
+          window.dispatchEvent(
+            new CustomEvent('cart-count-update', {
+              detail: { count: totalItems },
+            })
+          );
+          console.log('Root - Sent cart count update from server data with count:', totalItems);
+        }
+      } catch (err) {
+        console.error('Root - Error accessing localStorage:', err);
+      }
+    }
+  }, [cartItems]);
 
   return (
     <html lang="en">
@@ -135,8 +193,9 @@ export default function App() {
         <Links />
       </head>
       <body className="flex flex-col min-h-screen">
-        <Outlet />
-        {!isAdminRoute && <Footer />}
+        <CartProvider initialCartItems={cartItems}>
+          <Outlet />
+        </CartProvider>
         <ScrollRestoration />
         <script
           dangerouslySetInnerHTML={{

@@ -98,6 +98,46 @@ CREATE INDEX idx_hero_banners_active ON hero_banners(is_active);
 CREATE INDEX idx_hero_banners_position ON hero_banners(position);
 ```
 
+### carts
+```sql
+CREATE TABLE carts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id),
+    anonymous_id TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT check_user_or_anonymous CHECK (
+        (user_id IS NOT NULL AND anonymous_id IS NULL) OR
+        (user_id IS NULL AND anonymous_id IS NOT NULL)
+    )
+);
+
+-- Indexes
+CREATE INDEX idx_carts_user_id ON carts(user_id);
+CREATE INDEX idx_carts_anonymous_id ON carts(anonymous_id);
+CREATE INDEX idx_carts_status ON carts(status);
+```
+
+### cart_items
+```sql
+CREATE TABLE cart_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    cart_id UUID NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    variant_id UUID REFERENCES product_variants(id) ON DELETE CASCADE,
+    quantity INTEGER NOT NULL,
+    price NUMERIC(10,2) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX idx_cart_items_cart_id ON cart_items(cart_id);
+CREATE INDEX idx_cart_items_product_id ON cart_items(product_id);
+CREATE INDEX idx_cart_items_variant_id ON cart_items(variant_id);
+```
+
 ### orders
 ```sql
 CREATE TABLE orders (
@@ -216,6 +256,49 @@ CREATE POLICY "Hero banners are editable by admins"
             SELECT 1 FROM profiles
             WHERE id = auth.uid()
             AND role = 'admin'
+        )
+    );
+```
+
+### Cart & Cart Items
+```sql
+ALTER TABLE carts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cart_items ENABLE ROW LEVEL SECURITY;
+
+-- Simple policy for authenticated users to access their own carts
+CREATE POLICY "Authenticated users can manage their own carts" 
+    ON carts FOR ALL 
+    USING (user_id = auth.uid());
+
+-- Simple policy for cart items - authenticated users
+CREATE POLICY "Authenticated users can manage their cart items" 
+    ON cart_items FOR ALL 
+    USING (
+        EXISTS (
+            SELECT 1 FROM carts 
+            WHERE carts.id = cart_items.cart_id 
+            AND carts.user_id = auth.uid()
+        )
+    );
+
+-- Admin policies
+CREATE POLICY "Admins can view all carts" 
+    ON carts FOR SELECT 
+    USING (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role = 'admin'
+        )
+    );
+
+CREATE POLICY "Admins can view all cart items" 
+    ON cart_items FOR SELECT 
+    USING (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role = 'admin'
         )
     );
 ```

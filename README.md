@@ -61,6 +61,12 @@ Detailed documentation is available in the [docs](./docs/README.md) directory.
   - Advanced search & filtering
   - Bulk operations
   - Database structure
+- [Product Detail Page](./docs/features/product-detail.md)
+  - Interactive image gallery with zoom
+  - Variant selection UI
+  - Add to cart functionality
+  - Related products
+  - SEO optimizations
 - [Category Management](./docs/features/category-management.md)
   - Hierarchical structure
   - Tree visualization

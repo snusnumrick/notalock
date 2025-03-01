@@ -1,11 +1,15 @@
 import '@testing-library/jest-dom';
 import { TextEncoder, TextDecoder } from 'util';
 import { vi } from 'vitest';
+import { createRemixStub } from '~/__mocks__/remix';
 
 declare global {
   interface Window {
-    fs: {
-      readFile: ReturnType<typeof vi.fn>;
+    fs?: {
+      readFile: (
+        path: string,
+        options?: { encoding?: string | undefined } | undefined
+      ) => Promise<string | Uint8Array>;
     };
   }
 }
@@ -62,3 +66,7 @@ vi.spyOn(console, 'error').mockImplementation((...args) => {
     originalConsoleError(...args);
   }
 });
+
+// Set up Remix mock for all tests
+const remixMock = createRemixStub();
+vi.mock('@remix-run/react', () => remixMock);

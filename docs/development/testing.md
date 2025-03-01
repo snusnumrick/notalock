@@ -118,6 +118,96 @@
     - Don't overcomplicate mocks - start simple and add complexity as needed
     - Don't test framework behavior, focus on your code's behavior
 
+3. Avoiding Common React Testing Issues
+    - **Avoid Circular Dependencies in Mocks**: Import modules before mocking them, not after
+    - **Simplify Mock Implementations**: Use simple, direct mocks instead of complex chains
+    - **Use Flexible Text Matching**: Prefer regex or custom matchers over exact text matching
+    - **Favor Semantic HTML**: Use proper semantic elements and ARIA roles for better accessibility
+    - **Test Behavior, Not Implementation**: Focus on user-facing functionality, not internal details
+
+4. Detailed Examples of Testing Patterns
+
+   a. **Avoiding Circular Dependencies in Mocks**
+   ```typescript
+   // BAD: Creating circular dependencies by importing after mocking
+   vi.mock('~/components/ui/input');
+   import { Input } from '~/components/ui/input'; // DON'T do this!
+   
+   // GOOD: Import what you need first, then mock
+   import { Input } from '~/components/ui/input';
+   vi.mock('~/components/ui/input');
+   
+   // BETTER: Don't import modules you're mocking completely
+   vi.mock('~/components/ui/input', () => ({
+     Input: ({ value, onChange, ...props }) => (
+       <input value={value} onChange={onChange} {...props} />
+     )
+   }));
+   ```
+
+   b. **Simplifying Mock Implementations**
+   ```typescript
+   // BAD: Overly complex mocks with unnecessary functions
+   vi.mock('~/components/ui/input', () => ({
+     Input: vi.fn().mockImplementation(({ value, onChange }) => {
+       const handleChange = (e) => { 
+         // Complex logic here
+         onChange(e);
+       };
+       return <input value={value} onChange={handleChange} />;
+     })
+   }));
+   
+   // GOOD: Simple, direct mocks
+   vi.mock('~/components/ui/input', () => ({
+     Input: ({ value, onChange, ...props }) => (
+       <input value={value} onChange={onChange} {...props} />
+     )
+   }));
+   ```
+
+   c. **Using Flexible Text Matching**
+   ```typescript
+   // BAD: Brittle exact text matching
+   expect(screen.getByText('$99.99')).toBeInTheDocument();
+   
+   // GOOD: Regex for more flexible matching
+   expect(screen.getByText(/99\.99/)).toBeInTheDocument();
+   
+   // BETTER: Custom matcher for complex scenarios
+   const priceElement = screen.getByText((content, element) => {
+     return content.includes('99.99') && 
+            element.classList.contains('text-blue-600');
+   });
+   expect(priceElement).toBeInTheDocument();
+   ```
+
+   d. **Semantic HTML in Components**
+   ```typescript
+   // BAD: Generic divs for lists
+   <div className="grid grid-cols-3 gap-4">
+     {items.map(item => (
+       <div key={item.id}>{item.name}</div>
+     ))}
+   </div>
+   
+   // GOOD: Semantic HTML with proper roles
+   <ul className="grid grid-cols-3 gap-4" role="list">
+     {items.map(item => (
+       <li key={item.id}>{item.name}</li>
+     ))}
+   </ul>
+   ```
+
+   e. **Testing Behavior, Not Implementation**
+   ```typescript
+   // BAD: Testing implementation details
+   expect(component.find('div').at(3).hasClass('text-red-500')).toBe(true);
+   
+   // GOOD: Testing user-facing behavior
+   expect(screen.getByText('Error message')).toHaveClass('text-red-500');
+   ```
+
 5. Best Practices
     - Clear test descriptions that explain what's being tested
     - Proper setup and teardown in beforeEach

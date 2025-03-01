@@ -16,6 +16,7 @@
 - Components: Shadcn/UI with Tailwind CSS
 - Imports ordered: React/Remix, third-party, project modules, relative
 - Error handling: Use Response throws with appropriate status codes in loaders/actions
+- See more at [Development Guidelines](./docs/development/guidelines.md)
 
 ## Project Structure
 - Features organized by domain (products, categories) with components, api, services
@@ -24,8 +25,9 @@
 - Form handling with React Hook Form + Zod validation
 - Auth with Supabase - session managed at loader level, passed to components
 - Cursor-based pagination with explicit sort orders
+- See more at [Code Organization](./docs/development/code-organization.md)
 
 ## Testing
 - Component tests use mock loaders and service functions
 - Error tests verify both status and user-facing messages
-- Use test utils from test/setup.ts and app/test/test-utils.tsx
+- See more at [Testing Guidelines](./docs/development/testing.md)
