@@ -30,7 +30,7 @@ function createMockSupabaseClient(customMocks: Record<string, unknown> = {}): Su
     const methods = [
       'select',
       'insert',
-      'update',
+      'update', // Ensure update method is included
       'delete',
       'upsert',
       'eq',
@@ -130,7 +130,48 @@ describe('CartService', () => {
 
   describe('addToCart', () => {
     it('adds a new item to the cart successfully', async () => {
-      // No need to override specific behavior as the generic mock will handle it
+      // Setup the getOrCreateCart method to return a cart ID
+      vi.spyOn(cartService as any, 'getOrCreateCart').mockResolvedValue('test-cart-id');
+
+      // Mock authenticated user
+      mockSupabase.auth.getSession = vi.fn().mockResolvedValue({
+        data: { session: { user: { id: 'user-123' } } },
+        error: null,
+      });
+
+      // First create a mock for the single method to handle different call scenarios
+      const singleMock = vi.fn();
+
+      // First call should return 'no rows' to trigger the insert path
+      singleMock.mockResolvedValueOnce({
+        data: null,
+        error: { code: 'PGRST116' },
+      });
+
+      // Later calls can return the inserted data
+      singleMock.mockResolvedValue({
+        data: { id: 'new-item-id', product_id: 'prod-123' },
+        error: null,
+      });
+
+      // Setup mock for cart_items table with proper chain methods
+      const mockQueryBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        single: singleMock,
+      };
+
+      // Use mockImplementation to return different responses based on table name
+      mockSupabase.from.mockImplementation(table => {
+        if (table === 'cart_items') {
+          return mockQueryBuilder;
+        }
+        return createMockSupabaseClient().from(table);
+      });
+
       const result = await cartService.addToCart({
         productId: 'prod-123',
         quantity: 1,
@@ -140,11 +181,60 @@ describe('CartService', () => {
       // The mock creates a default response
       expect(result).toBeDefined();
       expect(mockSupabase.from).toHaveBeenCalledWith('cart_items');
-      expect(mockSupabase.from).toHaveBeenCalledWith('carts');
     });
 
     it('updates quantity when adding the same product', async () => {
-      // Setup mock to return existing item, then updated item
+      // Setup the getOrCreateCart method to return a cart ID
+      vi.spyOn(cartService as any, 'getOrCreateCart').mockResolvedValue('test-cart-id');
+
+      // Mock authenticated user
+      mockSupabase.auth.getSession = vi.fn().mockResolvedValue({
+        data: { session: { user: { id: 'user-123' } } },
+        error: null,
+      });
+
+      // First create a mock for the single method to handle different call scenarios
+      const singleMock = vi.fn();
+
+      // First call should return an existing item (for the initial query)
+      singleMock.mockResolvedValueOnce({
+        data: {
+          id: 'existing-item-id',
+          product_id: 'prod-123',
+          quantity: 2,
+          cart_id: 'test-cart-id',
+        },
+        error: null,
+      });
+
+      // Second call should return the updated item (for the update operation)
+      singleMock.mockResolvedValueOnce({
+        data: {
+          id: 'existing-item-id',
+          product_id: 'prod-123',
+          quantity: 3, // Incremented quantity
+          cart_id: 'test-cart-id',
+        },
+        error: null,
+      });
+
+      // Setup mock query builder with proper chain methods
+      const mockQueryBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        single: singleMock,
+      };
+
+      // Use mockImplementation to return different responses based on table name
+      mockSupabase.from.mockImplementation(table => {
+        if (table === 'cart_items') {
+          return mockQueryBuilder;
+        }
+        return createMockSupabaseClient().from(table);
+      });
+
       const result = await cartService.addToCart({
         productId: 'prod-123',
         quantity: 1,
@@ -152,9 +242,53 @@ describe('CartService', () => {
       });
 
       expect(result).toBeDefined();
+      expect(mockSupabase.from).toHaveBeenCalledWith('cart_items');
+      expect(mockQueryBuilder.update).toHaveBeenCalled();
     });
 
     it('handles variant products correctly', async () => {
+      // Setup the getOrCreateCart method to return a cart ID
+      vi.spyOn(cartService as any, 'getOrCreateCart').mockResolvedValue('test-cart-id');
+
+      // Mock authenticated user
+      mockSupabase.auth.getSession = vi.fn().mockResolvedValue({
+        data: { session: { user: { id: 'user-123' } } },
+        error: null,
+      });
+
+      // First create a mock for the single method to handle different call scenarios
+      const singleMock = vi.fn();
+
+      // First call should return 'no rows' to trigger the insert path
+      singleMock.mockResolvedValueOnce({
+        data: null,
+        error: { code: 'PGRST116' },
+      });
+
+      // Later calls can return the inserted data
+      singleMock.mockResolvedValue({
+        data: { id: 'new-item-id', product_id: 'prod-123', variant_id: 'var-123' },
+        error: null,
+      });
+
+      // Setup mock for cart_items table with proper chain methods
+      const mockQueryBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        single: singleMock,
+      };
+
+      // Use mockImplementation to return different responses based on table name
+      mockSupabase.from.mockImplementation(table => {
+        if (table === 'cart_items') {
+          return mockQueryBuilder;
+        }
+        return createMockSupabaseClient().from(table);
+      });
+
       await cartService.addToCart({
         productId: 'prod-123',
         quantity: 1,
@@ -239,10 +373,16 @@ describe('CartService', () => {
 
   describe('getOrCreateCart', () => {
     it('returns existing cart for authenticated user', async () => {
+      // Mock authenticated user session
+      mockSupabase.auth.getSession = vi.fn().mockResolvedValue({
+        data: { session: { user: { id: 'user-123' } } },
+        error: null,
+      });
+
       // Setup mock to return existing cart for user
-      (mockSupabase.from as any).mockImplementation((table: string) => {
+      mockSupabase.from = vi.fn().mockImplementation((table: string) => {
         if (table === 'carts') {
-          const mockQueryBuilder = {
+          return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             order: vi.fn().mockReturnThis(),
@@ -250,11 +390,9 @@ describe('CartService', () => {
               data: [{ id: 'existing-cart-id' }],
               error: null,
             }),
-            // Add other methods that might be called
             insert: vi.fn().mockReturnThis(),
             single: vi.fn().mockReturnThis(),
           };
-          return mockQueryBuilder;
         }
         return createMockSupabaseClient().from(table);
       });
@@ -268,35 +406,44 @@ describe('CartService', () => {
     });
 
     it('creates a new cart when none exists', async () => {
+      // Mock authenticated user session
+      mockSupabase.auth.getSession = vi.fn().mockResolvedValue({
+        data: { session: { user: { id: 'user-123' } } },
+        error: null,
+      });
+
+      // Mock uuid function to return our expected ID
+      vi.mock('uuid', () => ({
+        v4: vi.fn().mockReturnValue('new-cart-id'),
+      }));
+
       // Setup mock to return empty cart list, then successful insert
-      (mockSupabase.from as jest.Mock).mockImplementation((table: string) => {
+      let callCount = 0;
+      mockSupabase.from = vi.fn().mockImplementation((table: string) => {
         if (table === 'carts') {
-          // First call is for querying existing carts
-          const firstCallMock = {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            order: vi.fn().mockReturnThis(),
-            limit: vi.fn().mockResolvedValue({
-              data: [], // No existing carts
-              error: null,
-            }),
-          };
-
-          // Second call is for inserting a new cart
-          const secondCallMock = {
-            insert: vi.fn().mockReturnThis(),
-            select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              data: { id: 'new-cart-id' },
-              error: null,
-            }),
-          };
-
-          // Combine the mocks
-          return {
-            ...firstCallMock,
-            ...secondCallMock,
-          };
+          callCount++;
+          if (callCount === 1) {
+            // First call - querying for existing carts
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockResolvedValue({
+                data: [], // No existing carts
+                error: null,
+              }),
+            };
+          } else {
+            // Second call - inserting new cart
+            return {
+              insert: vi.fn().mockReturnThis(),
+              select: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: { id: 'new-cart-id' },
+                error: null,
+              }),
+            };
+          }
         }
         return createMockSupabaseClient().from(table);
       });
@@ -312,34 +459,20 @@ describe('CartService', () => {
     it('handles anonymous users with localStorage', async () => {
       // Mock localStorage
       const mockLocalStorage = {
-        getItem: vi.fn().mockReturnValue('anon-id-123'),
+        getItem: vi.fn().mockReturnValue('existing-anon-cart-id'),
         setItem: vi.fn(),
       };
 
-      // @ts-expect-error - mock global.localStorage
-      global.localStorage = mockLocalStorage;
+      // Mock window object with localStorage
+      global.window = {
+        ...global.window,
+        localStorage: mockLocalStorage,
+      };
 
-      // Setup mock to return no authenticated user and existing anonymous cart
-      (mockSupabase.auth.getSession as jest.Mock).mockResolvedValue({
+      // Setup mock to return no authenticated user
+      mockSupabase.auth.getSession = vi.fn().mockResolvedValue({
         data: { session: null },
         error: null,
-      });
-
-      (mockSupabase.from as jest.Mock).mockImplementation(table => {
-        if (table === 'carts') {
-          // Create a chainable mock with multiple eq calls
-          const selectMock = {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(), // This gets called multiple times
-            limit: vi.fn().mockResolvedValue({
-              data: [{ id: 'existing-anon-cart-id' }],
-              error: null,
-            }),
-          };
-
-          return selectMock;
-        }
-        return createMockSupabaseClient().from(table);
       });
 
       // Call the private method directly for testing
@@ -352,52 +485,27 @@ describe('CartService', () => {
     });
 
     it('creates a new anonymous cart when needed', async () => {
+      // Mock uuid function to return our expected ID
+      vi.mock('uuid', () => ({
+        v4: vi.fn().mockReturnValue('new-anon-cart-id'),
+      }));
+
       // Mock localStorage with no existing ID
       const mockLocalStorage = {
         getItem: vi.fn().mockReturnValue(null),
         setItem: vi.fn(),
       };
 
-      // @ts-expect-error - mock global.localStorage
-      global.localStorage = mockLocalStorage;
+      // Mock window object with localStorage
+      global.window = {
+        ...global.window,
+        localStorage: mockLocalStorage,
+      };
 
-      // Setup mock to return no authenticated user and no existing anonymous cart
-      (mockSupabase.auth.getSession as jest.Mock).mockImplementation(() =>
-        Promise.resolve({
-          data: { session: null },
-          error: null,
-        })
-      );
-
-      (mockSupabase.from as jest.Mock).mockImplementation(table => {
-        if (table === 'carts') {
-          // First handle the query for existing cart
-          const selectChain = {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            limit: vi.fn().mockResolvedValue({
-              data: [], // No existing cart
-              error: null,
-            }),
-          };
-
-          // Then handle the insert for new cart
-          const insertChain = {
-            insert: vi.fn().mockReturnThis(),
-            select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              data: { id: 'new-anon-cart-id' },
-              error: null,
-            }),
-          };
-
-          // Return a merged object with both chains
-          return {
-            ...selectChain,
-            ...insertChain,
-          };
-        }
-        return createMockSupabaseClient().from(table);
+      // Setup mock to return no authenticated user
+      mockSupabase.auth.getSession = vi.fn().mockResolvedValue({
+        data: { session: null },
+        error: null,
       });
 
       // Call the private method directly for testing
@@ -406,7 +514,7 @@ describe('CartService', () => {
       // Verify we get a response
       expect(cartId).toBeDefined();
       expect(cartId).toBe('new-anon-cart-id');
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('anonymousCartId', expect.any(String));
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('anonymousCartId', 'new-anon-cart-id');
     });
   });
 });

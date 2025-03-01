@@ -176,7 +176,7 @@ export default function App() {
               detail: { count: totalItems },
             })
           );
-          console.log('Root - Sent cart count update from server data with count:', totalItems);
+          // console.log('Root - Sent cart count update from server data with count:', totalItems);
         }
       } catch (err) {
         console.error('Root - Error accessing localStorage:', err);

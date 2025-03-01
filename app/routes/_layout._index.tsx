@@ -2,6 +2,7 @@ import type { LoaderFunction, MetaFunction } from '@remix-run/node';
 import { json } from '@remix-run/node';
 import { useLoaderData, Link } from '@remix-run/react';
 import { FeaturedProducts } from '~/features/products/components/FeaturedProducts';
+import { NewArrivals } from '~/features/products/components/NewArrivals';
 import { CategoryHighlightGrid } from '~/features/categories/components/CategoryHighlightGrid';
 import { getCategoryService } from '~/features/categories/api/categoryService.server';
 import { getHeroBannerService } from '~/features/hero-banners/api';
@@ -138,6 +139,11 @@ export default function Index() {
         {/* Featured Products Section */}
         <div className="bg-white pb-8">
           <FeaturedProducts supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} />
+        </div>
+
+        {/* New Arrivals Section */}
+        <div className="bg-white py-8">
+          <NewArrivals supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} limit={8} />
         </div>
 
         {/* Featured Categories */}

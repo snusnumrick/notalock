@@ -2,8 +2,24 @@ import type { LoaderFunctionArgs } from '@remix-run/node';
 import { getProducts } from './products.server';
 import type { CustomerFilterOptions } from '../components/ProductFilter';
 import { getCategories } from '~/features/categories/api/categories.server';
+import type { TransformedProduct } from '~/features/products/types/product.types';
 
-export async function productsLoader({ request }: LoaderFunctionArgs) {
+export interface ProductLoaderData {
+  products: TransformedProduct[];
+  total: number;
+  nextCursor: string | null;
+  initialLoad: boolean;
+  filters: {
+    sortOrder?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    categoryId?: string;
+    inStockOnly?: boolean;
+  };
+  categories: Array<{ id: string; name: string }>;
+}
+
+export async function productsLoader({ request }: LoaderFunctionArgs): Promise<ProductLoaderData> {
   // console.log('=== Products Loader ===');
   const url = new URL(request.url);
   const cursor = url.searchParams.get('cursor') || undefined;

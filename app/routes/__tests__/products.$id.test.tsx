@@ -2,7 +2,7 @@
 import { screen } from '@testing-library/react';
 import { renderWithRemix } from '../../../tests/utils/render-with-remix';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import ProductPage, { loader } from '~/routes/_layout.products.$id.tsx';
+import ProductPage, { loader } from '~/routes/_layout.products.$id';
 import type { Mock } from 'vitest';
 
 // We're using the global mock from setup.ts

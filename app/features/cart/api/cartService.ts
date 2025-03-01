@@ -30,6 +30,77 @@ export class CartService {
     // Get the user's cart ID (create if needed)
     const cartId = await this.getOrCreateCart();
 
+    // Check if we have an authenticated user
+    const { data: sessionData } = await this.supabase.auth.getSession();
+    const isAuthenticated = !!sessionData.session?.user.id;
+
+    // For anonymous users, handle cart items in localStorage
+    if (!isAuthenticated && typeof window !== 'undefined') {
+      const cartDataKey = 'notalock_cart_data';
+      const now = new Date().toISOString();
+      const newItemId = uuidv4();
+
+      // Try to get existing cart items
+      const savedData = window.localStorage.getItem(cartDataKey) || '[]';
+      let cartItems: CartItem[] = [];
+
+      try {
+        cartItems = JSON.parse(savedData);
+      } catch (error) {
+        console.error('Error parsing cart data:', error);
+        cartItems = [];
+      }
+
+      // Check if item already exists in cart
+      const existingItemIndex = cartItems.findIndex(
+        item =>
+          item.product_id === productId &&
+          ((!variantId && !item.variant_id) || variantId === item.variant_id)
+      );
+
+      if (existingItemIndex !== -1) {
+        // Update quantity of existing item
+        cartItems[existingItemIndex].quantity += quantity;
+        cartItems[existingItemIndex].updated_at = now;
+
+        // Save updated cart to localStorage
+        window.localStorage.setItem(cartDataKey, JSON.stringify(cartItems));
+
+        // Dispatch cart update event
+        const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+        window.dispatchEvent(
+          new CustomEvent('cart-count-update', { detail: { count: totalItems } })
+        );
+
+        return cartItems[existingItemIndex];
+      } else {
+        // Add new item to cart
+        const newItem: CartItem = {
+          id: newItemId,
+          cart_id: cartId,
+          product_id: productId,
+          variant_id: variantId || null,
+          quantity: quantity,
+          price: price,
+          created_at: now,
+          updated_at: now,
+        };
+
+        cartItems.push(newItem);
+
+        // Save updated cart to localStorage
+        window.localStorage.setItem(cartDataKey, JSON.stringify(cartItems));
+
+        // Dispatch cart update event
+        const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+        window.dispatchEvent(
+          new CustomEvent('cart-count-update', { detail: { count: totalItems } })
+        );
+
+        return newItem;
+      }
+    }
+
     // Check if product already exists in cart
     const { data: existingItems, error: queryError } = await this.supabase
       .from('cart_items')
@@ -138,61 +209,26 @@ export class CartService {
 
       return newCart.id;
     } else {
-      // For anonymous users, use anonymous cart ID from localStorage
+      // For anonymous users, we'll use a client-side only approach
+      // This avoids RLS policy issues completely
       let anonymousCartId = '';
 
       if (typeof window !== 'undefined' && window.localStorage) {
         anonymousCartId = window.localStorage.getItem('anonymousCartId') || '';
 
         if (!anonymousCartId) {
-          // Create new anonymous cart if none exists
+          // Create new anonymous cart ID if none exists
           anonymousCartId = uuidv4();
           window.localStorage.setItem('anonymousCartId', anonymousCartId);
         }
+
+        // Return the ID without trying to create a cart in the database
+        // We'll handle items client-side for anonymous users
+        return anonymousCartId;
       } else {
-        // For server-side, generate a temporary ID
-        anonymousCartId = uuidv4();
+        // For server-side, generate a temporary ID but don't try to store in database
+        return uuidv4();
       }
-
-      // Check if this anonymous cart exists in the database
-      try {
-        const { data: anonCarts, error: anonCartsError } = await this.supabase
-          .from('carts')
-          .select('id')
-          .eq('anonymous_id', anonymousCartId)
-          .eq('status', 'active')
-          .limit(1);
-
-        if (anonCartsError) {
-          throw new Error(`Failed to get anonymous carts: ${anonCartsError.message}`);
-        }
-
-        if (anonCarts && anonCarts.length > 0) {
-          return anonCarts[0].id;
-        }
-      } catch (error) {
-        console.error('Error checking for existing anonymous cart:', error);
-        // Continue to create a new cart
-      }
-
-      // Create new anonymous cart
-      const { data: newAnonCart, error: createAnonError } = await this.supabase
-        .from('carts')
-        .insert({
-          id: uuidv4(),
-          anonymous_id: anonymousCartId,
-          status: 'active',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (createAnonError) {
-        throw new Error(`Failed to create anonymous cart: ${createAnonError.message}`);
-      }
-
-      return newAnonCart.id;
     }
   }
 
@@ -204,6 +240,34 @@ export class CartService {
     try {
       const cartId = await this.getOrCreateCart();
 
+      // Check if we have an authenticated user
+      const { data: sessionData } = await this.supabase.auth.getSession();
+      const isAuthenticated = !!sessionData.session?.user.id;
+
+      // If not authenticated, try getting cart items from localStorage
+      if (!isAuthenticated) {
+        // For anonymous users, we'll retrieve cart items from localStorage
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const cartDataKey = 'notalock_cart_data';
+          const savedData = window.localStorage.getItem(cartDataKey);
+          if (savedData) {
+            try {
+              const parsedItems = JSON.parse(savedData);
+              if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+                return parsedItems;
+              }
+            } catch (error) {
+              console.error('Error parsing localStorage cart items:', error);
+            }
+          }
+          // If no items found in localStorage, return empty array
+          return [];
+        }
+        // For server-side with anonymous users, return empty array
+        return [];
+      }
+
+      // For authenticated users, get cart items from Supabase
       const { data, error } = await this.supabase
         .from('cart_items')
         .select(

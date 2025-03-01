@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- New Arrivals Section Implementation
+  - Created reusable NewArrivals component for homepage and other sections
+  - Implemented dedicated New Arrivals page with expanded product list
+  - Added visual "New" badge for products less than 14 days old
+  - Implemented responsive grid layout for all screen sizes
+  - Added loading skeletons and error handling
+  - Enhanced empty state design with informative messages
+  - Added date display to show when products were added
+  - Created comprehensive test suite for component
+  - Made component customizable with configurable title, description, and limit
+
 ### Fixed
 - Shopping Cart Persistence Bug
   - Fixed issue where cart changes made on the cart page weren't persisting when navigating to other pages

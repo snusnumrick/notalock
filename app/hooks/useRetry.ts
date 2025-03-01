@@ -99,11 +99,13 @@ export function useRetry<T>(
 
         // Don't retry auth errors
         if (error instanceof AuthApiError) {
-          setState({
-            attempt: fullConfig.maxAttempts,
-            error: error as Error,
-            isRetrying: false,
-          });
+          if (mountedRef.current) {
+            setState({
+              attempt: fullConfig.maxAttempts,
+              error: error as Error,
+              isRetrying: false,
+            });
+          }
           throw error;
         }
 

@@ -49,68 +49,6 @@ export const Header: React.FC = () => {
     };
   }, []);
 
-  // For debugging
-  console.log('Header - Current cartItemCount:', cartItemCount);
-
-  // Remove these event listeners to avoid duplicate updates
-  /* 
-  // Listen for cart-state-changed events
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const handleCartStateChanged = (e: CustomEvent<{ type: string, items: CartItem[] }>) => {
-      console.log('Header - Received cart state change event:', e.detail.type);
-      
-      if (e.detail && e.detail.items) {
-        // Calculate the total number of items
-        const totalItems = e.detail.items.reduce((total, item) => total + item.quantity, 0);
-        console.log('Header - Setting cart count from state-changed event:', totalItems);
-        setCartItemCount(totalItems);
-      }
-    };
-    
-    // Add event listener
-    window.addEventListener('cart-state-changed', handleCartStateChanged as EventListener);
-    
-    return () => {
-      window.removeEventListener('cart-state-changed', handleCartStateChanged as EventListener);
-    };
-  }, []);
-  */
-
-  // Remove direct-cart-add event listener to avoid duplication
-  /*
-  // Listen for direct cart add events for notifications
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const handleDirectCartAdd = (e: CustomEvent<{ quantity: number, productName: string }>) => {
-      console.log('Header - Received direct cart add event:', e.detail);
-      
-      // Only update if we have data
-      if (e.detail && typeof e.detail.quantity === 'number') {
-        // Show a temporary notification
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-100 text-green-800 p-2 rounded shadow z-50';
-        notification.innerHTML = `Added ${e.detail.quantity} × ${e.detail.productName} to cart`;
-        document.body.appendChild(notification);
-        
-        // Remove after 3 seconds
-        setTimeout(() => {
-          notification.remove();
-        }, 3000);
-      }
-    };
-    
-    // Add event listener
-    window.addEventListener('direct-cart-add', handleDirectCartAdd as EventListener);
-    
-    return () => {
-      window.removeEventListener('direct-cart-add', handleDirectCartAdd as EventListener);
-    };
-  }, []);
-  */
-
   return (
     <header className="bg-gray-100 border-b border-gray-300 shadow-sm fixed w-full top-0 z-50">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
