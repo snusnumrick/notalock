@@ -23,6 +23,22 @@
    - ✅ Bulk operations
 
 ### Sprint 2: Category Management - IN PROGRESS
+
+0. Fix Non-Working Links - HIGH PRIORITY
+   - Create missing route implementations for:
+     - `/about` - About Us page
+     - `/categories` - Public-facing categories page
+     - `/new-arrivals` - New products showcase
+     - `/featured` - Featured products page
+     - `/privacy` - Privacy policy page
+     - `/terms` - Terms & Conditions page
+     - `/shipping` - Shipping policy page
+     - `/account` - User account page
+   - Implementation approach:
+     - Create proper route files with appropriate layouts
+     - Implement content management for policy pages
+     - Ensure mobile responsiveness
+     - Add SEO metadata
 1. Category Structure
    - Category CRUD operations - PARTIALLY COMPLETED
      - ✅ Database schema and migrations
