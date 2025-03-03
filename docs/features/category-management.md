@@ -4,7 +4,7 @@
 The category management feature in Notalock provides a user interface for organizing products in a hierarchical structure. This document focuses on the frontend implementation, component architecture, and user interactions.
 
 For API implementation details, see [Category Management API](../api/category-management.md).
-For database schema details, see [Database Documentation](../database.md#categories).
+For database schema details, see [Database Documentation](../database/schema.md#categories).
 
 ## User Interface Features
 

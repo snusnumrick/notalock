@@ -1,4 +1,4 @@
-# Database Documentation
+# Database Schema
 
 ## Overview
 The Notalock e-commerce platform uses a Supabase PostgreSQL database. This document outlines the database schema, relationships, and security policies.

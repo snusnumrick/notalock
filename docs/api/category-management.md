@@ -241,7 +241,7 @@ The API respects row-level security policies:
 - Audit logging
 - Input sanitization
 
-For detailed security policies, see [Database Documentation](../database.md#categories).
+For detailed security policies, see [Database Documentation](../database/schema.md#categories).
 
 ## Future Improvements
 

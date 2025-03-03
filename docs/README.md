@@ -1,5 +1,8 @@
 # Notalock Documentation
 
+## Documentation Structure
+- [Documentation Map](./documentation-map.md) - Visual representation of documentation organization
+
 ## Development
 - [Development Guidelines](./development/guidelines.md)
 - [Code Organization](./development/code-organization.md)
@@ -19,10 +22,14 @@
 - [Development Roadmap](./roadmap/development-plan.md)
 
 ## Deployment
-- [Deployment Guide](deployment.md)
+- [Deployment Guide](deployment/guide.md)
 
 ## API Documentation
 - [API Documentation](api/README.md)
 
 ## Database
-- [Database Schema](database.md)
+- [Database Schema](database/schema.md)
+
+## User Documentation
+- [Getting Started Guide](user/getting-started.md)
+- [Frequently Asked Questions](user/faq.md)

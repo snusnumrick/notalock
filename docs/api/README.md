@@ -1,40 +1,21 @@
 # API Documentation
 
-## Image Processing
-- [Image Optimization API](./image-optimization.md)
-  - On-demand image processing
-  - Format conversion
-  - Size optimization
-  - Quality adjustment
-  - Caching strategies
+This directory contains documentation for the various APIs used in the Notalock platform.
 
-## Cart & Checkout
-- [Cart API](./cart-api.md)
-  - Add items to cart
-  - Manage cart contents
-  - Cart session handling
-  - Anonymous & authenticated carts
+## Contents
 
-## Product Management APIs
-- Product CRUD operations
-- Category management
-- Inventory tracking
-- Price management
+- [Image Optimization API](./image-optimization.md) - API for processing and optimizing images
+- [Cart API](./cart-api.md) - API for managing shopping cart functionality
+- [Category Management API](./category-management.md) - API for managing product categories
+- [Product Management API](./product-management.md) - API for managing products
 
-## Authentication & Authorization
-- User authentication
-- Role-based access control
-- Business account management
-- API key management
+## Purpose
 
-## Order Management
-- Order processing
-- Status updates
-- Payment integration
-- Shipping integration
+The API documentation provides detailed information about the endpoints, request/response formats, and usage examples for the various APIs used in the Notalock platform. It serves as a reference for developers working with these APIs.
 
-## Content Management
-- Product documentation
-- Technical specifications
-- Installation guides
-- Support content
+For detailed information about specific APIs, please refer to the individual API documentation files.
+
+## Related Documentation
+
+- [Feature Documentation](../features/) - Information about features that utilize these APIs
+- [Database Documentation](../database/README.md) - Database structure underlying the APIs

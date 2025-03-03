@@ -267,7 +267,7 @@ try {
 - Sanitize inputs
 - Handle sensitive data
 
-For detailed security policies, see [Database Documentation](../database.md#products).
+For detailed security policies, see [Database Documentation](../database/schema.md#products).
 
 ## Future Improvements
 

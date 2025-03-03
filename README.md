@@ -47,12 +47,15 @@ npm run dev
 
 Detailed documentation is available in the [docs](./docs/README.md) directory.
 
+### Documentation
+- [Documentation Map](./docs/documentation-map.md) - Overview of all documentation
+
 ### Development
 - [Development Guidelines](./docs/development/guidelines.md)
 - [Code Organization](./docs/development/code-organization.md)
-- [API Documentation](./docs/api.md)
-- [Database Schema](./docs/database.md)
-- [Deployment Guide](./docs/deployment.md)
+- [API Documentation](./docs/api/README.md)
+- [Database Schema](./docs/database/schema.md)
+- [Deployment Guide](./docs/deployment/guide.md)
 - [Claude Instructions](./docs/development/claude-instructions.md)
 
 ### Features

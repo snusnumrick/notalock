@@ -1,4 +1,4 @@
-# Deployment Documentation
+# Deployment Guide
 
 ## Overview
 This document outlines the deployment process for the Notalock e-commerce platform.
