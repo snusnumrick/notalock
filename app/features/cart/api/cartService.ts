@@ -273,7 +273,7 @@ export class CartService {
         .select(
           `
           *,
-          product:products(name, sku, thumbnail_url:image_url)
+          product:products(name, sku, image_url)
         `
         )
         .eq('cart_id', cartId);
@@ -295,18 +295,13 @@ export class CartService {
         product: {
           name: string;
           sku: string;
-          thumbnail_url: string | null;
+          image_url: string | null;
         } | null;
       };
 
       return data.map((item: RawCartItem) => ({
         ...item,
-        product: item.product
-          ? {
-              ...item.product,
-              image_url: item.product.thumbnail_url,
-            }
-          : undefined,
+        product: item.product || undefined,
       }));
     } catch (error) {
       console.error('Error getting cart items:', error);

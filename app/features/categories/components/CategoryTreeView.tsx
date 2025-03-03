@@ -44,7 +44,7 @@ const CategoryNode: React.FC<CategoryNodeProps> = ({
         className={cn(
           'flex items-center py-1 px-2 hover:bg-gray-100 rounded cursor-pointer',
           selectedCategoryId === category.id && 'bg-blue-50 hover:bg-blue-100',
-          !category.is_visible && 'opacity-50'
+          !category.isVisible && 'opacity-50'
         )}
         style={{ paddingLeft: `${level * 1.5}rem` }}
         onClick={handleSelect}
@@ -87,7 +87,7 @@ const CategoryNode: React.FC<CategoryNodeProps> = ({
 
         <span className="truncate">{category.name}</span>
 
-        {!category.is_visible && <span className="ml-2 text-sm text-gray-500">(Hidden)</span>}
+        {!category.isVisible && <span className="ml-2 text-sm text-gray-500">(Hidden)</span>}
       </div>
 
       {hasChildren && isExpanded && (
@@ -127,15 +127,15 @@ const CategoryTreeView: React.FC<CategoryTreeViewProps> = ({
       };
       categoryMap.set(category.id, categoryWithChildren);
 
-      if (!category.parent_id) {
+      if (!category.parentId) {
         tree.push(categoryWithChildren);
       }
     });
 
     // Second pass: Handle parent_id references for categories without direct children
     flatCategories.forEach(category => {
-      if (category.parent_id && !category.children) {
-        const parent = categoryMap.get(category.parent_id);
+      if (category.parentId && !category.children) {
+        const parent = categoryMap.get(category.parentId);
         if (parent) {
           if (!parent.children) {
             parent.children = [];
@@ -153,7 +153,7 @@ const CategoryTreeView: React.FC<CategoryTreeViewProps> = ({
 
     // Sort function
     const sortByOrder = (categories: Category[]) => {
-      categories.sort((a, b) => a.sort_order - b.sort_order);
+      categories.sort((a, b) => a.sortOrder - b.sortOrder);
       categories.forEach(category => {
         if (category.children?.length) {
           sortByOrder(category.children);

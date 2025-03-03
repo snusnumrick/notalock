@@ -147,10 +147,12 @@ export default function CartPage() {
                                 <p className="font-medium">
                                   {item.product
                                     ? item.product.name
-                                    : `Product ID: ${item.product_id}`}
+                                    : `Product ID: ${item.product_id.substring(0, 8)}`}
                                 </p>
                                 <p className="text-sm text-gray-500">
-                                  SKU: {item.product ? item.product.sku : item.id.substring(0, 8)}
+                                  {item.product
+                                    ? `SKU: ${item.product.sku}`
+                                    : `SKU: Item #${item.id.substring(0, 8)}`}
                                 </p>
                               </div>
                             </div>

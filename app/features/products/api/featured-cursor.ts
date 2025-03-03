@@ -14,6 +14,7 @@ export interface CursorData {
 export interface ProductWithCategories extends Record<string, unknown> {
   id: string;
   name: string;
+  slug: string | null;
   description: string | null;
   retail_price: number;
   business_price: number;

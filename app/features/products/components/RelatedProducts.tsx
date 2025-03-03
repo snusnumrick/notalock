@@ -21,7 +21,7 @@ export function RelatedProducts({ products, title = 'Related Products' }: Relate
       <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {products.map(product => (
           <li key={product.id}>
-            <Link to={`/products/${product.id}`} className="group">
+            <Link to={`/products/${product.slug}`} className="group">
               <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
                 {product.thumbnail_url ? (
                   <img

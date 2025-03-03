@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import type { SetURLSearchParams } from 'react-router-dom';
-import { useNavigation, Link } from '@remix-run/react';
+import { useNavigation, Link, useLocation } from '@remix-run/react';
 import { Card, CardContent } from '~/components/ui/card';
 import { Badge } from '~/components/ui/badge';
 import { formattedPrice } from '~/lib/utils';
 import { TransformedProduct } from '../types/product.types';
+import { storeReferringCategory } from '~/features/categories/utils/referringCategoryUtils';
+import { findCategoryBySlug } from '~/features/categories/utils/categoryUtils';
+import type { Category } from '~/features/categories/types/category.types';
 
 interface ProductListProps {
   products: TransformedProduct[];
@@ -13,6 +16,7 @@ interface ProductListProps {
   total: number;
   searchParams: URLSearchParams;
   setSearchParams: SetURLSearchParams;
+  currentCategory?: Category;
 }
 
 export const ProductList: React.FC<ProductListProps> = ({
@@ -22,12 +26,30 @@ export const ProductList: React.FC<ProductListProps> = ({
   total,
   searchParams,
   setSearchParams,
+  currentCategory,
 }) => {
   const navigation = useNavigation();
   const sentinel = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
   const isLoading = navigation.state !== 'idle';
   const hasMore = products.length < total && nextCursor !== null;
+  const location = useLocation();
+
+  // Try to determine current category from path if not provided directly
+  const derivedCategory = React.useMemo(() => {
+    if (currentCategory) return currentCategory;
+
+    const pathSegments = location.pathname.split('/').filter(Boolean);
+    if (
+      pathSegments.length >= 3 &&
+      pathSegments[0] === 'products' &&
+      pathSegments[1] === 'category'
+    ) {
+      const categorySlug = pathSegments[pathSegments.length - 1];
+      return findCategoryBySlug(categorySlug);
+    }
+    return null;
+  }, [currentCategory, location.pathname]);
 
   // Reset loading state when navigation completes
   useEffect(() => {
@@ -93,6 +115,18 @@ export const ProductList: React.FC<ProductListProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [loadMore, hasMore]);
 
+  // Handle storing referring category
+  const handleStoreCategory = React.useCallback(() => {
+    if (derivedCategory) {
+      storeReferringCategory({
+        id: derivedCategory.id,
+        name: derivedCategory.name,
+        slug: derivedCategory.slug,
+        path: derivedCategory.path || undefined,
+      });
+    }
+  }, [derivedCategory]);
+
   if (isInitialLoad && products.length === 0) {
     return (
       <div className="text-center py-12">
@@ -110,7 +144,7 @@ export const ProductList: React.FC<ProductListProps> = ({
     <div className="flex flex-col gap-8 relative z-10">
       <div className="space-y-4">
         {products.map(product => (
-          <Link key={product.id} to={`/products/${product.id}`}>
+          <Link key={product.id} to={`/products/${product.slug}`} onClick={handleStoreCategory}>
             <Card className="hover:shadow-lg transition-shadow">
               <CardContent className="p-4">
                 <div className="flex gap-4">

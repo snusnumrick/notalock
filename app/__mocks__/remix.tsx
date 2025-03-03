@@ -12,7 +12,7 @@ export const createRemixStub = () => {
     useActionData: vi.fn(),
     useNavigation: vi.fn().mockReturnValue({ state: 'idle' }),
     useRouteError: vi.fn(),
-    useLocation: vi.fn().mockReturnValue({ pathname: '/' }),
+    useLocation: vi.fn().mockReturnValue({ pathname: '/products/test-product', search: '' }),
 
     // Fetcher API
     useFetcher: vi.fn().mockReturnValue({
@@ -27,7 +27,10 @@ export const createRemixStub = () => {
     // Navigation hooks
     useNavigate: vi.fn(),
     useSubmit: vi.fn(),
-    useMatches: vi.fn().mockReturnValue([]),
+    useMatches: vi.fn().mockReturnValue([
+      { id: 'root', data: {} },
+      { id: 'routes/products', data: {} },
+    ]),
     useParams: vi.fn().mockReturnValue({}),
 
     // UI Components
@@ -101,11 +104,23 @@ const dataRouterContext = {
 
 // Router state context with navigation and data
 const dataRouterStateContext = {
-  location: { pathname: '/', search: '', hash: '', state: null, key: 'default' },
+  location: {
+    pathname: '/products/test-product',
+    search: '',
+    hash: '',
+    state: null,
+    key: 'default',
+  },
   loaderData: {},
   actionData: null,
   errors: {},
-  matches: [],
+  matches: [
+    { id: 'root', data: {} },
+    {
+      id: 'routes/products',
+      data: { currentProduct: { name: 'Test Product', slug: 'test-product' } },
+    },
+  ],
   fetchers: new Map(),
   navigation: { state: 'idle' },
 };

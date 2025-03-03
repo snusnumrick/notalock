@@ -1,5 +1,5 @@
 import type { LoaderFunction } from '@remix-run/node';
-import { useLoaderData, useNavigation, useSearchParams } from '@remix-run/react';
+import { useLoaderData, useNavigation, useSearchParams, Link } from '@remix-run/react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { ProductGrid } from '~/features/products/components/ProductGrid';
 import { ProductList } from '~/features/products/components/ProductList';
@@ -9,6 +9,7 @@ import { ProductView, TransformedProduct } from '~/features/products/types/produ
 import type { CustomerFilterOptions } from '~/features/products/components/ProductFilter';
 import { productsLoader } from '~/features/products/api/loaders';
 import { useMediaQuery } from '~/hooks/useMediaQuery';
+import { ChevronRight } from 'lucide-react';
 
 export const loader: LoaderFunction = async ({ request, params, context }) => {
   return productsLoader({ request, params, context });
@@ -21,8 +22,10 @@ export default function Products() {
     nextCursor: string | null;
     initialLoad: boolean;
     filters: CustomerFilterOptions;
-    categories: Array<{ id: string; name: string }>;
+    categories: Array<{ id: string; name: string; slug: string }>;
   }>();
+
+  // console.log('Products page loaded with categories:', categories);
 
   const navigation = useNavigation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -129,18 +132,25 @@ export default function Products() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 relative">
+      <div className="container mx-auto px-4 py-2 relative">
         <div className="flex flex-col gap-6">
-          <div className="sticky top-20 z-30 bg-white py-4 w-full shadow-sm border-b">
+          <div className="sticky top-28 z-30 bg-white py-4 w-full shadow-sm border-b">
             {isMobile ? (
               <div className="flex flex-col gap-4">
+                <div className="flex items-baseline flex-wrap gap-2">
+                  <Link
+                    to="/"
+                    className="text-gray-500 text-sm hover:text-blue-600 transition-colors duration-200"
+                  >
+                    Home
+                  </Link>
+                  <ChevronRight className="h-3 w-3 text-gray-400" />
+                  <h1 className="text-2xl font-bold">Products</h1>
+                </div>
                 <div className="flex justify-between items-center">
-                  <div className="space-y-1">
-                    <h1 className="text-2xl font-bold">Products</h1>
-                    <p className="text-sm text-gray-500">
-                      Showing {allProducts.length} of {productTotal.current} products
-                    </p>
-                  </div>
+                  <p className="text-sm text-gray-500">
+                    Showing {allProducts.length} of {productTotal.current} products
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <ProductFilter
@@ -152,26 +162,35 @@ export default function Products() {
                   <ViewToggle
                     view={view}
                     onViewChange={setView}
-                    className="fixed top-32 right-4 z-[100]"
+                    className="fixed top-40 right-4 z-[100]"
                   />
                 </div>
               </div>
             ) : (
-              <div className="flex justify-between items-center">
-                <div className="space-y-1">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-baseline flex-wrap gap-2">
+                  <Link
+                    to="/"
+                    className="text-gray-500 text-sm hover:text-blue-600 transition-colors duration-200"
+                  >
+                    Home
+                  </Link>
+                  <ChevronRight className="h-3 w-3 text-gray-400" />
                   <h1 className="text-2xl font-bold">Products</h1>
+                </div>
+                <div className="flex justify-between items-center">
                   <p className="text-sm text-gray-500">
                     Showing {allProducts.length} of {productTotal.current} products
                   </p>
+                  <ViewToggle view={view} onViewChange={setView} />
                 </div>
-                <ViewToggle view={view} onViewChange={setView} />
               </div>
             )}
           </div>
 
           <div className="flex flex-col md:flex-row gap-6 relative z-10">
             {!isMobile && (
-              <aside className="md:w-64 shrink-0 md:sticky md:top-32 md:h-[calc(100vh-8rem)] md:overflow-y-auto">
+              <aside className="md:w-64 shrink-0 md:sticky md:top-40 md:h-[calc(100vh-10rem)] md:overflow-y-auto">
                 <ProductFilter
                   onFilterChange={handleFilterChange}
                   defaultFilters={filters}

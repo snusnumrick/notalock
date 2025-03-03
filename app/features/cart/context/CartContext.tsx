@@ -60,7 +60,7 @@ export function CartProvider({
     if (isInitialized || typeof window === 'undefined') return;
 
     try {
-      console.log('CartContext - Initializing cart state');
+      // console.log('CartContext - Initializing cart state');
       const savedCart = localStorage.getItem(CART_STORAGE_KEY);
 
       if (savedCart) {
@@ -103,9 +103,11 @@ export function CartProvider({
   }, [initialCartItems, isInitialized]);
 
   // For debugging
+  /*
   useEffect(() => {
     console.log('CartContext - cartItems state updated:', cartItems);
   }, [cartItems]);
+*/
 
   // Calculate cart summary
   const summary: CartSummary = cartItems.reduce(
@@ -203,6 +205,8 @@ export function CartProvider({
               price,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
+              // Note: We don't have product details yet for optimistic updates
+              // They will be filled when the server responds or page reloads
             };
             return [...prevItems, newItem];
           }

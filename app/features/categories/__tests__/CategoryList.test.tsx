@@ -10,20 +10,16 @@ describe('CategoryList', () => {
       name: 'Test Category',
       slug: 'test-category',
       description: 'Test Description',
-      sort_order: 0,
-      is_visible: true,
-      created_at: '2025-02-08T00:00:00Z',
-      updated_at: '2025-02-08T00:00:00Z',
+      sortOrder: 0,
+      isVisible: true,
     },
     {
       id: '2',
       name: 'Another Category',
       slug: 'another-category',
       description: 'Another Description',
-      sort_order: 1,
-      is_visible: false,
-      created_at: '2025-02-08T00:00:00Z',
-      updated_at: '2025-02-08T00:00:00Z',
+      sortOrder: 1,
+      isVisible: false,
     },
   ];
 
@@ -130,7 +126,7 @@ describe('CategoryList', () => {
   });
 
   it('maintains sort order of categories', () => {
-    const sortedCategories = [...mockCategories].sort((a, b) => a.sort_order - b.sort_order);
+    const sortedCategories = [...mockCategories].sort((a, b) => a.sortOrder - b.sortOrder);
 
     render(
       <CategoryList

@@ -1,16 +1,21 @@
 import { getSupabase } from '~/lib/supabase';
-import type { Category } from '~/features/products/types/product.types.ts';
+// import type { ProductCategory } from '~/features/products/types/product.types.ts';
+import { Category } from '~/features/categories/types/category.types';
 
 interface GetCategoriesOptions {
   activeOnly?: boolean;
   parentId?: string | null;
   includeChildren?: boolean;
+  depth?: number;
+  maxDepth?: number;
 }
 
 export async function getCategories({
   activeOnly = false,
   parentId = null,
   includeChildren = false,
+  depth = 0,
+  maxDepth = 5,
 }: GetCategoriesOptions = {}): Promise<Category[]> {
   const supabase = getSupabase();
 
@@ -57,28 +62,29 @@ export async function getCategories({
     return [];
   }
 
-  const categories = data.map(category => ({
+  const categories: Category[] = data.map(category => ({
     id: category.id,
     name: category.name,
     slug: category.slug,
-    description: category.description,
+    description: category.description || undefined,
     parentId: category.parent_id,
     position: category.position,
     isActive: category.is_active,
     sortOrder: category.sort_order,
     isVisible: category.is_visible,
-    status: category.status,
+    status: category.status ? category.status : '',
     isHighlighted: category.is_highlighted,
     highlightPriority: category.highlight_priority,
   }));
 
-  if (includeChildren) {
-    // For each category, fetch its children
+  if (includeChildren && depth < maxDepth) {
     return await Promise.all(
       categories.map(async category => {
-        const children: Category[] = await getCategories({
+        const children = await getCategories({
           parentId: category.id,
           includeChildren: true,
+          depth: depth + 1,
+          maxDepth,
         });
         return { ...category, children };
       })

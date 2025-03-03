@@ -5,6 +5,23 @@ interface CategoryNode extends Category {
   children: CategoryNode[];
 }
 
+// Define types for database fields with snake_case naming
+interface DbCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  parent_id?: string | null;
+  position?: number;
+  is_active?: boolean;
+  sort_order?: number;
+  is_visible?: boolean;
+  status?: string;
+  is_highlighted?: boolean;
+  highlight_priority?: number;
+  children?: DbCategory[];
+}
+
 export class CategoryService {
   static instance: CategoryService;
 
@@ -37,7 +54,8 @@ export class CategoryService {
       throw new Error('Failed to load categories');
     }
 
-    return data;
+    // Map database snake_case to application camelCase
+    return data ? data.map(cat => this.mapDbToCategory(cat)) : [];
   }
 
   async fetchHighlightedCategories(): Promise<Category[]> {
@@ -51,7 +69,8 @@ export class CategoryService {
       throw new Error('Failed to load highlighted categories');
     }
 
-    return data;
+    // Map database snake_case to application camelCase
+    return data ? data.map(cat => this.mapDbToCategory(cat)) : [];
   }
 
   async createCategory(data: CategoryFormData): Promise<Category> {
@@ -61,11 +80,11 @@ export class CategoryService {
         name: data.name,
         slug: data.slug || this.generateSlug(data.name),
         description: data.description,
-        parent_id: data.parent_id || null,
-        sort_order: data.sort_order || 0,
-        is_visible: data.is_visible ?? true,
-        is_highlighted: data.is_highlighted ?? false,
-        highlight_priority: data.highlight_priority ?? 0,
+        parent_id: data.parentId || null,
+        sort_order: data.sortOrder || 0,
+        is_visible: data.isVisible ?? true,
+        is_highlighted: data.isHighlighted,
+        highlight_priority: data.highlightPriority,
       })
       .select()
       .single();
@@ -74,15 +93,26 @@ export class CategoryService {
       throw new Error('Create failed');
     }
 
-    return category;
+    return this.mapDbToCategory(category);
   }
 
   async updateCategory(id: string, data: Partial<CategoryFormData>): Promise<Category> {
-    const updateData = {
-      ...data,
-      slug: data.name ? this.generateSlug(data.name) : data.slug,
-      parent_id: data.parent_id || null,
-    };
+    const updateData: Record<string, unknown> = {};
+
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.parentId !== undefined) updateData.parent_id = data.parentId;
+    if (data.sortOrder !== undefined) updateData.sort_order = data.sortOrder;
+    if (data.isVisible !== undefined) updateData.is_visible = data.isVisible;
+    if (data.isHighlighted !== undefined) updateData.is_highlighted = data.isHighlighted;
+    if (data.highlightPriority !== undefined)
+      updateData.highlight_priority = data.highlightPriority;
+
+    if (data.name) {
+      updateData.slug = this.generateSlug(data.name);
+    }
+
+    updateData.updated_at = new Date().toISOString();
 
     const { data: category, error } = await this.client
       .from('categories')
@@ -95,7 +125,7 @@ export class CategoryService {
       throw new Error('Update failed');
     }
 
-    return category;
+    return this.mapDbToCategory(category);
   }
 
   async deleteCategory(id: string): Promise<void> {
@@ -171,8 +201,8 @@ export class CategoryService {
     // Second pass: build tree
     categories.forEach(category => {
       const node = categoryMap.get(category.id)!;
-      if (category.parent_id && categoryMap.has(category.parent_id)) {
-        categoryMap.get(category.parent_id)!.children.push(node);
+      if (category.parentId && categoryMap.has(category.parentId)) {
+        categoryMap.get(category.parentId)!.children.push(node);
       } else {
         roots.push(node);
       }
@@ -186,6 +216,27 @@ export class CategoryService {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
+  }
+
+  // Convert database snake_case to model camelCase
+  private mapDbToCategory(dbCat: DbCategory): Category {
+    return {
+      id: dbCat.id,
+      name: dbCat.name,
+      slug: dbCat.slug,
+      description: dbCat.description,
+      parentId: dbCat.parent_id,
+      position: dbCat.position ?? 0, // Provide default values for required fields
+      isActive: dbCat.is_active ?? true,
+      sortOrder: dbCat.sort_order ?? 0,
+      isVisible: dbCat.is_visible ?? true,
+      status: dbCat.status ?? '',
+      isHighlighted: dbCat.is_highlighted ?? false,
+      highlightPriority: dbCat.highlight_priority ?? 0,
+      children: Array.isArray(dbCat.children)
+        ? dbCat.children.map(c => this.mapDbToCategory(c))
+        : undefined,
+    };
   }
 }
 

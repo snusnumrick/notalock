@@ -43,7 +43,7 @@ export function CategoryHighlightActions({
     try {
       // Update priorities sequentially
       for (const category of selectedCategories) {
-        const newPriority = Math.max(0, (category.highlight_priority || 0) + adjustment);
+        const newPriority = Math.max(0, (category.highlightPriority || 0) + adjustment);
         await onUpdatePriority(category.id, newPriority);
       }
     } catch (error) {
@@ -53,9 +53,9 @@ export function CategoryHighlightActions({
     }
   };
 
-  const anyHighlighted = selectedCategories.some(cat => cat.is_highlighted);
+  const anyHighlighted = selectedCategories.some(cat => cat.isHighlighted);
   const allHighlighted =
-    selectedCategories.length > 0 && selectedCategories.every(cat => cat.is_highlighted);
+    selectedCategories.length > 0 && selectedCategories.every(cat => cat.isHighlighted);
 
   return (
     <div className="flex gap-2">

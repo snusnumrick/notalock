@@ -36,6 +36,7 @@
     - Mock each level of the chain properly (e.g., from -> select -> order -> eq)
     - Be explicit about return values at each chain level
     - Use mockReturnThis() for method chaining and mockReturnValue() for final values
+    - When mocking React Router components like Link, include all possible props (className, prefetch, etc.)
 
 2. Supabase Query Mocking
    ```typescript
@@ -124,6 +125,8 @@
     - **Use Flexible Text Matching**: Prefer regex or custom matchers over exact text matching
     - **Favor Semantic HTML**: Use proper semantic elements and ARIA roles for better accessibility
     - **Test Behavior, Not Implementation**: Focus on user-facing functionality, not internal details
+    - **Account for Default Values**: Make sure expected values in tests match any default values your code applies
+    - **Mock All Required Props**: When mocking components like Link, include all props that might be used
 
 4. Detailed Examples of Testing Patterns
 
@@ -263,6 +266,23 @@ describe('Component Interactions', () => {
     });
   });
 
+  it('handles component with default value transformations', async () => {
+    // Make sure expected values in tests match any default values that your component applies
+    // For example, if your code provides default values for nulls or undefined:
+    const mockData = {
+      id: '1',
+      name: 'Test Item',
+      // Include the expected default values that will be applied
+      position: 0,           // Default for undefined
+      isActive: true,        // Default for undefined
+      sortOrder: 0,          // Default for undefined
+      status: '',            // Default for undefined
+    };
+    
+    // Then test against these expected values
+    expect(result).toEqual(mockData);
+  });
+
   it('properly cleans up subscriptions', () => {
     const unsubscribe = vi.fn();
     mockSupabaseClient.auth.onAuthStateChange.mockReturnValue({
@@ -386,6 +406,47 @@ Key points for testing singletons:
 - Verify both instance creation and reuse
 - Avoid clearing mocks too early
 
+## Testing Data Transformation
+
+```typescript
+it('correctly transforms database fields to frontend model', () => {
+  // Define the database model with snake_case fields
+  const mockDbData = {
+    id: '1',
+    name: 'Test Category',
+    is_active: true,
+    is_highlighted: true,
+    highlight_priority: 5
+  };
+  
+  // If the model applies default values, make sure your expected result includes them
+  const expectedResult = {
+    id: '1',
+    name: 'Test Category',
+    isActive: true,           // Transformed from is_active
+    isHighlighted: true,      // Transformed from is_highlighted
+    highlightPriority: 5,     // Transformed from highlight_priority
+    description: undefined,   // Undefined field
+    position: 0,              // Default value for undefined
+    sortOrder: 0,             // Default value for undefined
+    status: '',               // Default empty string 
+    isVisible: true           // Default boolean value
+  };
+  
+  // Test the transformation function
+  const result = service.transformData(mockDbData);
+  expect(result).toEqual(expectedResult);
+});
+```
+
+When testing data transformations, especially between database and frontend models:
+
+1. **Know Your Defaults**: Be aware of default values that your service might apply to undefined or null fields
+2. **Test Complete Objects**: Compare the entire transformed object, not just the fields you're interested in
+3. **Document Default Values**: Add comments in tests to indicate which fields have default values
+4. **Snake_case to camelCase**: Ensure all field name transformations are tested
+5. **Run Console Diffs**: If a test fails with object comparison, study the diff carefully to identify default value issues
+
 ## Asynchronous Testing Example
 ```typescript
 // Bad: Multiple assertions in waitFor
@@ -442,7 +503,7 @@ Currently, we test Remix components by mocking the necessary Remix imports direc
 ```typescript
 // Mock the Link component from Remix
 vi.mock('@remix-run/react', () => ({
-  Link: ({ to, children, className }) => (
+  Link: ({ to, children, className, prefetch }) => (
     <a href={to} className={className}>
       {children}
     </a>
@@ -450,6 +511,10 @@ vi.mock('@remix-run/react', () => ({
   // Mock other Remix components/hooks as needed
   useLoaderData: vi.fn(),
   useActionData: vi.fn(),
+  useMatches: vi.fn().mockReturnValue([
+    { id: 'root', data: {} },
+    { id: 'routes/products', data: {} }
+  ]),
   Form: ({ children, method, action, onSubmit }) => (
     <form method={method} action={action} onSubmit={onSubmit}>
       {children}

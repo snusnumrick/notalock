@@ -1,9 +1,8 @@
 import type { LoaderFunction, MetaFunction } from '@remix-run/node';
-import { json } from '@remix-run/node';
 import { useLoaderData, Link } from '@remix-run/react';
-import { getCategoryService } from '~/features/categories/api/categoryService.server';
 import type { Category } from '~/features/categories/types/category.types';
 import { Suspense } from 'react';
+import { categoryLoader } from '~/features/categories/api/loaders';
 
 export const meta: MetaFunction = () => {
   return [
@@ -19,17 +18,8 @@ interface LoaderData {
   categories: Category[];
 }
 
-export const loader: LoaderFunction = async ({ request }) => {
-  const response = new Response();
-  const categoryService = getCategoryService(request, response);
-
-  const categories = await categoryService.fetchCategories({
-    isVisible: true,
-  });
-
-  return json<LoaderData>({
-    categories,
-  });
+export const loader: LoaderFunction = async ({ request, params, context }) => {
+  return categoryLoader({ request, params, context });
 };
 
 export default function CategoriesPage() {

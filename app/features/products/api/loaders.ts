@@ -3,6 +3,8 @@ import { getProducts } from './products.server';
 import type { CustomerFilterOptions } from '../components/ProductFilter';
 import { getCategories } from '~/features/categories/api/categories.server';
 import type { TransformedProduct } from '~/features/products/types/product.types';
+import { initializeCategories } from '~/data/categories';
+import { Category } from '~/features/categories/types/category.types';
 
 export interface ProductLoaderData {
   products: TransformedProduct[];
@@ -16,7 +18,7 @@ export interface ProductLoaderData {
     categoryId?: string;
     inStockOnly?: boolean;
   };
-  categories: Array<{ id: string; name: string }>;
+  categories: Array<{ id: string; name: string; slug: string }>;
 }
 
 export async function productsLoader({ request }: LoaderFunctionArgs): Promise<ProductLoaderData> {
@@ -41,7 +43,7 @@ export async function productsLoader({ request }: LoaderFunctionArgs): Promise<P
         ? undefined
         : parseFloat(url.searchParams.get('maxPrice')!)
       : undefined,
-    categoryId: url.searchParams.get('categoryId') || url.searchParams.get('category') || undefined,
+    categoryId: url.searchParams.get('categoryId') || undefined,
     inStockOnly: url.searchParams.get('inStockOnly') === 'true',
     sortOrder: sortOrder || undefined,
   };
@@ -61,15 +63,19 @@ export async function productsLoader({ request }: LoaderFunctionArgs): Promise<P
 
   const { products, total, nextCursor } = productsData;
 
+  // Initialize categories for client-side usage
+  initializeCategories(categories as Category[]);
+
   return {
     products,
     total,
     nextCursor,
     initialLoad: !cursor,
     filters,
-    categories: categories.map((cat: { id: string; name: string }) => ({
+    categories: categories.map((cat: Category) => ({
       id: cat.id,
       name: cat.name,
+      slug: cat.slug,
     })),
   };
 }

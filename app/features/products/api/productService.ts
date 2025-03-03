@@ -63,6 +63,7 @@ export class ProductService {
 
     const productData = {
       name: formData.name,
+      slug: formData.slug || undefined, // Let DB trigger generate if not provided
       sku: formData.sku,
       description: formData.description,
       retail_price: parseFloat(formData.retail_price),
@@ -127,6 +128,7 @@ export class ProductService {
 
     const productData = {
       name: formData.name,
+      slug: formData.slug,
       sku: formData.sku,
       description: formData.description,
       retail_price: parseFloat(formData.retail_price),

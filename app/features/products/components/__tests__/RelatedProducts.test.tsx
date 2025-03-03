@@ -18,24 +18,28 @@ describe('RelatedProducts Component', () => {
     {
       id: 'prod-1',
       name: 'Related Product 1',
+      slug: 'prod-1',
       retail_price: 99.99,
       thumbnail_url: '/thumbnail1.jpg',
     },
     {
       id: 'prod-2',
       name: 'Related Product 2',
+      slug: 'prod-2',
       retail_price: 149.99,
       thumbnail_url: '/thumbnail2.jpg',
     },
     {
       id: 'prod-3',
       name: 'Related Product 3',
+      slug: 'prod-3',
       retail_price: 79.99,
       thumbnail_url: null,
     },
     {
       id: 'prod-4',
       name: 'Related Product 4',
+      slug: 'prod-4',
       retail_price: null,
       thumbnail_url: '/thumbnail4.jpg',
     },

@@ -94,7 +94,7 @@ export default function Index() {
                           About Us
                         </Link>
                       </div>
-                      <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm text-gray-600">
+                      {/*<div className="mt-12 flex flex-wrap justify-center gap-8 text-sm text-gray-600">
                         <div className="flex items-center">
                           <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
                             <span className="text-blue-600">✓</span>
@@ -113,7 +113,7 @@ export default function Index() {
                           </span>
                           10-Year Warranty
                         </div>
-                      </div>
+                      </div>*/}
                     </div>
                   </div>
                 </div>

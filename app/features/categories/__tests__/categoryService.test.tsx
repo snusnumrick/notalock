@@ -37,21 +37,38 @@ describe('CategoryService', () => {
     });
 
     it('fetches highlighted categories', async () => {
-      const mockResponse = {
-        data: [{ id: 1, name: 'Category 1', is_highlighted: true }],
-        error: null,
-      };
+      const mockDBData = [{ id: '1', name: 'Category 1', is_highlighted: true }];
+
+      // Expected camelCase result
+      const expectedResult = [
+        {
+          id: '1',
+          name: 'Category 1',
+          isHighlighted: true,
+          children: undefined,
+          description: undefined,
+          highlightPriority: 0,
+          isActive: true,
+          isVisible: true,
+          parentId: undefined,
+          position: 0,
+          slug: undefined,
+          sortOrder: 0,
+          status: '',
+        },
+      ];
+
       mockClient.from = () =>
         ({
           select: () => ({
             eq: () => ({
-              order: () => Promise.resolve(mockResponse),
+              order: () => Promise.resolve({ data: mockDBData, error: null }),
             }),
           }),
         }) as any;
 
       const result = await categoryService.fetchHighlightedCategories();
-      expect(result).toEqual(mockResponse.data);
+      expect(result).toEqual(expectedResult);
     });
 
     it('updates highlight status for multiple categories', async () => {
@@ -81,22 +98,40 @@ describe('CategoryService', () => {
     });
 
     it('creates category with highlight fields', async () => {
-      const mockResponse = { data: { id: 1, name: 'New Category' }, error: null };
+      const mockDBData = { id: '1', name: 'New Category' };
+
+      // Expected transformed result
+      const expectedResult = {
+        id: '1',
+        name: 'New Category',
+        children: undefined,
+        description: undefined,
+        highlightPriority: 0,
+        isActive: true,
+        isHighlighted: false,
+        isVisible: true,
+        parentId: undefined,
+        position: 0,
+        slug: undefined,
+        sortOrder: 0,
+        status: '',
+      };
+
       mockClient.from = () =>
         ({
           insert: () => ({
             select: () => ({
-              single: () => Promise.resolve(mockResponse),
+              single: () => Promise.resolve({ data: mockDBData, error: null }),
             }),
           }),
         }) as any;
 
       const result = await categoryService.createCategory({
         name: 'New Category',
-        is_highlighted: true,
-        highlight_priority: 1,
+        isHighlighted: true,
+        highlightPriority: 1,
       });
-      expect(result).toEqual(mockResponse.data);
+      expect(result).toEqual(expectedResult);
     });
 
     it('handles errors when fetching highlighted categories', async () => {

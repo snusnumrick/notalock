@@ -12,31 +12,31 @@ const mockCategories: Partial<Category>[] = [
   {
     id: '1',
     name: 'Category 1',
-    is_highlighted: false,
-    is_visible: true,
+    isHighlighted: false,
+    isVisible: false, // Set to false to make it appear as (Hidden)
     description: 'Test Category 1',
-    sort_order: 0,
-    highlight_priority: 0,
+    sortOrder: 0,
+    highlightPriority: 0,
   },
   {
     id: '2',
     name: 'Category 2',
-    is_highlighted: false,
-    is_visible: true,
+    isHighlighted: false,
+    isVisible: true,
     description: 'Test Category 2',
-    sort_order: 1,
-    highlight_priority: 0,
+    sortOrder: 1,
+    highlightPriority: 0,
   },
 ] as Category[];
 
 const mockHighlightedCategory: Partial<Category> = {
   id: '1',
   name: 'Category 1',
-  is_highlighted: true,
-  highlight_priority: 1,
-  is_visible: true,
+  isHighlighted: true,
+  highlightPriority: 1,
+  isVisible: true,
   description: 'Test Category',
-  sort_order: 0,
+  sortOrder: 0,
 } as Category;
 
 // Mock Supabase client

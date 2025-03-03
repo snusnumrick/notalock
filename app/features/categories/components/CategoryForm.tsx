@@ -27,11 +27,11 @@ const categoryFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   slug: z.string().optional(),
   description: z.string().optional(),
-  parent_id: z.string().optional(),
-  sort_order: z.number().optional(),
-  is_visible: z.boolean(),
-  is_highlighted: z.boolean(),
-  highlight_priority: z.number().min(0, 'Priority must be non-negative'),
+  parentId: z.string().optional(),
+  sortOrder: z.number().optional(),
+  isVisible: z.boolean(),
+  isHighlighted: z.boolean(),
+  highlightPriority: z.number().min(0, 'Priority must be non-negative'),
 });
 
 interface CategoryFormProps {
@@ -45,11 +45,11 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
     name: initialData?.name ?? '',
     slug: initialData?.slug ?? '',
     description: initialData?.description ?? '',
-    parent_id: initialData?.parent_id ?? undefined,
-    sort_order: initialData?.sort_order ?? 0,
-    is_visible: initialData?.is_visible ?? true,
-    is_highlighted: initialData?.is_highlighted ?? false,
-    highlight_priority: initialData?.highlight_priority ?? 0,
+    parentId: initialData?.parentId ?? undefined,
+    sortOrder: initialData?.sortOrder ?? 0,
+    isVisible: initialData?.isVisible ?? true,
+    isHighlighted: initialData?.isHighlighted ?? false,
+    highlightPriority: initialData?.highlightPriority ?? 0,
   };
 
   const form = useForm<CategoryFormData>({
@@ -63,11 +63,11 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
         name: data.name,
         slug: data.slug || '',
         description: data.description || '',
-        is_visible: data.is_visible,
-        is_highlighted: data.is_highlighted,
-        highlight_priority: data.highlight_priority ?? 0,
-        parent_id: data.parent_id || null,
-        sort_order: data.sort_order ?? 0,
+        isVisible: data.isVisible,
+        isHighlighted: data.isHighlighted,
+        highlightPriority: data.highlightPriority ?? 0,
+        parentId: data.parentId || null,
+        sortOrder: data.sortOrder ?? 0,
       };
 
       await onSubmit(formattedData);
@@ -80,7 +80,7 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
   const submitButtonText = initialData?.id ? 'Update Category' : 'Create Category';
 
   // Watch is_highlighted to conditionally show priority field
-  const isHighlighted = form.watch('is_highlighted');
+  const isHighlighted = form.watch('isHighlighted');
 
   return (
     <Form {...form}>
@@ -134,7 +134,7 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
         {categories && (
           <FormField
             control={form.control}
-            name="parent_id"
+            name="parentId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Parent Category</FormLabel>
@@ -162,7 +162,7 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
         <div className="space-y-4">
           <FormField
             control={form.control}
-            name="is_visible"
+            name="isVisible"
             render={({ field }) => (
               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                 <div className="space-y-0.5">
@@ -177,7 +177,7 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
 
           <FormField
             control={form.control}
-            name="is_highlighted"
+            name="isHighlighted"
             render={({ field }) => (
               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                 <div className="space-y-0.5">
@@ -196,7 +196,7 @@ export function CategoryForm({ initialData, onSubmit, categories }: CategoryForm
           {isHighlighted && (
             <FormField
               control={form.control}
-              name="highlight_priority"
+              name="highlightPriority"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Display Priority</FormLabel>

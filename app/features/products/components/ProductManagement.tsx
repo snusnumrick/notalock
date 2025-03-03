@@ -316,6 +316,7 @@ export function ProductManagement({
             initialData: {
               id: editingProduct.id,
               name: editingProduct.name,
+              slug: editingProduct.slug,
               sku: editingProduct.sku,
               description: editingProduct.description || '',
               retail_price: editingProduct.retail_price?.toString() ?? '0',

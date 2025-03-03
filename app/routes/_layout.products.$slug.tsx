@@ -20,6 +20,7 @@ import type {
 } from '~/features/products/types/product.types';
 import ProductGallery from '~/features/products/components/ProductGallery';
 import { ProductInfo } from '~/features/products/components/ProductInfo';
+import CategoryBreadcrumbs from '~/features/categories/components/Breadcrumbs/CategoryBreadcrumbs';
 import { ProductVariantSelector } from '~/features/products/components/ProductVariantSelector';
 import { RelatedProducts } from '~/features/products/components/RelatedProducts';
 import { generateProductMeta } from '~/features/products/components/ProductSEO';
@@ -47,7 +48,7 @@ export const loader = async ({
         variants:product_variants(*)
       `
       )
-      .eq('id', params.id)
+      .eq('slug', params.slug)
       .order('sort_order', { referencedTable: 'product_images' })
       .single();
 
@@ -58,8 +59,8 @@ export const loader = async ({
     // Fetch related products (same category or by manufacturer)
     const { data: relatedProducts = [] } = await supabase
       .from('products')
-      .select('id, name, retail_price, thumbnail_url')
-      .neq('id', params.id) // Exclude current product
+      .select('id, name, slug, retail_price, thumbnail_url')
+      .neq('id', product.id) // Exclude current product
       .eq('category_id', product.category_id)
       .limit(4);
 
@@ -67,6 +68,10 @@ export const loader = async ({
       {
         product,
         relatedProducts: relatedProducts || [],
+        currentProduct: {
+          name: product.name,
+          slug: product.slug,
+        },
       },
       {
         headers: response.headers,
@@ -136,23 +141,7 @@ export default function ProductPage() {
   return (
     <PageLayout>
       <div className="bg-white rounded-lg shadow">
-        <nav className="p-4 text-sm text-gray-500" aria-label="Breadcrumb">
-          <ol className="flex items-center space-x-2">
-            <li>
-              <Link to="/" className="hover:text-blue-600">
-                Home
-              </Link>
-            </li>
-            <li>/</li>
-            <li>
-              <Link to="/products" className="hover:text-blue-600">
-                Products
-              </Link>
-            </li>
-            <li>/</li>
-            <li className="text-gray-900 font-medium truncate">{product.name}</li>
-          </ol>
-        </nav>
+        <CategoryBreadcrumbs className="p-4" />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
           <div className="w-full">

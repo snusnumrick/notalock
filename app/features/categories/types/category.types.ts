@@ -3,26 +3,25 @@ export interface Category {
   name: string;
   slug: string;
   description?: string;
-  parent_id?: string | null;
+  parentId?: string | null;
   position: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  sort_order: number;
-  is_visible: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  isVisible: boolean;
   status: string;
-  is_highlighted: boolean;
-  highlight_priority: number;
+  isHighlighted: boolean;
+  highlightPriority: number;
   children?: Category[];
+  path?: string; // Full path for nested categories, used in breadcrumbs
 }
 
 export interface CategoryFormData {
   name: string;
   slug?: string;
   description?: string;
-  parent_id?: string | null;
-  sort_order: number;
-  is_visible: boolean;
-  is_highlighted: boolean;
-  highlight_priority: number;
+  parentId?: string | null;
+  sortOrder: number;
+  isVisible: boolean;
+  isHighlighted: boolean;
+  highlightPriority: number;
 }

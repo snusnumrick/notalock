@@ -12,7 +12,7 @@ interface ProductCardProps {
 
 const ProductCardComponent = React.memo(({ product, index }: ProductCardProps) => {
   return (
-    <Link to={`/products/${product.id}`} prefetch="intent" className="block">
+    <Link to={`/products/${product.slug}`} prefetch="intent" className="block">
       <Card className="h-full hover:shadow-lg transition-shadow">
         <CardHeader className="p-0">
           <div className="aspect-square w-full relative overflow-hidden rounded-t-lg">

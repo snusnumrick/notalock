@@ -79,27 +79,21 @@ describe('CategoryService', () => {
     });
 
     it('should handle category tree building correctly', async () => {
-      const mockCategories = [
-        { id: '1', name: 'Parent', parent_id: null },
-        { id: '2', name: 'Child', parent_id: '1' },
-      ];
+      // Here we need to mock DB-style data (snake_case) but the function will convert to camelCase
 
-      const mockSelect = vi.fn().mockReturnValue({
-        order: vi.fn().mockReturnValue({
-          data: mockCategories,
-          error: null,
-        }),
-      });
-
-      mockSupabase.from.mockReturnValue({
-        select: mockSelect,
-      });
+      // Mock service.fetchCategories to return the right format
+      vi.spyOn(categoryService, 'fetchCategories').mockResolvedValue([
+        { id: '1', name: 'Parent', parentId: null, children: [] },
+        { id: '2', name: 'Child', parentId: '1', children: [] },
+      ] as any);
 
       const tree = await categoryService.fetchCategoryTree();
 
+      // Now it should have only 1 root node with a child
       expect(tree).toHaveLength(1);
-      expect(tree[0].children).toHaveLength(1);
-      expect(tree[0].children[0].name).toBe('Child');
+      expect(tree[0]?.children).toBeDefined();
+      expect(tree[0]?.children?.length).toBe(1);
+      expect(tree[0]?.children?.[0]?.name).toBe('Child');
     });
 
     it('should validate highlight priority', async () => {

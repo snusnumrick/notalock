@@ -1,6 +1,6 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 
-export interface Category {
+export interface ProductCategory {
   id: string;
   name: string;
 }
@@ -8,6 +8,7 @@ export interface Category {
 export interface ProductSummary {
   id: string;
   name: string;
+  slug: string;
   retail_price: number | null;
   thumbnail_url: string | null;
 }
@@ -27,6 +28,7 @@ export interface ProductVariant {
 export interface Product {
   id: string;
   name: string;
+  slug: string;
   sku: string;
   description: string | null;
   retail_price: number | null;
@@ -46,6 +48,7 @@ export interface Product {
 export interface TransformedProduct {
   id: string;
   name: string;
+  slug: string;
   description: string;
   price: number;
   image_url: string;
@@ -98,6 +101,7 @@ export interface TempImage {
 export interface ProductFormData {
   id?: string;
   name: string;
+  slug?: string;
   sku: string;
   description: string;
   retail_price: string;
@@ -128,4 +132,4 @@ export type ValidationErrors = {
   [K in ValidatedFields]?: string;
 };
 
-export type FormFields = ValidatedFields | 'description' | 'is_active';
+export type FormFields = ValidatedFields | 'description' | 'is_active' | 'slug';

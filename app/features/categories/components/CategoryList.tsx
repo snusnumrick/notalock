@@ -40,17 +40,17 @@ export function CategoryList({ categories, onEdit, onDelete, onToggleActive }: C
               <TableCell>{category.description}</TableCell>
               <TableCell>
                 <Switch
-                  checked={category.is_visible}
+                  checked={category.isVisible}
                   onCheckedChange={checked => onToggleActive(category.id, checked)}
                 />
               </TableCell>
               <TableCell>
-                {category.is_highlighted ? (
+                {category.isHighlighted ? (
                   <Tooltip>
                     <TooltipTrigger>
                       <Badge variant="secondary" className="gap-1">
                         <Star className="h-3 w-3 fill-current" />
-                        <span>Priority: {category.highlight_priority}</span>
+                        <span>Priority: {category.highlightPriority}</span>
                       </Badge>
                     </TooltipTrigger>
                     <TooltipContent>

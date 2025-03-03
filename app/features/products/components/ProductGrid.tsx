@@ -4,13 +4,13 @@ import { Alert, AlertDescription } from '~/components/ui/alert';
 import { Button } from '~/components/ui/button';
 import { ReloadIcon } from '@radix-ui/react-icons';
 import { AuthApiError } from '@supabase/supabase-js';
-import { Link, useNavigation, useNavigate } from '@remix-run/react';
-import { Card, CardContent, CardFooter, CardHeader } from '~/components/ui/card';
-import { Badge } from '~/components/ui/badge';
-import { formattedPrice } from '~/lib/utils';
+import { useNavigation, useNavigate, useLocation } from '@remix-run/react';
 import type { TransformedProduct } from '../types/product.types';
 import { ProductGridSkeleton } from './ProductCardSkeleton';
 import type { SetURLSearchParams } from 'react-router-dom';
+import ProductCardWithReferrer from './ProductCardWithReferrer';
+import { findCategoryBySlug } from '~/features/categories/utils/categoryUtils';
+import type { Category } from '~/features/categories/types/category.types';
 
 interface ProductGridProps {
   products: TransformedProduct[];
@@ -19,6 +19,7 @@ interface ProductGridProps {
   total: number;
   searchParams: URLSearchParams;
   setSearchParams: SetURLSearchParams;
+  currentCategory?: Category;
 }
 
 export const ProductGrid: React.FC<ProductGridProps> = ({
@@ -28,11 +29,29 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   total,
   searchParams,
   setSearchParams,
+  currentCategory,
 }) => {
   const navigation = useNavigation();
   const sentinel = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
   const unmountedRef = useRef(false);
+  const location = useLocation();
+
+  // Try to determine current category from path if not provided directly
+  const derivedCategory = React.useMemo(() => {
+    if (currentCategory) return currentCategory;
+
+    const pathSegments = location.pathname.split('/').filter(Boolean);
+    if (
+      pathSegments.length >= 3 &&
+      pathSegments[0] === 'products' &&
+      pathSegments[1] === 'category'
+    ) {
+      const categorySlug = pathSegments[pathSegments.length - 1];
+      return findCategoryBySlug(categorySlug);
+    }
+    return null;
+  }, [currentCategory, location.pathname]);
 
   // Track unmounted state for cleanup
   useEffect(() => {
@@ -104,16 +123,6 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   const loadMore = useCallback(async () => {
     const shouldSkip = !nextCursor || loadingRef.current || !hasMore || unmountedRef.current;
 
-    /*
-    console.log('loadMore called:', {
-      nextCursor,
-      loading: loadingRef.current,
-      hasMore,
-      unmounted: unmountedRef.current,
-      shouldSkip,
-    });
-*/
-
     if (shouldSkip) {
       return;
     }
@@ -146,14 +155,6 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
       ([entry]) => {
         const shouldLoad =
           entry?.isIntersecting && !loadingRef.current && hasMore && !unmountedRef.current;
-
-        /*        console.log('IntersectionObserver update:', {
-          isIntersecting: entry?.isIntersecting,
-          loading: loadingRef.current,
-          hasMore,
-          unmounted: unmountedRef.current,
-          shouldLoad,
-        });*/
 
         if (shouldLoad) {
           void loadMore();
@@ -192,41 +193,12 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
     <div className="flex flex-col gap-8 relative z-10">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 z-0">
         {products.map((product, index) => (
-          <Link
+          <ProductCardWithReferrer
             key={`${product.id}-${index}`}
-            to={`/products/${product.id}`}
-            prefetch="intent"
-            className="block"
-          >
-            <Card className="h-full hover:shadow-lg transition-shadow">
-              <CardHeader className="p-0">
-                <div className="aspect-square w-full relative overflow-hidden rounded-t-lg">
-                  <img
-                    src={product.image_url || '/placeholder-product.png'}
-                    alt={product.name}
-                    className="object-cover w-full h-full"
-                    loading={index < 8 ? 'eager' : 'lazy'}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-lg line-clamp-1">{product.name}</h3>
-                <p className="text-sm text-gray-600 mt-1 line-clamp-2">{product.description}</p>
-                {product.categories && product.categories.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {product.categories.map(category => (
-                      <Badge key={category.id} variant="secondary">
-                        {category.name}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="p-4 pt-0">
-                <p className="font-bold text-lg">{formattedPrice(product.price)}</p>
-              </CardFooter>
-            </Card>
-          </Link>
+            product={product}
+            index={index}
+            category={derivedCategory || undefined}
+          />
         ))}
       </div>
 

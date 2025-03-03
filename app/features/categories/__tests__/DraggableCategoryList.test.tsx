@@ -8,22 +8,22 @@ const mockCategories: Category[] = [
     id: '1',
     name: 'Category 1',
     slug: 'category-1',
-    sort_order: 0,
-    is_visible: true,
+    sortOrder: 0,
+    isVisible: true,
   },
   {
     id: '2',
     name: 'Category 2',
     slug: 'category-2',
-    sort_order: 1,
-    is_visible: true,
+    sortOrder: 1,
+    isVisible: true,
   },
   {
     id: '3',
     name: 'Category 3',
     slug: 'category-3',
-    sort_order: 2,
-    is_visible: false,
+    sortOrder: 2,
+    isVisible: false,
   },
 ];
 

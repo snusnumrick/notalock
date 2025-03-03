@@ -27,7 +27,7 @@ export interface CustomerFilterOptions {
 interface ProductFilterProps {
   onFilterChange: (filters: CustomerFilterOptions) => void;
   defaultFilters?: CustomerFilterOptions;
-  categories: Array<{ id: string; name: string }>;
+  categories: Array<{ id: string; name: string; slug?: string }>;
   isMobile?: boolean;
 }
 
@@ -38,6 +38,8 @@ export default function ProductFilter({
   isMobile = false,
 }: ProductFilterProps) {
   const [searchParams] = useSearchParams();
+
+  // console.log('Navigate function available:', !!navigate);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const submitTimeoutRef = useRef<NodeJS.Timeout>();
   const minPriceRef = useRef<HTMLInputElement>(null);
@@ -47,7 +49,8 @@ export default function ProductFilter({
 
   const initialMinPrice = searchParams.get('minPrice') || defaultFilters.minPrice?.toString() || '';
   const initialMaxPrice = searchParams.get('maxPrice') || defaultFilters.maxPrice?.toString() || '';
-  const initialCategoryId = searchParams.get('categoryId') || defaultFilters.categoryId || 'all';
+  // Simple initialization to avoid hydration issues
+  const initialCategoryId = 'all';
   const initialInStockOnly =
     searchParams.get('inStockOnly') === 'true' || defaultFilters.inStockOnly || false;
   const initialSortOrder =
@@ -58,9 +61,35 @@ export default function ProductFilter({
   const [minPrice, setMinPrice] = useState(initialMinPrice);
   const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
   const [categoryId, setCategoryId] = useState(initialCategoryId);
+
+  // Update categoryId from URL on first client render and when URL changes
+  const isMounted = useRef(false);
+  useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+
+      // Set initial value from URL or props on first client render
+      const urlCategoryId = searchParams.get('categoryId');
+      const filterCategoryId = defaultFilters.categoryId;
+
+      if (urlCategoryId) {
+        setCategoryId(urlCategoryId);
+      } else if (filterCategoryId) {
+        setCategoryId(filterCategoryId);
+      }
+      return;
+    }
+
+    const urlCategoryId = searchParams.get('categoryId');
+    if (urlCategoryId && urlCategoryId !== categoryId) {
+      setCategoryId(urlCategoryId);
+    }
+  }, [searchParams, categoryId, defaultFilters.categoryId]);
   const [inStockOnly, setInStockOnly] = useState(initialInStockOnly);
   const [sortOrder, setSortOrder] = useState(initialSortOrder);
   const submit = useSubmit();
+
+  // Debug has been removed
 
   useEffect(() => {
     if (lastFocusedInput.current === 'minPrice' && minPriceRef.current) {
@@ -156,39 +185,120 @@ export default function ProductFilter({
       });
 
       preventScrollReset = false;
-    } else {
-      // Handle other filter changes
+
+      // Submit form normally for sort changes
+      submit(formData, {
+        method: 'get',
+        preventScrollReset,
+        replace: true,
+      });
+    } else if (field === 'categoryId') {
+      setCategoryId(value as string);
+
+      if (value !== 'all') {
+        // Find the selected category to get its slug
+        const selectedCategory = categories.find(cat => cat.id === value);
+        console.log('Selected category:', selectedCategory);
+        console.log('All categories:', categories);
+
+        if (selectedCategory && selectedCategory.slug) {
+          console.log('Found slug:', selectedCategory.slug);
+
+          // Instead of using navigate, use window.location.href for a hard redirect
+          // This bypasses any client-side routing interception
+          // Only run in browser environment
+          if (typeof window !== 'undefined') {
+            const baseUrl = window.location.origin;
+
+            // Build query parameters to preserve filter state
+            const queryParams = new URLSearchParams();
+
+            // Preserve other filters
+            if (minPrice) queryParams.set('minPrice', minPrice);
+            if (maxPrice) queryParams.set('maxPrice', maxPrice);
+            if (inStockOnly) queryParams.set('inStockOnly', 'true');
+            if (sortOrder) queryParams.set('sortOrder', sortOrder);
+
+            // Build the URL with query parameters
+            const queryString = queryParams.toString();
+            const newUrl = `${baseUrl}/products/category/${selectedCategory.slug}${
+              queryString ? `?${queryString}` : ''
+            }`;
+
+            console.log('Redirecting with hard navigation to:', newUrl);
+
+            // Perform hard redirect
+            window.location.href = newUrl;
+            return; // Exit early
+          }
+        } else {
+          // Fallback to the old behavior if slug is not available
+          console.log('No slug found for category, using old behavior');
+          formData.set('categoryId', value as string);
+          onFilterChange({ ...defaultFilters, categoryId: value as string });
+
+          // Preserve other parameters
+          searchParams.forEach((paramValue, key) => {
+            if (key !== 'cursor' && key !== 'categoryId') {
+              formData.set(key, paramValue);
+            }
+          });
+
+          submit(formData, {
+            method: 'get',
+            preventScrollReset,
+            replace: true,
+          });
+        }
+      } else {
+        // For 'All Categories' - redirect to /products with hard navigation
+        // Only run in browser environment
+        if (typeof window !== 'undefined') {
+          const baseUrl = window.location.origin;
+
+          // Build query parameters to preserve filter state
+          const queryParams = new URLSearchParams();
+
+          // Preserve other filters
+          if (minPrice) queryParams.set('minPrice', minPrice);
+          if (maxPrice) queryParams.set('maxPrice', maxPrice);
+          if (inStockOnly) queryParams.set('inStockOnly', 'true');
+          if (sortOrder) queryParams.set('sortOrder', sortOrder);
+
+          // Build the URL with query parameters
+          const queryString = queryParams.toString();
+          const newUrl = `${baseUrl}/products${queryString ? `?${queryString}` : ''}`;
+
+          console.log('Redirecting to all products:', newUrl);
+          window.location.href = newUrl;
+          return;
+        }
+      }
+    } else if (field === 'inStockOnly') {
+      // Handle in-stock filter changes
+      setInStockOnly(value as boolean);
+
+      // Prepare form data with all current parameters
       searchParams.forEach((paramValue, key) => {
         if (key !== 'cursor') {
           formData.set(key, paramValue);
         }
       });
 
-      if (field === 'categoryId') {
-        setCategoryId(value as string);
-        if (value !== 'all') {
-          formData.set('categoryId', value as string);
-          onFilterChange({ ...defaultFilters, categoryId: value as string });
-        } else {
-          formData.delete('categoryId');
-          onFilterChange({ ...defaultFilters, categoryId: undefined });
-        }
-      } else if (field === 'inStockOnly') {
-        setInStockOnly(value as boolean);
-        if (value) {
-          formData.set('inStockOnly', 'true');
-        } else {
-          formData.delete('inStockOnly');
-        }
-        onFilterChange({ ...defaultFilters, inStockOnly: value as boolean });
+      if (value) {
+        formData.set('inStockOnly', 'true');
+      } else {
+        formData.delete('inStockOnly');
       }
-    }
 
-    submit(formData, {
-      method: 'get',
-      preventScrollReset,
-      replace: true,
-    });
+      onFilterChange({ ...defaultFilters, inStockOnly: value as boolean });
+
+      submit(formData, {
+        method: 'get',
+        preventScrollReset,
+        replace: true,
+      });
+    }
   };
 
   useEffect(() => {
@@ -280,18 +390,27 @@ export default function ProductFilter({
         <Select
           name="categoryId"
           value={categoryId}
-          onValueChange={value => handleOtherChanges(value, 'categoryId')}
+          onValueChange={value => {
+            console.log('Category selected:', value);
+            handleOtherChanges(value, 'categoryId');
+          }}
+          defaultValue="all"
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
-            {categories.map(category => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
+            {categories.map(category => {
+              /*              console.log(
+                `Category in dropdown: ${category.name}, id: ${category.id}, slug: ${category.slug}`
+              );*/
+              return (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>

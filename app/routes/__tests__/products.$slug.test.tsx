@@ -1,11 +1,36 @@
-// app/routes/__tests__/products.$id.test.tsx
+// app/routes/__tests__/products.$slug.test.tsx
 import { screen } from '@testing-library/react';
 import { renderWithRemix } from '../../../tests/utils/render-with-remix';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import ProductPage, { loader } from '~/routes/_layout.products.$id';
+import ProductPage, { loader } from '../_layout.products.$slug';
 import type { Mock } from 'vitest';
 
-// We're using the global mock from setup.ts
+// Mock all of @remix-run/react first so Link doesn't trigger router errors
+vi.mock('@remix-run/react', async () => {
+  const actual = await vi.importActual('@remix-run/react');
+  return {
+    ...actual,
+    useLoaderData: vi.fn(),
+    useNavigation: vi.fn(),
+    useMatches: vi.fn(),
+    useLocation: vi.fn(),
+    Link: ({
+      to,
+      children,
+      className,
+    }: {
+      to: string;
+      children: React.ReactNode;
+      className?: string;
+    }) => (
+      <a href={to} className={className} data-testid="link">
+        {children}
+      </a>
+    ),
+    // Mock any other hooks that need to be used
+    useHref: vi.fn().mockReturnValue('#'),
+  };
+});
 
 // Mock environment variables
 vi.stubEnv('SUPABASE_URL', 'https://test.supabase.co');
@@ -161,6 +186,7 @@ vi.mock('~/components/common/PageLayout', () => ({
 const mockProduct = {
   id: 'product-1',
   name: 'Test Product',
+  slug: 'test-product',
   sku: 'SKU123',
   description: 'Test description',
   retail_price: 99.99,
@@ -191,34 +217,48 @@ const mockRelatedProducts = [
   {
     id: 'related-1',
     name: 'Related Product 1',
+    slug: 'related-product-1',
     retail_price: 79.99,
     thumbnail_url: '/thumb-1.jpg',
   },
   {
     id: 'related-2',
     name: 'Related Product 2',
+    slug: 'related-product-2',
     retail_price: 89.99,
     thumbnail_url: '/thumb-2.jpg',
   },
 ];
 
 // Import the modules we're using in the test file
-import { useLoaderData, useNavigation } from '@remix-run/react';
-import { createSupabaseClient } from '~/server/services/supabase.server';
+import { useLoaderData, useNavigation, useMatches, useLocation } from '@remix-run/react';
+import { createSupabaseClient } from '../../server/services/supabase.server';
 
 describe('Product Detail Page', () => {
   // Setup for component tests
   beforeEach(() => {
     vi.resetAllMocks();
 
-    // @ts-expect-error - Mock implementation
-    useLoaderData.mockReturnValue({
+    // Mock Remix hooks for testing
+    vi.mocked(useMatches).mockReturnValue([
+      { id: 'root', data: {} },
+      { id: 'routes/products', data: { currentProduct: mockProduct } },
+    ]);
+
+    vi.mocked(useLoaderData).mockReturnValue({
       product: mockProduct,
       relatedProducts: mockRelatedProducts,
     });
 
-    // @ts-expect-error - Mock implementation
-    useNavigation.mockReturnValue({ state: 'idle' });
+    vi.mocked(useNavigation).mockReturnValue({ state: 'idle' });
+
+    vi.mocked(useLocation).mockReturnValue({
+      pathname: '/products/test-product',
+      search: '',
+      hash: '',
+      state: null,
+      key: 'default',
+    });
   });
 
   it('renders the product details when data is loaded', () => {
@@ -237,8 +277,17 @@ describe('Product Detail Page', () => {
   });
 
   it('renders loading skeleton when navigation state is loading', () => {
-    // @ts-expect-error - Mock implementation
-    useNavigation.mockReturnValue({ state: 'loading' });
+    // Keep all other mocks the same, just override navigation state
+    vi.mocked(useNavigation).mockReturnValue({ state: 'loading' });
+
+    // Make sure location is still mocked
+    vi.mocked(useLocation).mockReturnValue({
+      pathname: '/products/test-product',
+      search: '',
+      hash: '',
+      state: null,
+      key: 'default',
+    });
 
     // First, render the component with loading state
     renderWithRemix(<ProductPage />);
@@ -249,6 +298,15 @@ describe('Product Detail Page', () => {
   });
 
   it('passes the correct props to child components', () => {
+    // Ensure our mocks are set up correctly
+    vi.mocked(useLocation).mockReturnValue({
+      pathname: '/products/test-product',
+      search: '',
+      hash: '',
+      state: null,
+      key: 'default',
+    });
+
     renderWithRemix(<ProductPage />);
 
     // Check gallery props
@@ -268,12 +326,12 @@ describe('Product Detail Page', () => {
 describe('Product Detail Loader', () => {
   let mockSupabase: ReturnType<typeof createSupabaseMock>;
   let mockRequest: Request;
-  let mockParams: { id: string };
+  let mockParams: { slug: string };
 
   // Setup for loader tests
   beforeEach(() => {
-    mockRequest = new Request('https://test.com/products/product-1');
-    mockParams = { id: 'product-1' };
+    mockRequest = new Request('https://test.com/products/test-product');
+    mockParams = { slug: 'test-product' };
 
     // Create mock data for Supabase responses
     const fromData = {

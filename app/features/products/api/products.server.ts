@@ -278,6 +278,7 @@ export async function getProducts({
     (product: ProductWithCategories): TransformedProduct => ({
       id: product.id,
       name: product.name,
+      slug: product.slug || product.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       description: product.description || '',
       price: product.retail_price,
       image_url: product.image_url || '',

@@ -29,6 +29,7 @@ export function ProductForm({
 }: ProductFormProps) {
   const [formData, setFormData] = useState<ProductFormData>({
     name: initialData?.name || '',
+    slug: initialData?.slug || '',
     sku: initialData?.sku || '',
     description: initialData?.description || '',
     retail_price: initialData?.retail_price?.toString() || '',
@@ -175,6 +176,24 @@ export function ProductForm({
                         : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                     }`}
                     required
+                  />
+                </div>
+
+                {/* Slug Field */}
+                <div>
+                  <label htmlFor="slug" className="text-sm font-medium">
+                    Slug (URL)
+                    <span className="text-gray-400 text-xs ml-1">
+                      (Leave empty to auto-generate)
+                    </span>
+                  </label>
+                  <input
+                    id="slug"
+                    type="text"
+                    value={formData.slug}
+                    onChange={e => handleInputChange('slug', e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm"
+                    placeholder="product-url-path"
                   />
                 </div>
 

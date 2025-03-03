@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Enhanced Breadcrumb Navigation System
+  - Implemented context-aware breadcrumbs that retain category context when navigating to products
+  - Added hybrid URL approach that maintains clean product URLs while preserving navigation context
+  - Created category-specific breadcrumb paths for products accessed from category pages
+  - Added support for nested category hierarchies in breadcrumbs
+  - Improved user experience with consistent navigation indicators
+  - Implemented local storage for persistent category context between page loads
+  - Added comprehensive test coverage for breadcrumb components
+  - Ensured SEO-friendly URL structure while enhancing navigation context
+
+### Added
 - New Arrivals Section Implementation
   - Created reusable NewArrivals component for homepage and other sections
   - Implemented dedicated New Arrivals page with expanded product list

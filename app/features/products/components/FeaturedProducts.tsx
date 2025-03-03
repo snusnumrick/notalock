@@ -9,6 +9,7 @@ import { ShoppingCart, ImageIcon } from 'lucide-react';
 interface Product {
   id: string;
   name: string;
+  slug: string;
   description: string;
   retail_price: number;
   featured: boolean;
@@ -46,6 +47,7 @@ export function FeaturedProducts({ supabaseUrl, supabaseAnonKey }: FeaturedProdu
           `
           id,
           name,
+          slug,
           description,
           retail_price,
           featured,
@@ -72,6 +74,7 @@ export function FeaturedProducts({ supabaseUrl, supabaseAnonKey }: FeaturedProdu
         return {
           id: product.id,
           name: product.name,
+          slug: product.slug || product.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
           description: product.description,
           retail_price: product.retail_price,
           featured: product.featured,
@@ -169,7 +172,7 @@ export function FeaturedProducts({ supabaseUrl, supabaseAnonKey }: FeaturedProdu
                     )}
                   </div>
                   <CardHeader className="p-4 pb-0">
-                    <Link to={`/products/${product.id}`}>
+                    <Link to={`/products/${product.slug}`}>
                       <CardTitle className="text-lg font-semibold line-clamp-2 hover:text-blue-600 transition-colors">
                         {product.name}
                       </CardTitle>
@@ -196,7 +199,7 @@ export function FeaturedProducts({ supabaseUrl, supabaseAnonKey }: FeaturedProdu
                         })}
                       </p>
                     </div>
-                    <Link to={`/products/${product.id}`}>
+                    <Link to={`/products/${product.slug}`}>
                       <Button
                         size="sm"
                         variant="outline"

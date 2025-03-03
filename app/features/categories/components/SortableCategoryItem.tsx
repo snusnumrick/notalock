@@ -63,21 +63,21 @@ export function SortableCategoryItem({
       <TableCell>{category.description}</TableCell>
       <TableCell>
         <Switch
-          checked={category.is_visible}
+          checked={category.isVisible}
           onCheckedChange={checked => onToggleActive(category.id, checked)}
         />
       </TableCell>
       <TableCell>
-        {category.is_highlighted ? (
+        {category.isHighlighted ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <Badge variant="secondary" className="inline-flex items-center gap-1">
                 <Star className="h-3 w-3 fill-primary text-primary" />
-                <span>{category.highlight_priority}</span>
+                <span>{category.highlightPriority}</span>
               </Badge>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Featured on Homepage (Priority: {category.highlight_priority})</p>
+              <p>Featured on Homepage (Priority: {category.highlightPriority})</p>
             </TooltipContent>
           </Tooltip>
         ) : (

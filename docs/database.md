@@ -10,9 +10,10 @@ The Notalock e-commerce platform uses a Supabase PostgreSQL database. This docum
 CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
     description TEXT,
     retail_price NUMERIC(10,2) NOT NULL,
-    business_price NUMERIC(10,2) NOT NULL,
+    business_price NUMERIC(10,2),
     stock INTEGER DEFAULT 0,
     sku TEXT UNIQUE,
     image_url TEXT,
@@ -21,7 +22,7 @@ CREATE TABLE products (
     has_variants BOOLEAN NOT NULL DEFAULT false,
     created_by UUID REFERENCES auth.users(id),
     updated_by UUID REFERENCES auth.users(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- Indexes
@@ -31,6 +32,7 @@ CREATE INDEX idx_products_featured ON products(featured);
 CREATE INDEX idx_products_has_variants ON products(has_variants);
 CREATE INDEX idx_products_retail_price ON products(retail_price, id);
 CREATE INDEX idx_products_name ON products(name, id);
+CREATE INDEX idx_products_slug ON products(slug);
 CREATE INDEX idx_products_created_at ON products(created_at, id);
 ```
 
@@ -39,7 +41,7 @@ CREATE INDEX idx_products_created_at ON products(created_at, id);
 CREATE TABLE product_categories (
     product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     PRIMARY KEY (product_id, category_id)
 );
 
@@ -60,7 +62,7 @@ CREATE TABLE categories (
     is_active BOOLEAN NOT NULL DEFAULT true,
     sort_order INTEGER NOT NULL DEFAULT 0,
     is_visible BOOLEAN NOT NULL DEFAULT true,
-    status VARCHAR,
+    status VARCHAR DEFAULT 'active',
     is_highlighted BOOLEAN NOT NULL DEFAULT false,
     highlight_priority INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
@@ -138,50 +140,166 @@ CREATE INDEX idx_cart_items_product_id ON cart_items(product_id);
 CREATE INDEX idx_cart_items_variant_id ON cart_items(variant_id);
 ```
 
-### orders
+### product_images
 ```sql
-CREATE TABLE orders (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES profiles(id),
-    status order_status NOT NULL DEFAULT 'pending',
-    total_amount DECIMAL(10,2) NOT NULL,
-    shipping_address JSONB NOT NULL,
-    billing_address JSONB NOT NULL,
-    shipping_method TEXT,
-    tracking_number TEXT,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### order_items
-```sql
-CREATE TABLE order_items (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
+CREATE TABLE product_images (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id UUID REFERENCES products(id),
-    quantity INTEGER NOT NULL,
-    unit_price DECIMAL(10,2) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    url TEXT NOT NULL,
+    storage_path TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    is_primary BOOLEAN DEFAULT false,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
+
+-- Indexes
+CREATE INDEX idx_product_images_product_id ON product_images(product_id);
+CREATE INDEX idx_product_images_is_primary ON product_images(is_primary);
 ```
 
 ### profiles
 ```sql
 CREATE TABLE profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id),
-    email TEXT NOT NULL UNIQUE,
-    role user_role NOT NULL DEFAULT 'customer',
-    first_name TEXT,
-    last_name TEXT,
-    company_name TEXT,
-    business_number TEXT,
-    shipping_address JSONB,
-    billing_address JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    email TEXT,
+    role user_role DEFAULT 'customer',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
+
+-- Indexes
+CREATE INDEX idx_profiles_email ON profiles(email);
+CREATE INDEX idx_profiles_role ON profiles(role);
+```
+
+### admin_permissions
+```sql
+CREATE TABLE admin_permissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id),
+    role user_role DEFAULT 'admin',
+    can_manage_products BOOLEAN NOT NULL DEFAULT false,
+    can_view_products BOOLEAN NOT NULL DEFAULT true,
+    can_manage_categories BOOLEAN NOT NULL DEFAULT false,
+    can_view_categories BOOLEAN NOT NULL DEFAULT true,
+    can_manage_orders BOOLEAN NOT NULL DEFAULT false,
+    can_view_orders BOOLEAN NOT NULL DEFAULT true,
+    can_manage_users BOOLEAN NOT NULL DEFAULT false,
+    can_view_users BOOLEAN NOT NULL DEFAULT true,
+    can_manage_all_products BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Indexes
+CREATE INDEX idx_admin_permissions_user_id ON admin_permissions(user_id);
+```
+
+### admin_audit_log
+```sql
+CREATE TABLE admin_audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id),
+    action TEXT NOT NULL,
+    details JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Indexes
+CREATE INDEX idx_admin_audit_log_user_id ON admin_audit_log(user_id);
+CREATE INDEX idx_admin_audit_log_action ON admin_audit_log(action);
+CREATE INDEX idx_admin_audit_log_created_at ON admin_audit_log(created_at);
+```
+
+### product_options
+```sql
+CREATE TABLE product_options (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- Indexes
+CREATE INDEX idx_product_options_name ON product_options(name);
+```
+
+### product_option_values
+```sql
+CREATE TABLE product_option_values (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    option_id UUID NOT NULL REFERENCES product_options(id) ON DELETE CASCADE,
+    value TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- Indexes
+CREATE INDEX idx_product_option_values_option_id ON product_option_values(option_id);
+```
+
+### product_variants
+```sql
+CREATE TABLE product_variants (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    sku TEXT,
+    retail_price NUMERIC,
+    business_price NUMERIC,
+    stock INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- Indexes
+CREATE INDEX idx_product_variants_product_id ON product_variants(product_id);
+CREATE INDEX idx_product_variants_sku ON product_variants(sku);
+```
+
+### product_variant_options
+```sql
+CREATE TABLE product_variant_options (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    variant_id UUID NOT NULL REFERENCES product_variants(id) ON DELETE CASCADE,
+    option_value_id UUID NOT NULL REFERENCES product_option_values(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- Indexes
+CREATE INDEX idx_product_variant_options_variant_id ON product_variant_options(variant_id);
+CREATE INDEX idx_product_variant_options_option_value_id ON product_variant_options(option_value_id);
+```
+
+## Views
+
+### product_with_categories
+```sql
+CREATE VIEW product_with_categories AS
+SELECT 
+    p.id,
+    p.name,
+    p.slug,
+    p.description,
+    p.retail_price,
+    p.stock,
+    p.business_price,
+    p.is_active,
+    p.created_by,
+    p.updated_by,
+    p.created_at,
+    p.featured,
+    p.sku,
+    p.image_url,
+    pc.category_id,
+    c.name AS category_name
+FROM 
+    products p
+LEFT JOIN 
+    product_categories pc ON p.id = pc.product_id
+LEFT JOIN 
+    categories c ON pc.category_id = c.id;
 ```
 
 ## Row Level Security (RLS) Policies
@@ -299,6 +417,114 @@ CREATE POLICY "Admins can view all cart items"
             SELECT 1 FROM profiles
             WHERE profiles.id = auth.uid()
             AND profiles.role = 'admin'
+        )
+    );
+```
+
+### Product Images
+```sql
+ALTER TABLE product_images ENABLE ROW LEVEL SECURITY;
+
+-- Everyone can view product images
+CREATE POLICY "Product images are viewable by everyone" 
+    ON product_images FOR SELECT
+    USING (true);
+
+-- Only admins can manage product images
+CREATE POLICY "Product images are editable by admins"
+    ON product_images FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
+        )
+    );
+```
+
+### Admin Permissions & Audit Log
+```sql
+ALTER TABLE admin_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_audit_log ENABLE ROW LEVEL SECURITY;
+
+-- Only super admins can manage admin permissions
+CREATE POLICY "Only super admins can manage admin permissions" 
+    ON admin_permissions FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role = 'admin'
+        )
+    );
+
+-- Only admins can view audit logs
+CREATE POLICY "Only admins can view audit logs" 
+    ON admin_audit_log FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role = 'admin'
+        )
+    );
+```
+
+### Product Variants System
+```sql
+ALTER TABLE product_options ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_option_values ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_variants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_variant_options ENABLE ROW LEVEL SECURITY;
+
+-- Everyone can view product variant data
+CREATE POLICY "Product variant data is viewable by everyone" 
+    ON product_options FOR SELECT USING (true);
+CREATE POLICY "Product option values are viewable by everyone" 
+    ON product_option_values FOR SELECT USING (true);
+CREATE POLICY "Product variants are viewable by everyone" 
+    ON product_variants FOR SELECT USING (true);
+CREATE POLICY "Product variant options are viewable by everyone" 
+    ON product_variant_options FOR SELECT USING (true);
+
+-- Only admins can manage product variant data
+CREATE POLICY "Product options are editable by admins"
+    ON product_options FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
+        )
+    );
+
+CREATE POLICY "Product option values are editable by admins"
+    ON product_option_values FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
+        )
+    );
+
+CREATE POLICY "Product variants are editable by admins"
+    ON product_variants FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
+        )
+    );
+
+CREATE POLICY "Product variant options are editable by admins"
+    ON product_variant_options FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM admin_permissions
+            WHERE user_id = auth.uid()
+            AND can_manage_products = true
         )
     );
 ```

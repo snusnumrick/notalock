@@ -9,8 +9,8 @@ describe('CategoryHighlightActions', () => {
 
   const mockCategory = {
     id: '1',
-    is_highlighted: true,
-    highlight_priority: 1,
+    isHighlighted: true,
+    highlightPriority: 1,
   };
 
   beforeEach(() => {

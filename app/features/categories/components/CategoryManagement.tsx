@@ -107,7 +107,7 @@ export function CategoryManagement({ categoryService }: CategoryManagementProps)
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
     try {
-      await categoryService.updateCategory(id, { is_visible: isActive });
+      await categoryService.updateCategory(id, { isVisible: isActive });
       await loadCategories();
       toast({
         title: 'Success',

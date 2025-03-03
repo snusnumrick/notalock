@@ -1,3 +1,24 @@
+// Define the database row type (snake_case)
+interface DbCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  parent_id?: string | null;
+  position?: number;
+  is_active?: boolean;
+  sort_order?: number;
+  is_visible?: boolean;
+  status?: string;
+  is_highlighted?: boolean;
+  highlight_priority?: number;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+  updated_by?: string;
+  children?: DbCategory[];
+}
+
 import { SupabaseClient } from '@supabase/supabase-js';
 import type { Session } from '@supabase/supabase-js';
 import type { Category, CategoryFormData } from '../types/category.types';
@@ -19,14 +40,20 @@ export class CategoryService {
       throw error;
     }
 
-    return data ?? [];
+    return data ? data.map(category => this.mapDbCategoryToModel(category)) : [];
   }
 
   async createCategory(formData: CategoryFormData): Promise<Category> {
     const slug = formData.slug || this.generateSlug(formData.name);
     const categoryData = {
-      ...formData,
-      slug,
+      name: formData.name,
+      slug: slug,
+      description: formData.description,
+      parent_id: formData.parentId, // Convert camelCase to snake_case for DB
+      sort_order: formData.sortOrder, // Convert camelCase to snake_case for DB
+      is_visible: formData.isVisible, // Convert camelCase to snake_case for DB
+      is_highlighted: formData.isHighlighted, // Convert camelCase to snake_case for DB
+      highlight_priority: formData.highlightPriority, // Convert camelCase to snake_case for DB
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       created_by: this.session.user.id,
@@ -42,15 +69,24 @@ export class CategoryService {
       throw error;
     }
 
-    return data;
+    return this.mapDbCategoryToModel(data);
   }
 
   async updateCategory(id: string, formData: Partial<CategoryFormData>): Promise<Category> {
-    const updateData = {
-      ...formData,
+    // Convert camelCase properties to snake_case for DB
+    const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
       updated_by: this.session.user.id,
     };
+
+    if (formData.name !== undefined) updateData.name = formData.name;
+    if (formData.description !== undefined) updateData.description = formData.description;
+    if (formData.parentId !== undefined) updateData.parent_id = formData.parentId;
+    if (formData.sortOrder !== undefined) updateData.sort_order = formData.sortOrder;
+    if (formData.isVisible !== undefined) updateData.is_visible = formData.isVisible;
+    if (formData.isHighlighted !== undefined) updateData.is_highlighted = formData.isHighlighted;
+    if (formData.highlightPriority !== undefined)
+      updateData.highlight_priority = formData.highlightPriority;
 
     if (formData.name) {
       updateData.slug = this.generateSlug(formData.name);
@@ -67,7 +103,7 @@ export class CategoryService {
       throw error;
     }
 
-    return data;
+    return this.mapDbCategoryToModel(data);
   }
 
   async deleteCategory(id: string): Promise<void> {
@@ -86,7 +122,7 @@ export class CategoryService {
     const { error } = await this.supabase.from('categories').upsert(
       updates.map(({ id, position }) => ({
         id,
-        sort_order: position,
+        sort_order: position, // Convert camelCase to snake_case for DB
         updated_at: new Date().toISOString(),
         updated_by: this.session.user.id,
       }))
@@ -101,7 +137,7 @@ export class CategoryService {
     const { error } = await this.supabase
       .from('categories')
       .update({
-        is_highlighted: highlight,
+        is_highlighted: highlight, // Use snake_case for DB field
         updated_at: new Date().toISOString(),
         updated_by: this.session.user.id,
       })
@@ -116,7 +152,7 @@ export class CategoryService {
     const { error } = await this.supabase
       .from('categories')
       .update({
-        highlight_priority: priority,
+        highlight_priority: priority, // Use snake_case for DB field
         updated_at: new Date().toISOString(),
         updated_by: this.session.user.id,
       })
@@ -134,7 +170,7 @@ export class CategoryService {
 
   private buildCategoryTree(categories: Category[], parentId: string | null = null): Category[] {
     return categories
-      .filter(category => category.parent_id === parentId)
+      .filter(category => category.parentId === parentId)
       .map(category => ({
         ...category,
         children: this.buildCategoryTree(categories, category.id),
@@ -146,5 +182,26 @@ export class CategoryService {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
+  }
+
+  // Convert DB snake_case to model camelCase
+  private mapDbCategoryToModel(dbCategory: DbCategory): Category {
+    return {
+      id: dbCategory.id,
+      name: dbCategory.name,
+      slug: dbCategory.slug,
+      description: dbCategory.description,
+      parentId: dbCategory.parent_id,
+      position: dbCategory.position ?? 0,
+      isActive: dbCategory.is_active ?? false,
+      sortOrder: dbCategory.sort_order ?? 0,
+      isVisible: dbCategory.is_visible ?? false,
+      status: dbCategory.status ?? '',
+      isHighlighted: dbCategory.is_highlighted ?? false,
+      highlightPriority: dbCategory.highlight_priority ?? 0,
+      children: dbCategory.children
+        ? dbCategory.children.map(child => this.mapDbCategoryToModel(child))
+        : undefined,
+    };
   }
 }
