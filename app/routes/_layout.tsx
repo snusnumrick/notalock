@@ -46,7 +46,7 @@ export default function Layout() {
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Header categories={categories} />
-      <div className="flex-grow">
+      <div className="flex-grow pt-16">
         <Outlet />
       </div>
       <Footer />

@@ -18,6 +18,7 @@ export interface ProductLoaderData {
     maxPrice?: number;
     categoryId?: string;
     inStockOnly?: boolean;
+    searchTerm?: string;
   };
   categories: Array<{ id: string; name: string; slug: string }>;
 }
@@ -47,6 +48,7 @@ export async function productsLoader({ request }: LoaderFunctionArgs): Promise<P
     categoryId: url.searchParams.get('categoryId') || undefined,
     inStockOnly: url.searchParams.get('inStockOnly') === 'true',
     sortOrder: sortOrder || undefined,
+    searchTerm: url.searchParams.get('searchTerm') || undefined,
   };
 
   // console.log('Loading products with filters:', { filters, cursor, sortOrder });

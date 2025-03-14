@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from '@remix-run/react';
 import type { Category } from '~/features/categories/types/category.types';
-import { UserIcon } from '@heroicons/react/24/outline';
+import { UserIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
 import CategoryMenu from './Navigation/CategoryMenu';
 import { CategoryBreadcrumbs } from '~/features/categories/components/Breadcrumbs/CategoryBreadcrumbs';
 import { HeaderCartIndicator } from './HeaderCartIndicator';
@@ -15,12 +15,11 @@ export const Header: React.FC<HeaderProps> = ({ categories }) => {
   const [isMounted, setIsMounted] = useState(false);
   const location = useLocation();
 
-  // Show categories on the front page, product listings, and product detail pages
+  // Show categories on the product detail pages
   const isProductPage =
-    location.pathname === '/products' ||
-    location.pathname === '/products/' ||
-    location.pathname.startsWith('/products/') ||
-    location.pathname.startsWith('/product/');
+    location.pathname != '/products' &&
+    location.pathname != '/products/' &&
+    (location.pathname.startsWith('/products/') || location.pathname.startsWith('/product/'));
 
   useEffect(() => {
     setIsMounted(true);
@@ -75,15 +74,17 @@ export const Header: React.FC<HeaderProps> = ({ categories }) => {
                 Products
               </Link>
             </div>
-            <Link
-              to="/account"
-              className="text-gray-700 hover:text-blue-600 transition-colors duration-200 px-3 py-2 text-sm font-medium flex items-center"
-            >
-              <UserIcon className="w-4 h-4 mr-1" /> Account
-            </Link>
+            <div className="hidden md:flex items-center">
+              <Link
+                to="/account"
+                className="text-gray-700 hover:text-blue-600 transition-colors duration-200 px-3 py-2 text-sm font-medium flex items-center"
+              >
+                <UserIcon className="w-4 h-4 mr-1" /> Account
+              </Link>
 
-            {/* Use our new cart indicator component */}
-            <HeaderCartIndicator />
+              {/* Use our new cart indicator component */}
+              <HeaderCartIndicator />
+            </div>
 
             <button
               className="md:hidden text-gray-700 hover:text-blue-600 transition-colors duration-200"
@@ -107,7 +108,6 @@ export const Header: React.FC<HeaderProps> = ({ categories }) => {
           </div>
         </div>
 
-        {/* Category Navigation - only shown on home page */}
         {isProductPage && (
           <div className="hidden md:block py-2 border-t border-gray-200">
             <CategoryMenu categories={categories} />
@@ -121,9 +121,30 @@ export const Header: React.FC<HeaderProps> = ({ categories }) => {
             <Link
               to="/products"
               className="block py-2 text-gray-700 hover:text-blue-600 transition-colors duration-200"
+              onClick={() => setIsMenuOpen(false)}
             >
               Products
             </Link>
+            <Link
+              to="/account"
+              className="block py-2 text-gray-700 hover:text-blue-600 transition-colors duration-200 flex items-center"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <UserIcon className="w-4 h-4 mr-2" /> Account
+            </Link>
+            <div className="relative">
+              <Link
+                to="/cart"
+                className="block py-2 text-gray-700 hover:text-blue-600 transition-colors duration-200 flex items-center"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <ShoppingCartIcon className="w-4 h-4 mr-2" /> Cart
+              </Link>
+              <div className="absolute top-2 left-16">
+                <HeaderCartIndicator testId="mobile-cart-indicator" mobileStyle={true} />
+              </div>
+            </div>
+
             {isProductPage && <CategoryMenu categories={categories} className="mt-2" />}
           </div>
         )}

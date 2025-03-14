@@ -22,7 +22,10 @@ interface RouteMatch {
  * A dedicated cart indicator component that directly reads from Remix loader data
  * to ensure consistent display of cart count
  */
-export const HeaderCartIndicator: React.FC<{ testId?: string }> = ({ testId }) => {
+export const HeaderCartIndicator: React.FC<{ testId?: string; mobileStyle?: boolean }> = ({
+  testId,
+  mobileStyle = false,
+}) => {
   const [count, setCount] = useState(0);
   const matches = useMatches() as RouteMatch[];
   const location = useLocation();
@@ -89,7 +92,20 @@ export const HeaderCartIndicator: React.FC<{ testId?: string }> = ({ testId }) =
     };
   }, []);
 
-  return (
+  return mobileStyle ? (
+    // Mobile style - just the badge
+    count > 0 ? (
+      <span
+        data-testid={testId || 'cart-badge-mobile'}
+        className="bg-blue-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center"
+      >
+        <span data-testid="cart-count" className="cart-count">
+          {count}
+        </span>
+      </span>
+    ) : null
+  ) : (
+    // Desktop style - full link with badge
     <Link
       to="/cart"
       data-testid={testId || 'cart-link'}

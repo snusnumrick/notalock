@@ -23,6 +23,7 @@ export interface CustomerFilterOptions {
   categoryId?: string;
   inStockOnly?: boolean;
   sortOrder?: 'featured' | 'price_asc' | 'price_desc' | 'newest';
+  searchTerm?: string;
 }
 
 interface ProductFilterProps {
@@ -30,6 +31,10 @@ interface ProductFilterProps {
   defaultFilters?: CustomerFilterOptions;
   categories: Array<{ id: string; name: string; slug?: string }>;
   isMobile?: boolean;
+  searchProps?: {
+    initialValue: string;
+    onSearch: (term: string) => void;
+  };
 }
 
 export default function ProductFilter({
@@ -40,7 +45,6 @@ export default function ProductFilter({
 }: ProductFilterProps) {
   const [searchParams] = useSearchParams();
 
-  // console.log('Navigate function available:', !!navigate);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const submitTimeoutRef = useRef<NodeJS.Timeout>();
   const minPriceRef = useRef<HTMLInputElement>(null);
@@ -50,7 +54,6 @@ export default function ProductFilter({
 
   const initialMinPrice = searchParams.get('minPrice') || defaultFilters.minPrice?.toString() || '';
   const initialMaxPrice = searchParams.get('maxPrice') || defaultFilters.maxPrice?.toString() || '';
-  // Simple initialization to avoid hydration issues
   const initialCategoryId = 'all';
   const initialInStockOnly =
     searchParams.get('inStockOnly') === 'true' || defaultFilters.inStockOnly || false;
@@ -62,6 +65,8 @@ export default function ProductFilter({
   const [minPrice, setMinPrice] = useState(initialMinPrice);
   const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
   const [categoryId, setCategoryId] = useState(initialCategoryId);
+  const [inStockOnly, setInStockOnly] = useState(initialInStockOnly);
+  const [sortOrder, setSortOrder] = useState(initialSortOrder);
 
   // Update categoryId from URL on first client render and when URL changes
   const isMounted = useRef(false);
@@ -93,11 +98,8 @@ export default function ProductFilter({
       setCategoryId('all');
     }
   }, [searchParams, categoryId, defaultFilters.categoryId]);
-  const [inStockOnly, setInStockOnly] = useState(initialInStockOnly);
-  const [sortOrder, setSortOrder] = useState(initialSortOrder);
-  const submit = useSubmit();
 
-  // Debug has been removed
+  const submit = useSubmit();
 
   useEffect(() => {
     if (lastFocusedInput.current === 'minPrice' && minPriceRef.current) {
@@ -113,30 +115,6 @@ export default function ProductFilter({
     }
   });
 
-  const debouncedSubmit = (formData: FormData) => {
-    if (submitTimeoutRef.current) {
-      clearTimeout(submitTimeoutRef.current);
-    }
-
-    submitTimeoutRef.current = setTimeout(() => {
-      if (formData.get('categoryId') === 'all') {
-        formData.delete('categoryId');
-      }
-
-      for (const [key, value] of formData.entries()) {
-        if (!value || value === '') {
-          formData.delete(key);
-        }
-      }
-
-      submit(formData, {
-        method: 'get',
-        preventScrollReset: true,
-        replace: true,
-      });
-    }, 500);
-  };
-
   const handlePriceInput = (
     e: React.FormEvent<HTMLInputElement>,
     field: 'minPrice' | 'maxPrice'
@@ -146,27 +124,50 @@ export default function ProductFilter({
     lastCaretPosition.current = input.selectionStart;
     const value = input.value;
 
-    const formData = new FormData();
-
-    // Copy non-clearing params
-    const preservedParams = ['limit', 'sortOrder', 'view', 'categoryId', 'inStockOnly'];
-    searchParams.forEach((paramValue, key) => {
-      if (preservedParams.includes(key)) {
-        formData.set(key, paramValue);
-      }
-    });
-
+    // Update local state immediately
     if (field === 'minPrice') {
       setMinPrice(value);
-      if (value) formData.set('minPrice', value);
-      if (maxPrice) formData.set('maxPrice', maxPrice);
     } else {
       setMaxPrice(value);
-      if (value) formData.set('maxPrice', value);
-      if (minPrice) formData.set('minPrice', minPrice);
     }
 
-    debouncedSubmit(formData);
+    // Debounce the form submission
+    if (submitTimeoutRef.current) {
+      clearTimeout(submitTimeoutRef.current);
+    }
+
+    submitTimeoutRef.current = setTimeout(() => {
+      const formData = new FormData();
+
+      // Copy non-clearing params
+      const preservedParams = [
+        'limit',
+        'sortOrder',
+        'view',
+        'categoryId',
+        'inStockOnly',
+        'searchTerm',
+      ];
+      searchParams.forEach((paramValue, key) => {
+        if (preservedParams.includes(key)) {
+          formData.set(key, paramValue);
+        }
+      });
+
+      if (field === 'minPrice') {
+        if (value) formData.set('minPrice', value);
+        if (maxPrice) formData.set('maxPrice', maxPrice);
+      } else {
+        if (value) formData.set('maxPrice', value);
+        if (minPrice) formData.set('minPrice', minPrice);
+      }
+
+      submit(formData, {
+        method: 'get',
+        preventScrollReset: true,
+        replace: true,
+      });
+    }, 500);
   };
 
   const handleOtherChanges = (
@@ -185,7 +186,14 @@ export default function ProductFilter({
       formData.set('sortOrder', value as string);
 
       // Preserve all other non-pagination params
-      const preservedParams = ['minPrice', 'maxPrice', 'categoryId', 'inStockOnly', 'view'];
+      const preservedParams = [
+        'minPrice',
+        'maxPrice',
+        'categoryId',
+        'inStockOnly',
+        'view',
+        'searchTerm',
+      ];
       searchParams.forEach((paramValue, key) => {
         if (preservedParams.includes(key)) {
           formData.set(key, paramValue);
@@ -226,6 +234,10 @@ export default function ProductFilter({
             if (maxPrice) queryParams.set('maxPrice', maxPrice);
             if (inStockOnly) queryParams.set('inStockOnly', 'true');
             if (sortOrder) queryParams.set('sortOrder', sortOrder);
+
+            // Preserve searchTerm if it exists in the URL
+            const searchTerm = searchParams.get('searchTerm');
+            if (searchTerm) queryParams.set('searchTerm', searchTerm);
 
             // Build the URL with query parameters
             const queryString = queryParams.toString();
@@ -273,6 +285,10 @@ export default function ProductFilter({
           if (inStockOnly) queryParams.set('inStockOnly', 'true');
           if (sortOrder) queryParams.set('sortOrder', sortOrder);
 
+          // Preserve searchTerm if it exists in the URL
+          const searchTerm = searchParams.get('searchTerm');
+          if (searchTerm) queryParams.set('searchTerm', searchTerm);
+
           // Build the URL with query parameters
           const queryString = queryParams.toString();
           const newUrl = `${baseUrl}/products${queryString ? `?${queryString}` : ''}`;
@@ -318,15 +334,14 @@ export default function ProductFilter({
   }, []);
 
   const handleBlur = () => {
-    requestAnimationFrame(() => {
-      if (
-        document.activeElement !== minPriceRef.current &&
-        document.activeElement !== maxPriceRef.current
-      ) {
-        lastFocusedInput.current = null;
-        lastCaretPosition.current = null;
-      }
-    });
+    // Clear focus state when focus leaves input elements
+    if (
+      document.activeElement !== minPriceRef.current &&
+      document.activeElement !== maxPriceRef.current
+    ) {
+      lastFocusedInput.current = null;
+      lastCaretPosition.current = null;
+    }
   };
 
   const clearFilters = () => {
@@ -347,9 +362,15 @@ export default function ProductFilter({
     formData.set('limit', DEFAULT_PAGE_LIMIT.toString());
     formData.set('sortOrder', sortOrder);
 
+    // Preserve view and searchTerm if they exist
     const currentView = searchParams.get('view');
     if (currentView) {
       formData.set('view', currentView);
+    }
+
+    const searchTerm = searchParams.get('searchTerm');
+    if (searchTerm) {
+      formData.set('searchTerm', searchTerm);
     }
 
     // Always submit the form to update URL parameters
@@ -364,9 +385,10 @@ export default function ProductFilter({
       const baseUrl = window.location.origin;
       const queryParams = new URLSearchParams();
 
-      // Only preserve sortOrder and view
+      // Only preserve sortOrder, view, and searchTerm
       if (sortOrder) queryParams.set('sortOrder', sortOrder);
       if (currentView) queryParams.set('view', currentView);
+      if (searchTerm) queryParams.set('searchTerm', searchTerm);
 
       const queryString = queryParams.toString();
       const newUrl = `${baseUrl}/products${queryString ? `?${queryString}` : ''}`;
@@ -437,9 +459,6 @@ export default function ProductFilter({
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
             {categories.map(category => {
-              /*              console.log(
-                `Category in dropdown: ${category.name}, id: ${category.id}, slug: ${category.slug}`
-              );*/
               return (
                 <SelectItem key={category.id} value={category.id}>
                   {category.name}
@@ -500,9 +519,8 @@ export default function ProductFilter({
       <div className="flex items-center gap-2 w-full">
         <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" className="relative">
-              <Filter className="h-4 w-4 mr-2" />
-              Filters
+            <Button variant="outline" size="icon" className="relative">
+              <Filter className="h-4 w-4" />
               {getActiveFilterCount() > 0 && (
                 <span
                   data-testid="filter-count-badge"

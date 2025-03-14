@@ -135,6 +135,11 @@ export async function getProducts({
       productsQuery = productsQuery.gt('stock', 0); // Stock must be greater than 0 to be considered in stock
     }
 
+    // Apply search term if provided
+    if (customerFilters.searchTerm) {
+      productsQuery = productsQuery.ilike('name', `%${customerFilters.searchTerm}%`);
+    }
+
     // Handle category filtering with proper filter application
     if (categoryId || customerFilters.categoryId) {
       const catId = categoryId || customerFilters.categoryId;
@@ -163,6 +168,11 @@ export async function getProducts({
       // Apply stock filter if enabled
       if (customerFilters.inStockOnly) {
         baseQuery = baseQuery.gt('stock', 0); // Stock must be greater than 0 to be considered in stock
+      }
+
+      // Apply search term for category-filtered queries too
+      if (customerFilters.searchTerm) {
+        baseQuery = baseQuery.ilike('name', `%${customerFilters.searchTerm}%`);
       }
 
       // Apply cursor pagination last

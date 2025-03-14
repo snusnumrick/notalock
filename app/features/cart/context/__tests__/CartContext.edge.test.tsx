@@ -53,6 +53,15 @@ describe('CartContext Edge Cases', () => {
 
     // Mock window.dispatchEvent
     window.dispatchEvent = vi.fn();
+
+    // Define the CustomEvent globally for each test
+    global.CustomEvent = class CustomEvent extends Event {
+      detail: any;
+      constructor(type: string, eventInitDict?: CustomEventInit) {
+        super(type, eventInitDict);
+        this.detail = eventInitDict?.detail;
+      }
+    } as any;
   });
 
   afterEach(() => {
@@ -171,6 +180,15 @@ describe('CartContext Edge Cases', () => {
       return <div data-testid="item-count">{cartItems.length}</div>;
     };
 
+    // Force the CustomEvent constructor to be available
+    global.CustomEvent = class CustomEvent extends Event {
+      detail: any;
+      constructor(type: string, eventInitDict?: CustomEventInit) {
+        super(type, eventInitDict);
+        this.detail = eventInitDict?.detail;
+      }
+    } as any;
+
     // Render with both the provider and component
     render(
       <CartProvider initialCartItems={initialCartItems}>
@@ -236,6 +254,15 @@ describe('CartContext Edge Cases', () => {
 
     mockLocalStorage.getItem = getItemMock;
 
+    // Force the CustomEvent constructor to be available
+    global.CustomEvent = class CustomEvent extends Event {
+      detail: any;
+      constructor(type: string, eventInitDict?: CustomEventInit) {
+        super(type, eventInitDict);
+        this.detail = eventInitDict?.detail;
+      }
+    } as any;
+
     const ItemIdChecker = () => {
       const { cartItems } = useCart();
       return (
@@ -254,6 +281,11 @@ describe('CartContext Edge Cases', () => {
         <ItemIdChecker />
       </CartProvider>
     );
+
+    // Wait for state to be initialized
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
     // Should use localStorage items rather than initialCartItems
     await waitFor(() => {

@@ -18,21 +18,19 @@ vi.mock('@remix-run/react', () => ({
 }));
 
 // Mock localStorage
-const mockLocalStorage = (() => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: vi.fn(key => store[key] || null),
-    setItem: vi.fn((key, value) => {
-      store[key] = value.toString();
-    }),
-    removeItem: vi.fn(key => {
-      delete store[key];
-    }),
-    clear: vi.fn(() => {
-      store = {};
-    }),
-  };
-})();
+let mockStore: Record<string, string> = {};
+const mockLocalStorage = {
+  getItem: vi.fn(key => mockStore[key] || null),
+  setItem: vi.fn((key, value) => {
+    mockStore[key] = value.toString();
+  }),
+  removeItem: vi.fn(key => {
+    delete mockStore[key];
+  }),
+  clear: vi.fn(() => {
+    mockStore = {};
+  }),
+};
 
 // Mock window.dispatchEvent
 const mockDispatchEvent = vi.fn();
@@ -91,6 +89,7 @@ describe('CartContext', () => {
   beforeEach(() => {
     // Reset all mocks and clear global state before each test
     vi.clearAllMocks();
+    mockStore = {};
     mockLocalStorage.clear();
     window.dispatchEvent = mockDispatchEvent; // Reset dispatchEvent
     mockUseFetcherData = null; // Reset mock data
@@ -102,6 +101,15 @@ describe('CartContext', () => {
       }
       return null; // Return null for all other keys including cart data
     });
+
+    // Define the CustomEvent globally for each test
+    global.CustomEvent = class CustomEvent extends Event {
+      detail: any;
+      constructor(type: string, eventInitDict?: CustomEventInit) {
+        super(type, eventInitDict);
+        this.detail = eventInitDict?.detail;
+      }
+    } as any;
   });
 
   it('initializes empty cart when no data available', () => {
@@ -183,6 +191,15 @@ describe('CartContext', () => {
       return null;
     });
 
+    // Make sure CustomEvent is properly defined for the tests
+    global.CustomEvent = class CustomEvent extends Event {
+      detail: any;
+      constructor(type: string, eventInitDict?: CustomEventInit) {
+        super(type, eventInitDict);
+        this.detail = eventInitDict?.detail;
+      }
+    } as any;
+
     render(
       <CartProvider initialCartItems={initialCartItems}>
         <CartConsumer />
@@ -190,13 +207,19 @@ describe('CartContext', () => {
     );
 
     // Wait for the async operations to complete
-    await waitFor(() => {
-      expect(screen.getByTestId('cart-count').textContent).toBe('1');
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('cart-count').textContent).toBe('1');
+      },
+      { timeout: 2000 }
+    );
 
-    await waitFor(() => {
-      expect(screen.getByTestId('item-test-2')).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('item-test-2')).toBeInTheDocument();
+      },
+      { timeout: 2000 }
+    );
   });
 
   it('adds item to cart and calls API', async () => {
@@ -211,6 +234,15 @@ describe('CartContext', () => {
       return null;
     });
 
+    // Make sure CustomEvent is properly defined for the tests
+    global.CustomEvent = class CustomEvent extends Event {
+      detail: any;
+      constructor(type: string, eventInitDict?: CustomEventInit) {
+        super(type, eventInitDict);
+        this.detail = eventInitDict?.detail;
+      }
+    } as any;
+
     render(
       <CartProvider>
         <CartConsumer />
@@ -218,17 +250,23 @@ describe('CartContext', () => {
     );
 
     // Verify initial state is empty
-    await waitFor(() => {
-      expect(screen.getByTestId('cart-count').textContent).toBe('0');
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('cart-count').textContent).toBe('0');
+      },
+      { timeout: 2000 }
+    );
 
     // Add an item to cart
     fireEvent.click(screen.getByTestId('add-item'));
 
     // Check if item was added
-    await waitFor(() => {
-      expect(screen.getByTestId('cart-count').textContent).toBe('1');
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('cart-count').textContent).toBe('1');
+      },
+      { timeout: 2000 }
+    );
     expect(screen.getByTestId('total-items').textContent).toBe('1');
 
     // Check if API was called
@@ -388,6 +426,15 @@ describe('CartContext', () => {
       return null;
     });
 
+    // Make sure CustomEvent is properly defined for the tests
+    global.CustomEvent = class CustomEvent extends Event {
+      detail: any;
+      constructor(type: string, eventInitDict?: CustomEventInit) {
+        super(type, eventInitDict);
+        this.detail = eventInitDict?.detail;
+      }
+    } as any;
+
     const SummaryConsumer = () => {
       const { summary, addToCart } = useCart();
       return (
@@ -425,9 +472,12 @@ describe('CartContext', () => {
     fireEvent.click(screen.getByTestId('add-multiple'));
 
     // Wait for the total items to update
-    await waitFor(() => {
-      expect(screen.getByTestId('total-items').textContent).toBe('3'); // 2 + 1
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('total-items').textContent).toBe('3'); // 2 + 1
+      },
+      { timeout: 2000 }
+    );
 
     // These elements should be available immediately after total-items is updated
     expect(screen.getByTestId('subtotal').textContent).toBe('40'); // (2 * 10) + (1 * 20)

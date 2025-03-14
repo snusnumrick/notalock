@@ -1,15 +1,17 @@
 import type { LoaderFunction } from '@remix-run/node';
-import { useLoaderData, useNavigation, useSearchParams, Link } from '@remix-run/react';
+import { useLoaderData, useNavigation, useSearchParams } from '@remix-run/react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { ProductGrid } from '~/features/products/components/ProductGrid';
 import { ProductList } from '~/features/products/components/ProductList';
 import { ViewToggle } from '~/features/products/components/ViewToggle';
 import ProductFilter from '~/features/products/components/ProductFilter';
+import SimpleSearch from '~/features/products/components/SimpleSearch';
 import { ProductView, TransformedProduct } from '~/features/products/types/product.types';
 import type { CustomerFilterOptions } from '~/features/products/components/ProductFilter';
 import { productsLoader } from '~/features/products/api/loaders';
 import { useMediaQuery } from '~/hooks/useMediaQuery';
-import { ChevronRight } from 'lucide-react';
+import { LayoutGrid, List, Search } from 'lucide-react';
+import { Button } from '~/components/ui/button';
 
 export const loader: LoaderFunction = async ({ request, params, context }) => {
   return productsLoader({ request, params, context });
@@ -31,7 +33,12 @@ export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
   const lastSearchParams = useRef<URLSearchParams>(new URLSearchParams());
   const [view, setView] = useState<ProductView>('grid');
+  // Initialize searchExpanded to true if searchTerm exists in URL
+  const [searchExpanded, setSearchExpanded] = useState(() =>
+    Boolean(searchParams.get('searchTerm'))
+  );
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const hasHydrated = useRef(false);
   const [allProducts, setAllProducts] = useState<TransformedProduct[]>(products);
   const lastScrollPosition = useRef<number>(0);
   const isInitialLoadRef = useRef(true);
@@ -115,11 +122,65 @@ export default function Products() {
           updatedParams.set('view', currentView);
         }
 
+        // Preserve search term if it exists
+        const searchTerm = searchParams.get('searchTerm');
+        if (searchTerm) {
+          updatedParams.set('searchTerm', searchTerm);
+        }
+
         setSearchParams(updatedParams);
       }, 50); // Small delay to ensure we don't conflict with filter component's debounce
     },
     [searchParams, setSearchParams]
   );
+
+  // Handle search functionality
+  const handleSearch = useCallback(
+    (term: string) => {
+      // Save search field focus state and cursor position to session storage
+      if (document.activeElement?.classList.contains('pl-10')) {
+        const input = document.activeElement as HTMLInputElement;
+        sessionStorage.setItem('productSearchFocus', 'true');
+        // Store cursor position to restore it after page load
+        sessionStorage.setItem('searchCursorPosition', input.selectionStart?.toString() || 'end');
+      }
+
+      // Get the current URL parameters we want to keep
+      const currentParams = new URLSearchParams();
+
+      // Only preserve specific parameters (except searchTerm)
+      const minPrice = searchParams.get('minPrice');
+      const maxPrice = searchParams.get('maxPrice');
+      const inStockOnly = searchParams.get('inStockOnly');
+      const sortOrder = searchParams.get('sortOrder');
+      const view = searchParams.get('view');
+
+      if (term) currentParams.set('searchTerm', term);
+      if (minPrice) currentParams.set('minPrice', minPrice);
+      if (maxPrice) currentParams.set('maxPrice', maxPrice);
+      if (inStockOnly) currentParams.set('inStockOnly', inStockOnly);
+      if (sortOrder) currentParams.set('sortOrder', sortOrder);
+      if (view) currentParams.set('view', view);
+
+      // Create the new URL and perform hard navigation
+      const baseUrl = window.location.origin;
+      const queryString = currentParams.toString();
+      const newUrl = `${baseUrl}/products${queryString ? `?${queryString}` : ''}`;
+      window.location.href = newUrl;
+    },
+    [searchParams]
+  );
+
+  // Reset hydration state for consistent rendering
+  useEffect(() => {
+    // Set hydrated state
+    hasHydrated.current = true;
+
+    // Force layout recalculation if needed
+    requestAnimationFrame(() => {
+      // Let browser redraw
+    });
+  }, []);
 
   // Clean up timeout on unmount
   useEffect(() => {
@@ -132,95 +193,122 @@ export default function Products() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-2 relative">
-        <div className="flex flex-col gap-6">
-          <div className="sticky top-28 z-30 bg-white py-4 w-full shadow-sm border-b">
-            {isMobile ? (
+      <div className="container mx-auto px-4 relative pb-20">
+        <div className="flex flex-col md:flex-row gap-8 relative z-10 mt-3">
+          {/* Sidebar spacer */}
+          {!isMobile && <div className="hidden md:block w-64 shrink-0"></div>}
+          {/* Mobile view components */}
+          {isMobile && (
+            <div className="fixed z-30 bg-white bottom-4 right-0  m-0 p-0 pl-2 pr-2 border border-gray-300 shadow">
               <div className="flex flex-col gap-4">
-                <div className="flex items-baseline flex-wrap gap-2">
-                  <Link
-                    to="/"
-                    className="text-gray-500 text-sm hover:text-blue-600 transition-colors duration-200"
-                  >
-                    Home
-                  </Link>
-                  <ChevronRight className="h-3 w-3 text-gray-400" />
-                  <h1 className="text-2xl font-bold">Products</h1>
-                </div>
                 <div className="flex justify-between items-center">
-                  <p className="text-sm text-gray-500">
-                    Showing {allProducts.length} of {productTotal.current} products
-                  </p>
+                  <div
+                    className={`transition-all duration-300 ease-in-out overflow-hidden ${searchExpanded ? 'w-full' : 'w-0'}`}
+                  >
+                    <SimpleSearch
+                      initialValue={searchParams.get('searchTerm') || ''}
+                      onSearch={term => {
+                        handleSearch(term);
+                        setSearchExpanded(false);
+                      }}
+                    />
+                  </div>
+                  <div className={`flex items-center gap-2 ${searchExpanded ? 'ml-2' : 'ml-auto'}`}>
+                    <Button
+                      className="h-4 w-4"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setSearchExpanded(!searchExpanded)}
+                      aria-label="Toggle search"
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                    <ProductFilter
+                      onFilterChange={handleFilterChange}
+                      defaultFilters={filters}
+                      categories={categories}
+                      isMobile={true}
+                      searchProps={{
+                        initialValue: searchParams.get('searchTerm') || '',
+                        onSearch: handleSearch,
+                      }}
+                    />
+                    <ViewToggle view={view} onViewChange={setView} />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+              </div>
+            </div>
+          )}
+
+          {/* Desktop sidebar - fixed position */}
+          {!isMobile && (
+            <div className="fixed top-16 bottom-0 overflow-auto hidden md:block w-64 bg-white">
+              <div className="pt-3 px-2">
+                {/* Products title */}
+                <h1 className="text-2xl font-bold mb-4">Products</h1>
+
+                {/* View toggle row */}
+                <div className="flex justify-between items-center mb-4 border rounded-md p-2 bg-gray-50">
+                  <span className="text-sm font-medium">View:</span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={view === 'grid' ? 'default' : 'outline'}
+                      size="icon"
+                      onClick={() => setView('grid')}
+                      aria-label="Grid view"
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={view === 'list' ? 'default' : 'outline'}
+                      size="icon"
+                      onClick={() => setView('list')}
+                      aria-label="List view"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <SimpleSearch
+                    initialValue={searchParams.get('searchTerm') || ''}
+                    onSearch={handleSearch}
+                  />
+                </div>
+                <div>
                   <ProductFilter
                     onFilterChange={handleFilterChange}
                     defaultFilters={filters}
                     categories={categories}
-                    isMobile={true}
-                  />
-                  <ViewToggle
-                    view={view}
-                    onViewChange={setView}
-                    className="fixed top-40 right-4 z-[100]"
                   />
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Main content */}
+          <main className="flex-1 relative" style={{ zIndex: 1 }} data-testid="product-grid">
+            {view === 'grid' ? (
+              <ProductGrid
+                products={allProducts}
+                nextCursor={nextCursor}
+                isInitialLoad={initialLoad}
+                total={productTotal.current}
+                searchParams={searchParams}
+                setSearchParams={setSearchParams}
+              />
             ) : (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-baseline flex-wrap gap-2">
-                  <Link
-                    to="/"
-                    className="text-gray-500 text-sm hover:text-blue-600 transition-colors duration-200"
-                  >
-                    Home
-                  </Link>
-                  <ChevronRight className="h-3 w-3 text-gray-400" />
-                  <h1 className="text-2xl font-bold">Products</h1>
-                </div>
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-gray-500">
-                    Showing {allProducts.length} of {productTotal.current} products
-                  </p>
-                  <ViewToggle view={view} onViewChange={setView} />
-                </div>
-              </div>
+              <ProductList
+                products={allProducts}
+                nextCursor={nextCursor}
+                isInitialLoad={initialLoad}
+                total={productTotal.current}
+                searchParams={searchParams}
+                setSearchParams={setSearchParams}
+              />
             )}
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-6 relative z-10">
-            {!isMobile && (
-              <aside className="md:w-64 shrink-0 md:sticky md:top-40 md:h-[calc(100vh-10rem)] md:overflow-y-auto">
-                <ProductFilter
-                  onFilterChange={handleFilterChange}
-                  defaultFilters={filters}
-                  categories={categories}
-                />
-              </aside>
-            )}
-
-            <main className="flex-1 relative" style={{ zIndex: 1 }} data-testid="product-grid">
-              {view === 'grid' ? (
-                <ProductGrid
-                  products={allProducts}
-                  nextCursor={nextCursor}
-                  isInitialLoad={initialLoad}
-                  total={productTotal.current}
-                  searchParams={searchParams}
-                  setSearchParams={setSearchParams}
-                />
-              ) : (
-                <ProductList
-                  products={allProducts}
-                  nextCursor={nextCursor}
-                  isInitialLoad={initialLoad}
-                  total={productTotal.current}
-                  searchParams={searchParams}
-                  setSearchParams={setSearchParams}
-                />
-              )}
-            </main>
-          </div>
+          </main>
         </div>
       </div>
     </div>

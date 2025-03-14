@@ -37,7 +37,7 @@ vi.mock('~/features/products/components/ProductGrid', () => ({
     nextCursor: string | null;
     total: number;
     searchParams: URLSearchParams;
-    setSearchParams: (params: any) => void;
+    setSearchParams: (params: any, options?: any) => void;
   }) => {
     // Immediately call setSearchParams with the cursor if it exists
     // This simulates the intersection observer triggering a load more
