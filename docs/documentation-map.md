@@ -12,8 +12,12 @@ docs/
 │   ├── guidelines.md                  # General development guidelines
 │   ├── middleware.md                  # Middleware documentation
 │   ├── testing.md                     # Testing guidelines and practices
+│   ├── checkout-flow.md               # Checkout flow implementation details
+│   ├── checkout-routing.md            # Checkout routing structure
+│   ├── checkout-fixes.md              # Checkout fixes and improvements
 │   ├── image-optimization-guide.md    # Guide for image optimization
 │   ├── anonymous-carts.md             # Anonymous shopping carts
+│   ├── cart-removal.md               # Cart item removal implementation
 │   └── fixing-failing-tests-guide.md  # Guide for fixing tests
 │
 ├── api/                               # API documentation
@@ -26,9 +30,12 @@ docs/
 ├── features/                          # Feature documentation
 │   ├── README.md                      # Features overview
 │   ├── category-management.md         # Category management feature
+│   ├── checkout.md                   # Checkout feature
 │   ├── image-management.md            # Image management feature
+│   ├── payment-integration.md          # Payment provider integration
 │   ├── product-detail.md              # Product detail page feature
-│   └── product-management.md          # Product management feature
+│   ├── product-management.md          # Product management feature
+│   └── shipping-tax-calculations.md    # Shipping and tax calculation system
 │
 ├── user/                              # User documentation (new)
 │   ├── README.md                      # User guide overview

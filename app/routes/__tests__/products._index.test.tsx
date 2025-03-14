@@ -42,7 +42,8 @@ vi.mock('~/features/products/components/ProductGrid', () => ({
     // Immediately call setSearchParams with the cursor if it exists
     // This simulates the intersection observer triggering a load more
     if (nextCursor) {
-      setSearchParams(new URLSearchParams(`cursor=${nextCursor}`), {
+      const params = new URLSearchParams(`cursor=${nextCursor}`);
+      setSearchParams(params, {
         preventScrollReset: true,
         replace: true,
       });
@@ -128,6 +129,7 @@ vi.mock('~/hooks/useMediaQuery', () => ({
 
 // Import after mocks
 import Products from '../products._index';
+import { DEFAULT_PAGE_LIMIT } from '../../config/pagination';
 
 // Mock data setup
 const mockCategories = [
@@ -150,8 +152,8 @@ const createMockProduct = (id: number) => ({
   categories: [mockCategories[0]],
 });
 
-const mockProducts = Array.from({ length: 12 }, (_, i) => createMockProduct(i + 1));
-Array.from({ length: 12 }, (_, i) => createMockProduct(i + 13));
+const mockProducts = Array.from({ length: DEFAULT_PAGE_LIMIT }, (_, i) => createMockProduct(i + 1));
+Array.from({ length: DEFAULT_PAGE_LIMIT }, (_, i) => createMockProduct(i + DEFAULT_PAGE_LIMIT + 1));
 const createMockLoaderData = (overrides = {}) => ({
   products: mockProducts,
   total: 103,
@@ -272,7 +274,7 @@ describe('Products Page', () => {
     // Verify products are reset and rendered
     await waitFor(() => {
       const productLinks = screen.getAllByTestId('product-card');
-      expect(productLinks).toHaveLength(12);
+      expect(productLinks).toHaveLength(DEFAULT_PAGE_LIMIT);
     });
   });
 

@@ -31,7 +31,7 @@ const CategoryMenu: React.FC<CategoryMenuProps> = ({ categories = [], className 
 
   // Filter to only show root categories (those without a parent)
   const rootCategories = safeCategories.filter(cat => cat.parentId === null);
-  console.log('rootCategories', rootCategories);
+  // console.log('rootCategories', rootCategories);
 
   // Create a lookup map for children
   const childrenMap = safeCategories.reduce(

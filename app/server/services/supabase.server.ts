@@ -1,4 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '~/features/supabase/types/Database.types';
 
 type CookieHandler = {
   get: (key: string) => string | null;
@@ -9,7 +11,8 @@ type CookieHandler = {
 /**
  * Creates a Supabase client with cookie handling for server-side operations
  */
-export function createSupabaseClient(request: Request, response?: Response) {
+export type SupabaseServerType = SupabaseClient<Database>;
+export function createSupabaseClient(request: Request, response?: Response): SupabaseServerType {
   const cookies = request.headers.get('Cookie') ?? '';
   response = response || new Response();
 

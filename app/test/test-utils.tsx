@@ -1,21 +1,22 @@
 import { render } from '@testing-library/react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import React from 'react';
-
-interface RouteType {
-  path?: string;
-  element?: React.ReactNode;
+interface RenderWithRouterOptions {
+  initialEntries?: string[];
 }
 
-export function renderWithRouter(ui: React.ReactNode, { routes = [] as RouteType[] } = {}) {
+export function renderWithRouter(
+  ui: React.ReactNode,
+  { initialEntries = ['/'] }: RenderWithRouterOptions = {}
+) {
+  // We're going to wrap the UI with a div with a data-testid for easier querying
+  const wrappedUi = <div data-testid="test-component">{ui}</div>;
+
+  // For test cases, use MemoryRouter with specified initial entries
   return render(
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={ui} />
-        {routes.map((route: RouteType, i) => (
-          <Route key={i} {...route} />
-        ))}
-      </Routes>
-    </BrowserRouter>
+    <MemoryRouter initialEntries={initialEntries}>
+      {/* Render the component directly, without Routes */}
+      {wrappedUi}
+    </MemoryRouter>
   );
 }

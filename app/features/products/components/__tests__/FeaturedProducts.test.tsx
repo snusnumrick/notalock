@@ -1,68 +1,81 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { FeaturedProducts } from '../FeaturedProducts';
-import { createClient } from '@supabase/supabase-js';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import userEvent from '@testing-library/user-event';
+import { vi, describe, it, expect } from 'vitest';
+import type { TransformedProduct } from '~/features/products/types/product.types';
 
-// Mock Remix components
-vi.mock('@remix-run/react', async () => {
-  const actual = await vi.importActual('@remix-run/react');
-  return {
-    ...actual,
-    Link: ({
-      to,
-      children,
-      className,
-    }: {
-      to: string;
-      children: React.ReactNode;
-      className?: string;
-    }) => (
-      <a href={to} className={className} data-testid="remix-link">
-        {children}
-      </a>
-    ),
-    useNavigate: () => mockNavigate,
-  };
-});
-
-// Mock shadcn components
-vi.mock('~/components/ui/card', () => ({
-  Card: ({ className, children }: { className?: string; children: React.ReactNode }) => (
-    <div role="article" className={className} data-testid="card">
-      {children}
+// Mock the ProductCard component
+vi.mock('../ProductCard', () => ({
+  ProductCard: ({ product }: { product: TransformedProduct }) => (
+    <div data-testid="card">
+      <div data-testid="card-header">
+        <a href={`/products/${product.slug}`} data-testid="remix-link">
+          {product.name}
+        </a>
+      </div>
+      <div data-testid="card-content">
+        <div>{product.description}</div>
+        {product.categories?.map(cat => (
+          <div key={cat.id} role="status">
+            {cat.name}
+          </div>
+        ))}
+      </div>
+      <div data-testid="card-footer">
+        <div>
+          <span>Price</span>
+          <div>${product.price.toFixed(2)}</div>
+        </div>
+        <button data-testid="button">
+          <span data-testid="shopping-cart-icon">ShoppingCart</span>
+          Add
+        </button>
+      </div>
+      {!product.image_url && <span data-testid="image-icon">ImageIcon</span>}
     </div>
   ),
-  CardHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="card-header">{children}</div>
-  ),
-  CardContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="card-content">{children}</div>
-  ),
-  CardFooter: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="card-footer">{children}</div>
-  ),
-  CardTitle: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="card-title">{children}</div>
-  ),
 }));
 
-vi.mock('~/components/ui/badge', () => ({
-  Badge: ({ children }: { children: React.ReactNode }) => <div role="status">{children}</div>,
+// Mock useCart hook
+vi.mock('~/features/cart/hooks/useCart', () => ({
+  useCart: () => ({
+    cartItems: [],
+    isLoading: false,
+    summary: { totalItems: 0, subtotal: 0, total: 0 },
+    addToCart: vi.fn(),
+    updateCartItem: vi.fn(),
+    removeCartItem: vi.fn(),
+    clearCart: vi.fn(),
+    cartError: null,
+    cartSuccess: false,
+    isAddingToCart: false,
+  }),
 }));
 
-vi.mock('~/components/ui/button', () => ({
-  Button: ({
-    onClick,
+// Mock isProductNew utility
+vi.mock('~/features/products/utils/product-utils', () => ({
+  isProductNew: () => false,
+}));
+
+// Mock Remix components
+vi.mock('@remix-run/react', () => ({
+  Link: ({
+    to,
     children,
+    className,
   }: {
-    onClick?: React.MouseEventHandler<HTMLButtonElement>;
+    to: string;
     children: React.ReactNode;
+    className?: string;
   }) => (
-    <button onClick={onClick} type="button">
+    <a href={to} className={className} data-testid="remix-link">
       {children}
-    </button>
+    </a>
   ),
+  useFetcher: () => ({
+    submit: vi.fn(),
+    state: 'idle',
+    data: null,
+  }),
 }));
 
 // Mock Lucide icons
@@ -79,161 +92,125 @@ vi.mock('lucide-react', () => ({
   ),
 }));
 
-// Mock Supabase client
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(),
-}));
-
-// Mock navigate function
-const mockNavigate = vi.fn();
-
 describe('FeaturedProducts', () => {
-  const mockSupabaseUrl = 'http://localhost:54321';
-  const mockSupabaseKey = 'test-key';
+  // Sample product data matching TransformedProduct type
+  const mockProducts: TransformedProduct[] = [
+    {
+      id: '1',
+      name: 'Test Product',
+      slug: 'test-product',
+      description: 'Test Description',
+      price: 99.99,
+      image_url: 'test.jpg',
+      sku: 'SKU001',
+      stock: 10,
+      featured: true,
+      hasVariants: false,
+      created_at: '2023-01-01T00:00:00Z',
+      categories: [{ id: 'cat1', name: 'Category 1' }],
+    },
+    {
+      id: '2',
+      name: 'Another Product',
+      slug: 'another-product',
+      description: 'Another Description',
+      price: 149.99,
+      image_url: '',
+      sku: 'SKU002',
+      stock: 5,
+      featured: true,
+      hasVariants: false,
+      created_at: '2023-01-02T00:00:00Z',
+      categories: [{ id: 'cat2', name: 'Category 2' }],
+    },
+  ];
 
-  // Mock data for successful response
-  const mockProduct = {
-    id: '1',
-    name: 'Test Product',
-    description: 'Test Description',
-    retail_price: 99.99,
-    featured: true,
-    images: [{ id: 'img1', url: 'test.jpg', is_primary: true }],
-    categories: [{ category: [{ id: 'cat1', name: 'Category 1' }] }],
-  };
-
-  // Supabase query builder mock
-  const createQueryBuilder = (result: { data: any; error: any }) => ({
-    from: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockResolvedValue(result),
-  });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  describe('Data Loading', () => {
-    it('shows loading state initially', () => {
-      const mockClient = createQueryBuilder({ data: [], error: null });
-      vi.mocked(createClient).mockReturnValue(mockClient as any);
-
-      render(<FeaturedProducts supabaseUrl={mockSupabaseUrl} supabaseAnonKey={mockSupabaseKey} />);
-
-      // Check for loading skeleton cards
-      const loadingCards = screen.getAllByRole('article');
-      expect(loadingCards).toHaveLength(4);
-      expect(loadingCards[0]).toHaveClass('animate-pulse');
-    });
-
-    it('displays products after successful load', async () => {
-      const mockClient = createQueryBuilder({
-        data: [mockProduct],
-        error: null,
-      });
-      vi.mocked(createClient).mockReturnValue(mockClient as any);
-
-      render(<FeaturedProducts supabaseUrl={mockSupabaseUrl} supabaseAnonKey={mockSupabaseKey} />);
-
-      // Wait for product card to appear
-      const productTitle = await screen.findByTestId('card-title');
-      expect(productTitle).toHaveTextContent('Test Product');
+  describe('Rendering', () => {
+    it('renders products correctly', () => {
+      render(<FeaturedProducts products={mockProducts} />);
 
       // Verify product details
+      expect(screen.getByText('Test Product')).toBeInTheDocument();
+      expect(screen.getByText('Another Product')).toBeInTheDocument();
       expect(screen.getByText('Test Description')).toBeInTheDocument();
-      expect(screen.getByRole('status')).toHaveTextContent('Category 1');
+      expect(screen.getByText('Another Description')).toBeInTheDocument();
+
+      // Check prices
       expect(screen.getByText('$99.99')).toBeInTheDocument();
+      expect(screen.getByText('$149.99')).toBeInTheDocument();
+
+      // Check categories
+      expect(screen.getByText('Category 1')).toBeInTheDocument();
+      expect(screen.getByText('Category 2')).toBeInTheDocument();
+    });
+
+    it('displays empty state when no products', () => {
+      render(<FeaturedProducts products={[]} />);
+      expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+      expect(screen.getByText('No featured products available.')).toBeInTheDocument();
+    });
+
+    it('handles products with missing images', () => {
+      // Product at index 1 has no image_url
+      render(<FeaturedProducts products={mockProducts} />);
+
+      // Should render placeholder image icon
+      const imageIcons = screen.getAllByTestId('image-icon');
+      expect(imageIcons).toHaveLength(1); // One product has no image
+    });
+
+    it('allows custom title and description', () => {
+      const customTitle = 'Special Featured Products';
+      const customDescription = 'Our hand-picked selection';
+
+      render(
+        <FeaturedProducts
+          products={mockProducts}
+          title={customTitle}
+          description={customDescription}
+        />
+      );
+
+      expect(screen.getByText(customTitle)).toBeInTheDocument();
+      expect(screen.getByText(customDescription)).toBeInTheDocument();
     });
   });
 
-  describe('Error Handling', () => {
-    it('displays error message and retry button on load failure', async () => {
-      const mockClient = createQueryBuilder({
-        data: null,
-        error: new Error('Failed to fetch'),
-      });
-      vi.mocked(createClient).mockReturnValue(mockClient as any);
+  describe('Interactive Elements', () => {
+    it('has correct links to product pages', () => {
+      render(<FeaturedProducts products={mockProducts} />);
 
-      render(<FeaturedProducts supabaseUrl={mockSupabaseUrl} supabaseAnonKey={mockSupabaseKey} />);
+      // Get card links
+      const productLinks = screen.getAllByTestId('remix-link');
 
-      // Error message should appear
-      const errorMessage = await screen.findByText(/Failed to load featured products/);
-      expect(errorMessage).toBeInTheDocument();
+      // Find links by their href attribute
+      const testProductLink = productLinks.find(
+        link => link.getAttribute('href') === '/products/test-product'
+      );
+      const anotherProductLink = productLinks.find(
+        link => link.getAttribute('href') === '/products/another-product'
+      );
 
-      // Test retry functionality
-      const retryButton = screen.getByRole('button', { name: /try again/i });
-      expect(retryButton).toBeInTheDocument();
-
-      // Setup mock for retry
-      const successMock = createQueryBuilder({ data: [mockProduct], error: null });
-      vi.mocked(createClient).mockReturnValue(successMock as any);
-
-      // Click retry
-      await userEvent.click(retryButton);
-
-      // Verify product appears after retry
-      const productTitle = await screen.findByTestId('card-title');
-      expect(productTitle).toHaveTextContent('Test Product');
+      // Check that links exist and point to correct product pages
+      expect(testProductLink).toHaveAttribute('href', '/products/test-product');
+      expect(anotherProductLink).toHaveAttribute('href', '/products/another-product');
     });
 
-    it('redirects to login on JWT error', async () => {
-      const mockClient = createQueryBuilder({
-        data: null,
-        error: new Error('JWT expired'),
-      });
-      vi.mocked(createClient).mockReturnValue(mockClient as any);
+    it('displays proper product card layout', () => {
+      render(<FeaturedProducts products={[mockProducts[0]]} />);
 
-      render(<FeaturedProducts supabaseUrl={mockSupabaseUrl} supabaseAnonKey={mockSupabaseKey} />);
+      // Check for card structure
+      expect(screen.getByTestId('card')).toBeInTheDocument();
+      expect(screen.getByTestId('card-header')).toBeInTheDocument();
+      expect(screen.getByTestId('card-content')).toBeInTheDocument();
+      expect(screen.getByTestId('card-footer')).toBeInTheDocument();
 
-      await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/auth/login');
-      });
-    });
-  });
+      // Check for price label
+      expect(screen.getByText('Price')).toBeInTheDocument();
 
-  describe('Data Validation', () => {
-    it('handles products with missing category data', async () => {
-      const productWithMissingCategories = {
-        ...mockProduct,
-        categories: [
-          { category: [] }, // Empty category array
-          { category: null }, // Null category
-          { category: [{ id: '1', name: 'Valid Category' }] }, // Valid category
-        ],
-      };
-
-      const mockClient = createQueryBuilder({
-        data: [productWithMissingCategories],
-        error: null,
-      });
-      vi.mocked(createClient).mockReturnValue(mockClient as any);
-
-      render(<FeaturedProducts supabaseUrl={mockSupabaseUrl} supabaseAnonKey={mockSupabaseKey} />);
-
-      // Should only show valid category
-      const category = await screen.findByRole('status');
-      expect(category).toHaveTextContent('Valid Category');
-      expect(screen.queryAllByRole('status')).toHaveLength(1);
-    });
-
-    it('handles products with missing images', async () => {
-      const productWithoutImages = {
-        ...mockProduct,
-        images: [], // Empty images array
-      };
-
-      const mockClient = createQueryBuilder({
-        data: [productWithoutImages],
-        error: null,
-      });
-      vi.mocked(createClient).mockReturnValue(mockClient as any);
-
-      render(<FeaturedProducts supabaseUrl={mockSupabaseUrl} supabaseAnonKey={mockSupabaseKey} />);
-
-      // Look for the ImageIcon instead of the text "No image"
-      const imageIcon = await screen.findByTestId('image-icon');
-      expect(imageIcon).toBeInTheDocument();
+      // Check for cart icon and button
+      expect(screen.getByTestId('shopping-cart-icon')).toBeInTheDocument();
+      expect(screen.getByTestId('button')).toBeInTheDocument();
     });
   });
 });

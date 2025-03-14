@@ -9,7 +9,9 @@ import { getHeroBannerService } from '~/features/hero-banners/api';
 import { HeroSlider, HeroSliderSkeleton } from '~/features/hero-banners/components';
 import type { Category } from '~/features/categories/types/category.types';
 import type { HeroBanner } from '~/features/hero-banners/types/hero-banner.types';
+import type { TransformedProduct } from '~/features/products/types/product.types';
 import { Suspense } from 'react';
+import { getProducts } from '~/features/products/api/products.server';
 
 export const meta: MetaFunction = () => {
   return [
@@ -23,6 +25,8 @@ interface LoaderData {
   supabaseAnonKey: string;
   categories: Category[];
   banners: HeroBanner[];
+  newArrivals: TransformedProduct[];
+  featuredProducts: TransformedProduct[];
 }
 
 export const loader: LoaderFunction = async ({ request }) => {
@@ -34,27 +38,50 @@ export const loader: LoaderFunction = async ({ request }) => {
   }
 
   const response = new Response();
-  const categoryService = getCategoryService(request, response);
 
-  const categories = await categoryService.fetchCategories({
+  // Fetch categories
+  const categoryService = getCategoryService(request, response);
+  const categoriesPromise = categoryService.fetchCategories({
     isHighlighted: true,
     isVisible: true,
   });
 
-  // Get hero banners
+  // Fetch hero banners
   const heroBannerService = getHeroBannerService(request, response);
-  const banners = await heroBannerService.fetchHeroBanners({ isActive: true });
+  const bannersPromise = heroBannerService.fetchHeroBanners({ isActive: true });
+
+  // Fetch new arrivals using server-side getProducts function
+  const newArrivalsPromise = getProducts({
+    limit: 8,
+    filters: { sortOrder: 'newest' },
+  });
+
+  // Fetch featured products using server-side getProducts function
+  const featuredProductsPromise = getProducts({
+    limit: 4,
+    filters: { sortOrder: 'featured' },
+  });
+
+  // Wait for all promises to resolve
+  const [categories, banners, newArrivalsResponse, featuredProductsResponse] = await Promise.all([
+    categoriesPromise,
+    bannersPromise,
+    newArrivalsPromise,
+    featuredProductsPromise,
+  ]);
 
   return json<LoaderData>({
     supabaseUrl,
     supabaseAnonKey,
     categories,
     banners,
+    newArrivals: newArrivalsResponse.products,
+    featuredProducts: featuredProductsResponse.products,
   });
 };
 
 export default function Index() {
-  const { supabaseUrl, supabaseAnonKey, categories, banners } = useLoaderData<LoaderData>();
+  const { categories, banners, newArrivals, featuredProducts } = useLoaderData<LoaderData>();
 
   return (
     <div className="bg-white flex-grow">
@@ -138,12 +165,12 @@ export default function Index() {
 
         {/* Featured Products Section */}
         <div className="bg-white pb-8">
-          <FeaturedProducts supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} />
+          <FeaturedProducts products={featuredProducts} />
         </div>
 
         {/* New Arrivals Section */}
         <div className="bg-white py-8">
-          <NewArrivals supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} limit={8} />
+          <NewArrivals products={newArrivals} limit={8} />
         </div>
 
         {/* Featured Categories */}

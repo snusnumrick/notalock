@@ -7,7 +7,7 @@ export const validateProductForm = (formData: ProductFormData): ValidationErrors
     errors.name = 'Name is required';
   }
 
-  if (!formData.sku.trim()) {
+  if (!formData.sku || !formData.sku.trim()) {
     errors.sku = 'SKU is required';
   }
 

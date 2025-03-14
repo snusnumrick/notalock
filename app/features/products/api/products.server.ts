@@ -4,6 +4,7 @@ import type { FilterOptions } from '../components/ProductSearch';
 import type { TransformedProduct } from '../types/product.types';
 import type { Database } from '~/features/supabase/types/Database.types';
 import { ProductsQuery, ProductWithCategories } from './featured-cursor';
+import { DEFAULT_PAGE_LIMIT } from '~/config/pagination';
 
 type Tables = Database['public']['Tables'];
 type CategoryRow = Tables['categories']['Row'];
@@ -24,13 +25,38 @@ interface CursorData {
   featured: boolean;
 }
 
+/**
+ * Represents the response structure for a product-related API.
+ *
+ * @interface ProductResponse
+ * @property {TransformedProduct[]} products - The list of transformed product objects.
+ * @property {number} total - The total number of products available.
+ * @property {string | null} nextCursor - The cursor for the next set of results, or null if no more results are available.
+ */
+export interface ProductResponse {
+  products: TransformedProduct[];
+  total: number;
+  nextCursor?: string;
+}
+
+/**
+ * Fetches a list of products based on various filters and options.
+ *
+ * @param {Object} options - The options used to filter and fetch products.
+ * @param {number} [options.limit=DEFAULT_PAGE_LIMIT] - The maximum number of products to fetch.
+ * @param {string} [options.cursor] - A cursor string for pagination.
+ * @param {string|null} [options.categoryId=null] - The ID of the category to filter products by.
+ * @param {Object} [options.filters={}] - Additional filters for fetching products.
+ * @param {boolean} [options.isAdmin=false] - Whether the request is made by an administrator, enabling admin-specific filtering.
+ * @return {Promise<ProductResponse>} A promise that resolves to the list of filtered products and related metadata.
+ */
 export async function getProducts({
-  limit = 12,
+  limit = DEFAULT_PAGE_LIMIT,
   cursor,
   categoryId = null,
   filters = {},
   isAdmin = false,
-}: GetProductsOptions) {
+}: GetProductsOptions): Promise<ProductResponse> {
   const supabase = getSupabase();
 
   // Build base query for products with categories
@@ -168,6 +194,9 @@ export async function getProducts({
         break;
     }
 
+    // Ensure active products only for customer-facing views
+    productsQuery = productsQuery.eq('is_active', true);
+
     // Call createStableOrder for test purposes only after we've applied the actual ordering
     switch (customerFilters.sortOrder) {
       case 'price_asc':
@@ -294,7 +323,7 @@ export async function getProducts({
   );
 
   // Set next cursor if there are more products
-  let nextCursor = null;
+  let nextCursor = undefined;
   if (transformedProducts.length === limit && transformedProducts.length > 0) {
     const lastProduct = transformedProducts[transformedProducts.length - 1];
 

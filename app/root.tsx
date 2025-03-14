@@ -15,9 +15,14 @@ import stylesheet from '~/styles/tailwind.css';
 import { createSupabaseClient } from '~/server/services/supabase.server';
 import { Session } from '@supabase/supabase-js';
 import { CartProvider } from '~/features/cart/context/CartContext';
-import { CartService } from '~/features/cart/api/cartService';
+import { CartServiceRPC } from '~/features/cart/api/cartServiceRPC';
 import type { CartItem } from '~/features/cart/types/cart.types';
 import { useEffect } from 'react';
+// Import the client-side initialization script
+import './root.client';
+// Import cart cookie functions
+import { getAnonymousCartId, setAnonymousCartId } from '~/features/cart/utils/serverCookie';
+import { CART_COUNT_EVENT_NAME, CART_DATA_STORAGE_KEY } from '~/features/cart/constants';
 
 export const links = () => [{ rel: 'stylesheet', href: stylesheet }];
 
@@ -47,9 +52,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
   }
 
-  // Fetch cart items
-  const cartService = new CartService(supabase);
+  // Get or create anonymous cart ID from cookie
+  const anonymousCartId = await getAnonymousCartId(request);
+  console.log('Root loader: Using anonymous cart ID from cookie:', anonymousCartId);
+
+  // Set cookie for future requests
+  await setAnonymousCartId(response, anonymousCartId);
+
+  // Fetch cart items using the anonymous cart ID
+  const cartService = new CartServiceRPC(supabase, anonymousCartId);
   const cartItems = await cartService.getCartItems();
+
+  console.log(
+    `Root loader: Loaded ${cartItems.length} cart items for anonymous ID ${anonymousCartId}`
+  );
 
   return build.json(
     {
@@ -136,47 +152,52 @@ export default function App() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        // Check if we have localStorage data first
-        const storageKey = 'notalock_cart_data';
-        const savedCart = localStorage.getItem(storageKey);
+        // Server-side cart data should be the source of truth
+        if (cartItems && cartItems.length > 0) {
+          console.log(
+            'Root - Server provided',
+            cartItems.length,
+            'cart items, using as source of truth'
+          );
+          // Save server data to localStorage
+          localStorage.setItem(CART_DATA_STORAGE_KEY, JSON.stringify(cartItems));
+          // Calculate total items
+          const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+          console.log('count event 1', totalItems);
+          // Dispatch count event
+          console.log('count event 20', totalItems);
 
-        // If localStorage has data, prioritize it
+          window.dispatchEvent(
+            new CustomEvent(CART_COUNT_EVENT_NAME, {
+              detail: { count: totalItems },
+            })
+          );
+          return;
+        }
+
+        // Only use localStorage if server doesn't provide cart items
+        const savedCart = localStorage.getItem(CART_DATA_STORAGE_KEY);
         if (savedCart) {
           try {
             const parsedItems = JSON.parse(savedCart);
             if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+              console.log('Root - Using', parsedItems.length, 'cart items from localStorage');
               // Calculate total items
               const totalItems = parsedItems.reduce((total, item) => total + item.quantity, 0);
               // Dispatch count event
+              console.log('count event 21', totalItems);
+
               window.dispatchEvent(
-                new CustomEvent('cart-count-update', {
+                new CustomEvent(CART_COUNT_EVENT_NAME, {
                   detail: { count: totalItems },
                 })
               );
-              console.log(
-                'Root - Sent cart count update from localStorage with count:',
-                totalItems
-              );
-              return; // Skip server cart handling if localStorage has items
             }
           } catch (parseError) {
             console.error('Root - Error parsing localStorage cart:', parseError);
+            // Clear invalid localStorage data
+            localStorage.removeItem(CART_DATA_STORAGE_KEY);
           }
-        }
-
-        // If no localStorage data or invalid, check server data
-        if (cartItems && cartItems.length > 0) {
-          // Save server data to localStorage
-          localStorage.setItem(storageKey, JSON.stringify(cartItems));
-          // Calculate total items
-          const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
-          // Dispatch count event
-          window.dispatchEvent(
-            new CustomEvent('cart-count-update', {
-              detail: { count: totalItems },
-            })
-          );
-          // console.log('Root - Sent cart count update from server data with count:', totalItems);
         }
       } catch (err) {
         console.error('Root - Error accessing localStorage:', err);

@@ -1,7 +1,8 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { productsLoader } from '../loaders';
 import { getProducts } from '../products.server';
-import { getCategories } from '~/features/categories/api/categories.server';
+import { getCategories } from '../../../categories/api/categories.server';
+import { DEFAULT_PAGE_LIMIT } from '../../../../config/pagination';
 
 vi.mock('../products.server', () => ({
   getProducts: vi.fn(),
@@ -45,7 +46,7 @@ describe('productsLoader', () => {
 
     expect(getProducts).toHaveBeenCalledWith({
       cursor: undefined,
-      limit: 12,
+      limit: DEFAULT_PAGE_LIMIT,
       filters: {
         minPrice: undefined,
         maxPrice: undefined,
@@ -138,7 +139,7 @@ describe('productsLoader', () => {
 
     expect(getProducts).toHaveBeenCalledWith({
       cursor: undefined,
-      limit: 12,
+      limit: DEFAULT_PAGE_LIMIT,
       filters: {
         minPrice: undefined,
         maxPrice: undefined,

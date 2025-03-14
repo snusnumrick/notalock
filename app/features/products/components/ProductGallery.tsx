@@ -8,6 +8,7 @@ interface ProductGalleryProps {
     id: string;
     url: string;
     is_primary: boolean;
+    alt_text?: string | null;
   }[];
 }
 
@@ -91,7 +92,9 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
             processedImages[currentImageIndex]?.optimizedUrl ||
             processedImages[currentImageIndex]?.url
           }
-          alt="Product"
+          alt={
+            processedImages[currentImageIndex]?.alt_text || `Product image ${currentImageIndex + 1}`
+          }
           className={`w-full h-full object-contain transition-transform duration-300 ${
             isZoomed ? 'scale-150' : 'scale-100'
           }`}
@@ -169,7 +172,7 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
           >
             <img
               src={image.thumbnailUrl || image.url}
-              alt={`Product thumbnail ${index + 1}`}
+              alt={`${image.alt_text || `Product thumbnail ${index + 1}`}`}
               className="w-full h-full object-contain"
               loading="lazy"
             />
@@ -186,7 +189,10 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
                 processedImages[currentImageIndex]?.optimizedUrl ||
                 processedImages[currentImageIndex]?.url
               }
-              alt="Product full size"
+              alt={
+                processedImages[currentImageIndex]?.alt_text ||
+                `Product image ${currentImageIndex + 1} - full size`
+              }
               className="w-full h-full object-contain"
               loading="lazy"
             />

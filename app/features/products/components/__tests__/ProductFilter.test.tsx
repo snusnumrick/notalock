@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import ProductFilter from '../ProductFilter';
+import { DEFAULT_PAGE_LIMIT } from '../../../../config/pagination';
 
 const mockSubmit = vi.fn();
 
@@ -57,11 +58,11 @@ describe('ProductFilter', () => {
       const maxPriceInput = screen.getByLabelText('Maximum price') as HTMLInputElement;
 
       maxPriceInput.focus();
-      fireEvent.change(maxPriceInput, { target: { value: '12' } });
+      fireEvent.change(maxPriceInput, { target: { value: DEFAULT_PAGE_LIMIT.toString() } });
       vi.advanceTimersByTime(0);
 
       expect(screen.getByLabelText('Maximum price')).toHaveFocus();
-      expect(maxPriceInput.value).toBe('12');
+      expect(maxPriceInput.value).toBe(DEFAULT_PAGE_LIMIT.toString());
     });
 
     it('properly resets focus on blur', () => {

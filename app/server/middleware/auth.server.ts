@@ -1,10 +1,13 @@
 import { redirect } from '@remix-run/node';
-import type { User } from '@supabase/supabase-js';
-import { createSupabaseClient } from '../services/supabase.server';
+import type { PostgrestError, User } from '@supabase/supabase-js';
+import { createSupabaseClient, SupabaseServerType } from '../services/supabase.server';
+import { Database } from '~/features/supabase/types/Database.types';
 
 export interface AuthUser extends User {
   role?: string;
 }
+
+type Profile = Database['public']['Tables']['profiles']['Row'];
 
 interface AuthResult {
   user: AuthUser;
@@ -47,11 +50,13 @@ export async function requireAdmin(request: Request): Promise<AuthResult> {
   const supabase = createSupabaseClient(request, response);
   const url = new URL(request.url);
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
+  const {
+    data: profile,
+    error: profileError,
+  }: {
+    data: Profile | null;
+    error: PostgrestError | null;
+  } = await supabase.from('profiles').select('role').eq('id', user.id).single();
 
   if (profileError || profile?.role !== 'admin') {
     console.log('Admin check failed:', { profileError, role: profile?.role });
@@ -73,9 +78,10 @@ export async function requireAdmin(request: Request): Promise<AuthResult> {
 export async function checkUserRole(request: Request, allowedRoles: string[]): Promise<boolean> {
   try {
     const { user } = await requireAuth(request);
-    const supabase = createSupabaseClient(request, new Response());
+    const supabase: SupabaseServerType = createSupabaseClient(request, new Response());
 
-    const { data: profile } = await supabase
+    const { data: profile }: { data: Profile | null } = await supabase
+
       .from('profiles')
       .select('role')
       .eq('id', user.id)

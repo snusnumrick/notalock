@@ -6,7 +6,7 @@ import type { Category } from '~/features/categories/types/category.types';
 import { buildCategoryTree, initializeCategories } from '~/data/categories';
 import { Header } from '~/components/common/Header';
 import { Footer } from '~/components/common/Footer';
-import { CartProvider } from '~/features/cart/context/CartContext';
+// Cart provider is already in root.tsx
 
 interface LoaderData {
   categories: Category[];
@@ -44,14 +44,12 @@ export const loader: LoaderFunction = async ({ request }) => {
 export default function Layout() {
   const { categories } = useLoaderData<LoaderData>();
   return (
-    <CartProvider>
-      <div className="flex flex-col min-h-screen bg-white">
-        <Header categories={categories} />
-        <div className="flex-grow">
-          <Outlet />
-        </div>
-        <Footer />
+    <div className="flex flex-col min-h-screen bg-white">
+      <Header categories={categories} />
+      <div className="flex-grow">
+        <Outlet />
       </div>
-    </CartProvider>
+      <Footer />
+    </div>
   );
 }

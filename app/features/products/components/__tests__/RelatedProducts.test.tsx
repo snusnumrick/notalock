@@ -77,8 +77,8 @@ describe('RelatedProducts Component', () => {
   it('renders product images correctly', () => {
     render(<RelatedProducts products={mockProducts} />);
 
-    // Get all product image elements
-    const images = screen.getAllByRole('img');
+    // Get all actual image elements (excluding placeholders)
+    const images = screen.getAllByRole('img', { name: name => !name.includes('No image for') });
 
     // Should have 3 images (3 products with thumbnails)
     expect(images).toHaveLength(3);
@@ -92,8 +92,11 @@ describe('RelatedProducts Component', () => {
   it('shows placeholder for products without images', () => {
     render(<RelatedProducts products={mockProducts} />);
 
-    // Should have a "No Image" placeholder
-    expect(screen.getByText('No Image')).toBeInTheDocument();
+    // Should have a "No Image" placeholder for product 3 (which has no thumbnail_url)
+    const noImageProduct = mockProducts.find(p => p.thumbnail_url === null);
+    expect(
+      screen.getByRole('img', { name: `No image for ${noImageProduct?.name}` })
+    ).toBeInTheDocument();
   });
 
   it('creates links to product detail pages', () => {
@@ -151,9 +154,11 @@ describe('RelatedProducts Component', () => {
       expect(link).toHaveClass('group');
     });
 
-    // Images should have hover opacity class
-    const images = screen.getAllByRole('img');
-    images.forEach(img => {
+    // Only check actual images (not placeholders)
+    const actualImages = screen.getAllByRole('img', {
+      name: name => !name.includes('No image for'),
+    });
+    actualImages.forEach(img => {
       expect(img).toHaveClass('group-hover:opacity-75');
     });
   });

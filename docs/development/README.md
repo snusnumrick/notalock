@@ -1,31 +1,34 @@
-# Development Documentation
+# Notalock Development Documentation
 
-This directory contains comprehensive documentation for developers working on the Notalock project.
+This directory contains detailed documentation for developers working on the Notalock e-commerce platform.
 
-## Getting Started
+## Development Guidelines
 
-1. Start with the [Development Guidelines](./guidelines.md) to understand our coding standards and practices
-2. Review the [Code Organization](./code-organization.md) to understand the project structure
-3. Learn about our [Error Handling](./error-handling.md) practices
-4. Check the [Testing Guidelines](./testing.md) for our approach to testing
+- [Development Guidelines](./guidelines.md) - General coding and architecture guidelines
+- [Code Organization](./code-organization.md) - Project structure and file organization
+- [Error Handling](./error-handling.md) - Standardized error handling approach
+- [Testing Guidelines](./testing.md) - Testing standards and best practices
+- [Middleware](./middleware.md) - Server middleware implementation details
+- [Fixing Failing Tests Guide](./fixing-failing-tests-guide.md) - How to address failing tests
 
-## Key Documents
+## Checkout System
 
-### Project Structure
-- [Code Organization](./code-organization.md) - How the codebase is structured
-- [Middleware Documentation](./middleware.md) - Information about middleware components
+- [Checkout Flow](./checkout-flow.md) - Complete checkout flow implementation details
+- [Checkout Routing](./checkout-routing.md) - Route structure for multi-step checkout
+- [Checkout Fixes](./checkout-fixes.md) - Recent fixes and improvements to the checkout system
+- [Anonymous Carts](./anonymous-carts.md) - Implementation of guest shopping carts
+- [Cart Item Removal](./cart-removal.md) - Robust cart item removal implementation
 
-### Development Practices
-- [Development Guidelines](./guidelines.md) - Coding standards and best practices
-- [Error Handling](./error-handling.md) - How errors are handled throughout the application
-- [Testing Guidelines](./testing.md) - How to write and run tests
+## Image Handling
 
-### Features Implementation
-- [Image Optimization Guide](./image-optimization-guide.md) - How to implement image optimization
-- [Anonymous Carts](./anonymous-carts.md) - Implementation details for anonymous shopping carts
+- [Image Optimization Guide](./image-optimization-guide.md) - Guide to image optimization implementation
 
-### Troubleshooting
-- [Fixing Failing Tests Guide](./fixing-failing-tests-guide.md) - How to troubleshoot and fix failing tests
+## AI Assistance
 
-### AI Assistance
-- [Claude Instructions](./claude-instructions.md) - Guidelines for using Claude AI with this project
+- [Claude Instructions](./claude-instructions.md) - Instructions for Claude AI to assist with development
+
+## Related Resources
+
+- [Features Documentation](../features/README.md) - End-user feature documentation
+- [API Documentation](../api/README.md) - API endpoints and usage
+- [Database Documentation](../database/README.md) - Database schema and design

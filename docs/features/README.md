@@ -8,6 +8,7 @@ This directory contains documentation for all the major features in the Notalock
 - [Product Detail Page](./product-detail.md) - Documentation for product detail page implementation
 - [Category Management](./category-management.md) - Guide to category management functionality
 - [Image Management](./image-management.md) - Documentation for image handling features
+- [Checkout Feature](./checkout.md) - Comprehensive guide to the multi-step checkout process
 
 ## Purpose
 

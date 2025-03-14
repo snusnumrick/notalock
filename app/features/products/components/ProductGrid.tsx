@@ -11,6 +11,7 @@ import type { SetURLSearchParams } from 'react-router-dom';
 import ProductCardWithReferrer from './ProductCardWithReferrer';
 import { findCategoryBySlug } from '~/features/categories/utils/categoryUtils';
 import type { Category } from '~/features/categories/types/category.types';
+import { DEFAULT_PAGE_LIMIT } from '~/config/pagination';
 
 interface ProductGridProps {
   products: TransformedProduct[];
@@ -80,7 +81,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 
     // Calculate remaining items and adjust the limit if needed
     const remaining = total - products.length;
-    if (remaining < 12) {
+    if (remaining < DEFAULT_PAGE_LIMIT) {
       newParams.set('limit', remaining.toString());
     }
     // console.log('remaining', remaining);

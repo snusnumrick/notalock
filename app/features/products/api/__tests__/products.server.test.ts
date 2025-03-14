@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { createMockSupabaseClient } from '~/test/mocks/supabase';
+import { createMockSupabaseClient } from '../../../../test/mocks/supabase';
 
 // Mock Supabase lib including the stable order function
 vi.mock('~/lib/supabase', () => {
@@ -33,7 +33,8 @@ vi.mock('~/lib/supabase', () => {
 
 // Import after mocks
 import { getProducts } from '../products.server';
-import { getSupabase, createStableOrder } from '~/lib/supabase';
+import { getSupabase, createStableOrder } from '../../../../lib/supabase';
+import { DEFAULT_PAGE_LIMIT } from '../../../../config/pagination';
 
 // Top-level mock data
 const mockCategories = [
@@ -41,7 +42,7 @@ const mockCategories = [
   { id: 'cat2', name: 'Category 2' },
 ];
 
-const mockProducts = Array.from({ length: 12 }, (_, i) => ({
+const mockProducts = Array.from({ length: DEFAULT_PAGE_LIMIT }, (_, i) => ({
   id: `prod${i + 1}`,
   name: `Product ${i + 1}`,
   description: `Description ${i + 1}`,
@@ -64,7 +65,7 @@ const mockProducts = Array.from({ length: 12 }, (_, i) => ({
 }));
 
 // Products with multiple categories for testing category filtering
-const mockMultiCategoryProducts = Array.from({ length: 12 }, (_, i) => ({
+const mockMultiCategoryProducts = Array.from({ length: DEFAULT_PAGE_LIMIT }, (_, i) => ({
   ...mockProducts[i],
   product_categories: [{ category: mockCategories[0] }, { category: mockCategories[1] }],
 }));
@@ -148,8 +149,8 @@ describe('Products Server API', () => {
       });
 
       // Get first page
-      const firstPage = await getProducts({ limit: 12 });
-      expect(firstPage.products).toHaveLength(12);
+      const firstPage = await getProducts({ limit: DEFAULT_PAGE_LIMIT });
+      expect(firstPage.products).toHaveLength(DEFAULT_PAGE_LIMIT);
       expect(firstPage.total).toBe(103);
       expect(firstPage.nextCursor).toBeDefined();
 
@@ -173,7 +174,7 @@ describe('Products Server API', () => {
       });
 
       // Setup mock response for second page
-      const secondPageMockProducts = Array.from({ length: 12 }, (_, i) => ({
+      const secondPageMockProducts = Array.from({ length: DEFAULT_PAGE_LIMIT }, (_, i) => ({
         ...mockProducts[0],
         id: `prod${i + 13}`,
         name: `Product ${i + 13}`,
@@ -189,12 +190,12 @@ describe('Products Server API', () => {
 
       // Get second page using cursor
       const secondPage = await getProducts({
-        limit: 12,
+        limit: DEFAULT_PAGE_LIMIT,
         cursor: firstPage.nextCursor ?? undefined,
         filters: { sortOrder: 'featured' },
       });
 
-      expect(secondPage.products).toHaveLength(12);
+      expect(secondPage.products).toHaveLength(DEFAULT_PAGE_LIMIT);
       expect(secondPage.total).toBe(103);
       expect(secondPage.nextCursor).toBeDefined();
 
@@ -210,11 +211,11 @@ describe('Products Server API', () => {
       });
 
       const firstPage = await getProducts({
-        limit: 12,
+        limit: DEFAULT_PAGE_LIMIT,
         categoryId: 'cat1',
       });
 
-      expect(firstPage.products).toHaveLength(12);
+      expect(firstPage.products).toHaveLength(DEFAULT_PAGE_LIMIT);
       expect(firstPage.total).toBe(50);
       expect(firstPage.nextCursor).toBeDefined();
 
@@ -233,12 +234,12 @@ describe('Products Server API', () => {
       });
 
       const secondPage = await getProducts({
-        limit: 12,
+        limit: DEFAULT_PAGE_LIMIT,
         cursor: firstPage.nextCursor ?? undefined,
         categoryId: 'cat1',
       });
 
-      expect(secondPage.products).toHaveLength(12);
+      expect(secondPage.products).toHaveLength(DEFAULT_PAGE_LIMIT);
       expect(secondPage.total).toBe(50);
       expect(secondPage.nextCursor).toBeDefined();
 
@@ -537,7 +538,7 @@ describe('Products Server API', () => {
         // Setup required mocks with multi-category products
         mockQueryBuilder.limit.mockResolvedValueOnce({
           data: mockMultiCategoryProducts,
-          count: 12,
+          count: DEFAULT_PAGE_LIMIT,
           error: null,
         });
 

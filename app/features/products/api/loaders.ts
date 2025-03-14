@@ -5,11 +5,12 @@ import { getCategories } from '~/features/categories/api/categories.server';
 import type { TransformedProduct } from '~/features/products/types/product.types';
 import { initializeCategories } from '~/data/categories';
 import { Category } from '~/features/categories/types/category.types';
+import { DEFAULT_PAGE_LIMIT } from '~/config/pagination';
 
 export interface ProductLoaderData {
   products: TransformedProduct[];
   total: number;
-  nextCursor: string | null;
+  nextCursor?: string;
   initialLoad: boolean;
   filters: {
     sortOrder?: string;
@@ -26,8 +27,8 @@ export async function productsLoader({ request }: LoaderFunctionArgs): Promise<P
   const url = new URL(request.url);
   const cursor = url.searchParams.get('cursor') || undefined;
   const limit = Number.isNaN(parseInt(url.searchParams.get('limit') || ''))
-    ? 12
-    : parseInt(url.searchParams.get('limit') || '12');
+    ? DEFAULT_PAGE_LIMIT
+    : parseInt(url.searchParams.get('limit') || DEFAULT_PAGE_LIMIT.toString());
 
   const sortOrder = url.searchParams.get('sortOrder') as CustomerFilterOptions['sortOrder'];
 

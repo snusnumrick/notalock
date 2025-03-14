@@ -2,6 +2,12 @@ import { createContext, useContext, useState, ReactNode, useCallback, useEffect 
 import { useFetcher } from '@remix-run/react';
 import { CartResponseData } from '../types';
 import type { CartItem, CartSummary } from '../types/cart.types';
+import {
+  loadCartFromStorage,
+  removeItemFromStorage,
+  isLocalStorageAvailable,
+} from '../utils/cartStorage';
+import { CART_COUNT_EVENT_NAME, CART_DATA_STORAGE_KEY } from '~/features/cart/constants';
 
 interface CartContextValue {
   cartItems: CartItem[];
@@ -28,9 +34,6 @@ const defaultSummary: CartSummary = {
   total: 0,
 };
 
-// Storage key for cart data
-const CART_STORAGE_KEY = 'notalock_cart_data';
-
 // Create context with undefined default value
 const CartContext = createContext<CartContextValue | undefined>(undefined);
 
@@ -54,50 +57,91 @@ export function CartProvider({
   const [cartSuccess, setCartSuccess] = useState(false);
   const cartFetcher = useFetcher<CartResponseData>();
 
-  // Load cart items from localStorage once on mount
+  // Load cart items from server or localStorage on mount
   useEffect(() => {
     // Prevent multiple initializations
     if (isInitialized || typeof window === 'undefined') return;
 
     try {
-      // console.log('CartContext - Initializing cart state');
-      const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+      console.log('CartContext - Initializing cart state');
 
-      if (savedCart) {
-        const parsedItems = JSON.parse(savedCart) as CartItem[];
-        if (Array.isArray(parsedItems) && parsedItems.length > 0) {
-          // If we have items in localStorage, use those over initialCartItems
-          console.log('CartContext - Loading cart from localStorage');
-          setCartItems(parsedItems);
-
-          // Dispatch event to update header
-          const totalItems = parsedItems.reduce((total, item) => total + item.quantity, 0);
-          const event = new CustomEvent('cart-count-update', {
-            detail: { count: totalItems, timestamp: new Date().getTime() },
-          });
-          window.dispatchEvent(event);
-        } else if (initialCartItems.length > 0) {
-          // If localStorage empty but we have server items, use those
-          console.log('CartContext - Using initialCartItems');
-          setCartItems(initialCartItems);
+      // First try to get items from localStorage if it's available
+      let storedItems: CartItem[] = [];
+      try {
+        const storedCartData = localStorage.getItem(CART_DATA_STORAGE_KEY);
+        if (storedCartData) {
+          storedItems = JSON.parse(storedCartData);
+          if (!Array.isArray(storedItems)) {
+            console.error('CartContext - Invalid cart data in localStorage');
+            storedItems = [];
+          }
         }
-      } else if (initialCartItems.length > 0) {
-        // No localStorage but we have server-provided items
-        console.log('CartContext - Using provided initialCartItems');
-        setCartItems(initialCartItems);
+      } catch (localStorageErr) {
+        console.error('CartContext - Error accessing localStorage:', localStorageErr);
+        storedItems = [];
       }
 
-      // Mark as initialized to prevent re-running
+      // Prefer localStorage items over initialCartItems when both exist
+      if (storedItems.length > 0) {
+        console.log(`CartContext - Using items from localStorage: ${storedItems.length} items`);
+        setCartItems(storedItems);
+
+        // Calculate total items for event
+        const totalItems = storedItems.reduce((total, item) => total + item.quantity, 0);
+
+        // Use a timeout to ensure this happens after initialization
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent(CART_COUNT_EVENT_NAME, {
+              detail: { count: totalItems, timestamp: Date.now() },
+            })
+          );
+        }, 0);
+      }
+      // Use server items if no localStorage items
+      else if (initialCartItems && initialCartItems.length > 0) {
+        console.log(`CartContext - Using server items: ${initialCartItems.length} items`);
+        setCartItems(initialCartItems);
+
+        // Save server items to localStorage
+        try {
+          localStorage.setItem(CART_DATA_STORAGE_KEY, JSON.stringify(initialCartItems));
+        } catch (saveErr) {
+          console.error('CartContext - Failed to save server items to localStorage:', saveErr);
+        }
+
+        // Calculate total items for event
+        const totalItems = initialCartItems.reduce((total, item) => total + item.quantity, 0);
+
+        // Use a timeout to ensure this happens after initialization
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent(CART_COUNT_EVENT_NAME, {
+              detail: { count: totalItems, timestamp: Date.now() },
+            })
+          );
+        }, 0);
+      } else {
+        console.log('CartContext - No items found in localStorage or server');
+      }
+
+      // Mark as initialized
       setIsInitialized(true);
     } catch (err) {
       console.error('CartContext - Error initializing cart:', err);
-      // Still mark as initialized to prevent retries
-      setIsInitialized(true);
+      setIsInitialized(true); // Prevent retries
 
-      // If localStorage fails, make sure we use initialCartItems
-      if (initialCartItems.length > 0) {
-        console.log('CartContext - Using initialCartItems after localStorage error');
+      // Fallback to initialCartItems if available after error
+      if (initialCartItems && initialCartItems.length > 0) {
+        console.log('CartContext - Fallback to server items after error');
         setCartItems(initialCartItems);
+
+        // Save server items to localStorage
+        try {
+          localStorage.setItem(CART_DATA_STORAGE_KEY, JSON.stringify(initialCartItems));
+        } catch (saveErr) {
+          console.error('Failed to save fallback items to storage:', saveErr);
+        }
       }
     }
   }, [initialCartItems, isInitialized]);
@@ -122,31 +166,83 @@ export function CartProvider({
 
   // Save to localStorage when cartItems change, but only after initialization
   useEffect(() => {
-    // Don't save during initial load
+    // Don't save during initial load or if localStorage isn't available
     if (!isInitialized || typeof window === 'undefined') return;
 
     try {
-      if (cartItems.length > 0) {
-        console.log('CartContext - Saving cart to localStorage');
-        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+      // Check if localStorage is available
+      if (!isLocalStorageAvailable()) {
+        console.error('CartContext - localStorage is not available for saving cart');
+        return;
+      }
 
-        // Dispatch events, but use a throttled approach to avoid loops
-        const timestamp = new Date().getTime();
-        const countEvent = new CustomEvent('cart-count-update', {
-          detail: {
-            count: cartItems.reduce((total, item) => total + item.quantity, 0),
-            timestamp,
-          },
-        });
-        window.dispatchEvent(countEvent);
+      // Save directly to localStorage with less event triggering
+      if (cartItems.length > 0) {
+        localStorage.setItem(CART_DATA_STORAGE_KEY, JSON.stringify(cartItems));
       } else {
-        // Clear localStorage when cart is empty
-        localStorage.removeItem(CART_STORAGE_KEY);
+        localStorage.removeItem(CART_DATA_STORAGE_KEY);
+
+        // Only dispatch empty cart event if we actually cleared the cart
+        // and not during initialization
+        if (isInitialized) {
+          window.dispatchEvent(
+            new CustomEvent(CART_COUNT_EVENT_NAME, {
+              detail: { count: 0, timestamp: Date.now() },
+            })
+          );
+        }
       }
     } catch (err) {
-      console.error('CartContext - Error saving to localStorage:', err);
+      console.error('CartContext - Error saving cart to localStorage:', err);
     }
   }, [cartItems, isInitialized]);
+
+  // Listen for storage events to sync localStorage changes across tabs/components
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isInitialized) return;
+
+    // Track the last event timestamp to prevent loops
+    let lastEventTimestamp = 0;
+    const debounceTime = 100; // ms
+
+    const handleStorageEvent = () => {
+      try {
+        // Avoid reading storage too frequently
+        const now = Date.now();
+        if (now - lastEventTimestamp < debounceTime) return;
+        lastEventTimestamp = now;
+
+        console.log('CartContext - Storage event detected, resyncing cart');
+        const storedItems = loadCartFromStorage();
+
+        // Only update if there's a meaningful difference
+        const storedItemCount = storedItems.length;
+        const currentItemCount = cartItems.length;
+
+        if (storedItemCount !== currentItemCount) {
+          console.log(`CartContext - Cart changed: ${currentItemCount} → ${storedItemCount} items`);
+          setCartItems(storedItems);
+        }
+      } catch (err) {
+        console.error('Error handling storage event:', err);
+      }
+    };
+
+    // Handle cart-cleared event (triggered after order placement)
+    const handleCartCleared = () => {
+      console.log('CartContext - Received cart-cleared event, clearing cart state');
+      setCartItems([]);
+      localStorage.removeItem(CART_DATA_STORAGE_KEY);
+    };
+
+    window.addEventListener('storage', handleStorageEvent);
+    window.addEventListener('cart-cleared', handleCartCleared);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageEvent);
+      window.removeEventListener('cart-cleared', handleCartCleared);
+    };
+  }, [cartItems.length, isInitialized]);
 
   // Add item to cart
   const addToCart = useCallback(
@@ -167,6 +263,8 @@ export function CartProvider({
       setCartError(null);
       setCartSuccess(false);
 
+      // console.log('CartContext - Adding item to cart:', productId, quantity, price, variantId);
+
       try {
         cartFetcher.submit(
           {
@@ -186,14 +284,14 @@ export function CartProvider({
               item.product_id === productId && (item.variant_id || null) === (variantId || null)
           );
 
+          let updatedItems;
           if (existingItemIndex >= 0) {
             // Update existing item
-            const updatedItems = [...prevItems];
+            updatedItems = [...prevItems];
             updatedItems[existingItemIndex] = {
               ...updatedItems[existingItemIndex],
               quantity: updatedItems[existingItemIndex].quantity + quantity,
             };
-            return updatedItems;
           } else {
             // Add new item
             const newItem: CartItem = {
@@ -208,8 +306,24 @@ export function CartProvider({
               // Note: We don't have product details yet for optimistic updates
               // They will be filled when the server responds or page reloads
             };
-            return [...prevItems, newItem];
+            updatedItems = [...prevItems, newItem];
           }
+
+          // Calculate the new total items count
+          const totalItems = updatedItems.reduce((total, item) => total + item.quantity, 0);
+
+          // Dispatch event to update header with correct count
+          if (typeof window !== 'undefined') {
+            console.log('count event 9', totalItems);
+
+            window.dispatchEvent(
+              new CustomEvent(CART_COUNT_EVENT_NAME, {
+                detail: { count: totalItems, timestamp: Date.now() },
+              })
+            );
+          }
+
+          return updatedItems;
         });
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to add to cart';
@@ -225,84 +339,212 @@ export function CartProvider({
   );
 
   // Add update cart item function
-  const updateCartItem = useCallback(async (itemId: string, quantity: number) => {
-    setIsLoading(true);
-    setError(null);
+  const updateCartItem = useCallback(
+    async (itemId: string, quantity: number) => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      // Future implementation: API call to update quantity
-      console.log(`CartContext - Updating item ${itemId} to quantity ${quantity}`);
+      // console.log('CartContext - Updating item:', itemId, quantity);
 
-      // Optimistic update with localStorage persistence
-      setCartItems(prevItems => {
-        // Find and update the item
-        const updatedItems = prevItems.map(item =>
-          item.id === itemId ? { ...item, quantity, updated_at: new Date().toISOString() } : item
+      try {
+        // Server API call to update quantity
+        cartFetcher.submit(
+          {
+            action: 'update',
+            itemId,
+            quantity: quantity.toString(),
+          },
+          { method: 'post', action: '/api/cart' }
         );
-        return updatedItems;
-      });
 
-      // Dispatch an event for other components listening
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('cart-state-changed', {
-            detail: { type: 'update', itemId, quantity },
-          })
-        );
+        // Optimistic update
+        setCartItems(prevItems => {
+          // Find and update the item
+          const updatedItems = prevItems.map(item =>
+            item.id === itemId ? { ...item, quantity, updated_at: new Date().toISOString() } : item
+          );
+          return updatedItems;
+        });
+
+        // Dispatch an event for other components listening
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('cart-state-changed', {
+              detail: { type: 'update', itemId, quantity },
+            })
+          );
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to update cart');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update cart');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [cartFetcher]
+  );
 
   // Remove item from cart
-  const removeCartItem = useCallback(async (itemId: string) => {
-    setIsLoading(true);
-    setError(null);
+  const removeCartItem = useCallback(
+    async (itemId: string) => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      // Future implementation: API call to remove item
-      console.log(`CartContext - Removing item ${itemId}`);
+      // console.log('CartContext - Removing item:', itemId);
 
-      // Optimistic update
-      setCartItems(prevItems => {
-        // Filter out the item to remove
-        const filteredItems = prevItems.filter(item => item.id !== itemId);
-        return filteredItems;
-      });
+      try {
+        // console.log('CartContext - Removing item:', itemId);
 
-      // Dispatch an event for other components listening
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('cart-state-changed', {
-            detail: { type: 'remove', itemId },
-          })
+        // Create a promise that resolves when the fetcher completes
+        const fetcherPromise = new Promise((resolve, reject) => {
+          const checkFetcherState = () => {
+            if (cartFetcher.state === 'submitting') {
+              setTimeout(checkFetcherState, 100); // Check again in 100ms
+            } else if (cartFetcher.state === 'idle') {
+              if (cartFetcher.data?.error) {
+                console.error('Cart removal API error:', cartFetcher.data.error);
+                reject(new Error(cartFetcher.data.error));
+              } else {
+                console.log('Cart removal API success');
+                resolve(cartFetcher.data);
+              }
+            }
+          };
+
+          // Start checking the state
+          checkFetcherState();
+        });
+
+        // Get a snapshot of the current items before removal
+        const currentItems = [...cartItems];
+        const remainingItems = currentItems.filter(item => item.id !== itemId);
+        const currentCount = remainingItems.reduce((sum, item) => sum + item.quantity, 0);
+
+        // console.log('CartContext - Current items:', currentItems.length);
+        // console.log('CartContext - Remaining items after filter:', remainingItems.length);
+        // console.log('CartContext - Remaining item count:', currentCount);
+
+        // Server API call to remove item
+        cartFetcher.submit(
+          {
+            action: 'remove',
+            itemId,
+          },
+          { method: 'post', action: '/api/cart' }
         );
+
+        // Optimistic update for UI
+        setCartItems(remainingItems);
+
+        // Directly use our utility function to update localStorage
+        if (typeof window !== 'undefined') {
+          removeItemFromStorage(itemId);
+
+          // Dispatch events with the correct remaining count
+          window.dispatchEvent(
+            new CustomEvent('cart-state-changed', {
+              detail: {
+                type: 'remove',
+                itemId,
+                items: remainingItems,
+                count: currentCount,
+              },
+            })
+          );
+
+          // Force UI update with accurate count
+          console.log('count event 10', currentCount);
+
+          window.dispatchEvent(
+            new CustomEvent(CART_COUNT_EVENT_NAME, {
+              detail: {
+                count: currentCount,
+                timestamp: Date.now(),
+              },
+            })
+          );
+
+          // Double-check localStorage after a short delay
+          setTimeout(() => {
+            try {
+              const storedCart = localStorage.getItem(CART_DATA_STORAGE_KEY);
+              if (storedCart) {
+                const storedItems = JSON.parse(storedCart);
+                // If counts don't match, force an update
+                if (storedItems.length !== remainingItems.length) {
+                  // console.log('CartContext - Fixing inconsistent state after removal');
+                  setCartItems(storedItems);
+
+                  // Update count again
+                  const updatedCount = storedItems.reduce(
+                    (sum: number, item: CartItem) => sum + item.quantity,
+                    0
+                  );
+                  console.log('count event 11', updatedCount);
+
+                  window.dispatchEvent(
+                    new CustomEvent(CART_COUNT_EVENT_NAME, {
+                      detail: {
+                        count: updatedCount,
+                        timestamp: Date.now(),
+                      },
+                    })
+                  );
+                }
+              }
+            } catch (e) {
+              console.error('Error checking localStorage consistency:', e);
+            }
+          }, 300);
+        }
+
+        // Wait for the API call to complete
+        await fetcherPromise;
+
+        // After server confirms removal, verify our local state
+        if (cartItems.some(item => item.id === itemId)) {
+          console.log('Item still in context after removal, forcing update');
+          setCartItems(prev => prev.filter(item => item.id !== itemId));
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to remove item';
+        console.error('Error removing item:', errorMessage);
+        setError(errorMessage);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to remove item');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [cartFetcher, cartItems]
+  );
 
   // Clear cart
   const clearCart = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
-    try {
-      // Future implementation: API call to clear cart
+    // console.log('CartContext - Clearing cart');
 
+    try {
+      // Server API call to clear cart
+      cartFetcher.submit(
+        {
+          action: 'clear',
+        },
+        { method: 'post', action: '/api/cart' }
+      );
+
+      // Clear local state
       setCartItems([]);
+
+      // Clear localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(CART_DATA_STORAGE_KEY);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to clear cart');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [cartFetcher]);
 
   // Reset loading state when fetcher completes
   useEffect(() => {
@@ -316,6 +558,27 @@ export function CartProvider({
       setError(cartFetcher.data.error);
       setCartError(cartFetcher.data.error);
       setCartSuccess(false);
+    }
+
+    // Update cart items if the API returns updated cart data
+    if (cartFetcher.data?.cart) {
+      // Fix: Convert the cart data to match CartItem[] type expectations
+      const updatedCart = cartFetcher.data.cart as unknown as CartItem[];
+      setCartItems(updatedCart);
+
+      // Calculate and dispatch the updated cart count after server response
+      if (typeof window !== 'undefined') {
+        const totalItems = updatedCart.reduce((total, item) => total + item.quantity, 0);
+        console.log(
+          'CartContext - Server returned updated cart. Dispatching count update:',
+          totalItems
+        );
+        window.dispatchEvent(
+          new CustomEvent(CART_COUNT_EVENT_NAME, {
+            detail: { count: totalItems, timestamp: Date.now() },
+          })
+        );
+      }
     }
   }, [cartFetcher.state, cartFetcher.data, isLoading]);
 
@@ -348,5 +611,6 @@ export function useCart() {
     throw new Error('useCart must be used within a CartProvider');
   }
 
+  // console.log('useCart - returning context:', context);
   return context;
 }

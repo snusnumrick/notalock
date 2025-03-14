@@ -3,13 +3,17 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { CartProvider, useCart } from '../CartContext';
 import type { CartItem } from '../../types/cart.types';
+import { CART_DATA_STORAGE_KEY } from '../../constants';
 
-// Mock useCart hook implementation
+// Mock useFetcher to simulate API interaction
+const mockSubmit = vi.fn();
+let mockUseFetcherData: any = null;
+
 vi.mock('@remix-run/react', () => ({
   useFetcher: () => ({
-    submit: vi.fn(),
+    submit: mockSubmit,
     state: 'idle',
-    data: null,
+    data: mockUseFetcherData,
   }),
 }));
 
@@ -36,6 +40,8 @@ const mockDispatchEvent = vi.fn();
 // Setup global mocks
 Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
 window.dispatchEvent = mockDispatchEvent;
+
+// Make sure we have access to the constants
 
 // Simple test component to access cart context
 const CartConsumer = () => {
@@ -83,10 +89,19 @@ const CartConsumer = () => {
 
 describe('CartContext', () => {
   beforeEach(() => {
-    // Reset all mocks
+    // Reset all mocks and clear global state before each test
     vi.clearAllMocks();
     mockLocalStorage.clear();
-    window.dispatchEvent = mockDispatchEvent;
+    window.dispatchEvent = mockDispatchEvent; // Reset dispatchEvent
+    mockUseFetcherData = null; // Reset mock data
+
+    // Make sure localStorage.getItem returns null by default for our cart key
+    mockLocalStorage.getItem.mockImplementation(key => {
+      if (key === '__storage_test__') {
+        return 'test'; // For isLocalStorageAvailable check
+      }
+      return null; // Return null for all other keys including cart data
+    });
   });
 
   it('initializes empty cart when no data available', () => {
@@ -113,8 +128,16 @@ describe('CartContext', () => {
       },
     ];
 
-    // Setup localStorage mock to return our test cart items
-    mockLocalStorage.getItem.mockReturnValueOnce(JSON.stringify(testCartItems));
+    // Setup localStorage mock to return our test cart items with the correct key
+    mockLocalStorage.getItem.mockImplementation(key => {
+      if (key === CART_DATA_STORAGE_KEY) {
+        return JSON.stringify(testCartItems);
+      }
+      if (key === '__storage_test__') {
+        return 'test'; // For isLocalStorageAvailable check
+      }
+      return null;
+    });
 
     render(
       <CartProvider>
@@ -126,7 +149,12 @@ describe('CartContext', () => {
     await waitFor(() => {
       expect(screen.getByTestId('cart-count').textContent).toBe('1');
     });
-    expect(mockLocalStorage.getItem).toHaveBeenCalledWith('notalock_cart_data');
+
+    // Verify localStorage was accessed with the correct key
+    const getItemCalls = mockLocalStorage.getItem.mock.calls;
+    const hasCartKeyAccess = getItemCalls.some(call => call[0] === CART_DATA_STORAGE_KEY);
+    expect(hasCartKeyAccess).toBe(true);
+
     expect(mockDispatchEvent).toHaveBeenCalled();
   });
 
@@ -144,6 +172,17 @@ describe('CartContext', () => {
       },
     ];
 
+    // Ensure localStorage is empty by explicitly returning null for cart data
+    mockLocalStorage.getItem.mockImplementation(key => {
+      if (key === CART_DATA_STORAGE_KEY) {
+        return null;
+      }
+      if (key === '__storage_test__') {
+        return 'test';
+      }
+      return null;
+    });
+
     render(
       <CartProvider initialCartItems={initialCartItems}>
         <CartConsumer />
@@ -154,17 +193,34 @@ describe('CartContext', () => {
     await waitFor(() => {
       expect(screen.getByTestId('cart-count').textContent).toBe('1');
     });
-    expect(screen.getByTestId('item-test-2')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('item-test-2')).toBeInTheDocument();
+    });
   });
 
-  it('adds item to cart', async () => {
+  it('adds item to cart and calls API', async () => {
+    // Ensure we start with an empty cart by mocking localStorage to return null
+    mockLocalStorage.getItem.mockImplementation(key => {
+      if (key === CART_DATA_STORAGE_KEY) {
+        return null;
+      }
+      if (key === '__storage_test__') {
+        return 'test';
+      }
+      return null;
+    });
+
     render(
       <CartProvider>
         <CartConsumer />
       </CartProvider>
     );
 
-    expect(screen.getByTestId('cart-count').textContent).toBe('0');
+    // Verify initial state is empty
+    await waitFor(() => {
+      expect(screen.getByTestId('cart-count').textContent).toBe('0');
+    });
 
     // Add an item to cart
     fireEvent.click(screen.getByTestId('add-item'));
@@ -175,14 +231,28 @@ describe('CartContext', () => {
     });
     expect(screen.getByTestId('total-items').textContent).toBe('1');
 
+    // Check if API was called
+    expect(mockSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'add',
+        productId: 'test-1',
+        quantity: '1',
+        price: '10',
+      }),
+      expect.objectContaining({ method: 'post', action: '/api/cart' })
+    );
+
     // Check if localStorage was updated
-    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('notalock_cart_data', expect.any(String));
+    expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+      CART_DATA_STORAGE_KEY,
+      expect.any(String)
+    );
 
     // Check if event was dispatched
     expect(mockDispatchEvent).toHaveBeenCalled();
   });
 
-  it('updates item quantity', async () => {
+  it('updates item quantity and calls API', async () => {
     // Initialize with an item in the cart
     const testCartItems: CartItem[] = [
       {
@@ -197,7 +267,15 @@ describe('CartContext', () => {
       },
     ];
 
-    mockLocalStorage.getItem.mockReturnValueOnce(JSON.stringify(testCartItems));
+    mockLocalStorage.getItem.mockImplementation(key => {
+      if (key === CART_DATA_STORAGE_KEY) {
+        return JSON.stringify(testCartItems);
+      }
+      if (key === '__storage_test__') {
+        return 'test'; // For isLocalStorageAvailable check
+      }
+      return null;
+    });
 
     render(
       <CartProvider>
@@ -218,9 +296,22 @@ describe('CartContext', () => {
       expect(screen.getByTestId('total-items').textContent).toBe('5');
     });
 
+    // Check if API was called
+    expect(mockSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'update',
+        itemId: 'test-id',
+        quantity: '5',
+      }),
+      expect.objectContaining({ method: 'post', action: '/api/cart' })
+    );
+
     // Check if localStorage was updated
-    const lastCall =
-      mockLocalStorage.setItem.mock.calls[mockLocalStorage.setItem.mock.calls.length - 1];
+    const setItemCalls = mockLocalStorage.setItem.mock.calls;
+    const cartDataCalls = setItemCalls.filter(call => call[0] === CART_DATA_STORAGE_KEY);
+    expect(cartDataCalls.length).toBeGreaterThan(0);
+
+    const lastCall = cartDataCalls[cartDataCalls.length - 1];
     const savedData = JSON.parse(lastCall[1]);
     expect(savedData[0].quantity).toBe(5);
 
@@ -228,7 +319,7 @@ describe('CartContext', () => {
     expect(mockDispatchEvent).toHaveBeenCalled();
   });
 
-  it('removes item from cart', async () => {
+  it('removes item from cart and calls API', async () => {
     // Initialize with an item in the cart
     const testCartItems: CartItem[] = [
       {
@@ -243,7 +334,15 @@ describe('CartContext', () => {
       },
     ];
 
-    mockLocalStorage.getItem.mockReturnValueOnce(JSON.stringify(testCartItems));
+    mockLocalStorage.getItem.mockImplementation(key => {
+      if (key === CART_DATA_STORAGE_KEY) {
+        return JSON.stringify(testCartItems);
+      }
+      if (key === '__storage_test__') {
+        return 'test'; // For isLocalStorageAvailable check
+      }
+      return null;
+    });
 
     render(
       <CartProvider>
@@ -263,11 +362,32 @@ describe('CartContext', () => {
       // Check if item was removed
       expect(screen.getByTestId('cart-count').textContent).toBe('0');
     });
+
+    // Check if API was called
+    expect(mockSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'remove',
+        itemId: 'test-id',
+      }),
+      expect.objectContaining({ method: 'post', action: '/api/cart' })
+    );
+
     // Check if event was dispatched
     expect(mockDispatchEvent).toHaveBeenCalled();
   });
 
   it('properly calculates the cart summary', async () => {
+    // Ensure we start with an empty cart by mocking localStorage to return null
+    mockLocalStorage.getItem.mockImplementation(key => {
+      if (key === CART_DATA_STORAGE_KEY) {
+        return null;
+      }
+      if (key === '__storage_test__') {
+        return 'test';
+      }
+      return null;
+    });
+
     const SummaryConsumer = () => {
       const { summary, addToCart } = useCart();
       return (
@@ -296,7 +416,9 @@ describe('CartContext', () => {
     );
 
     // Initial state check
-    expect(screen.getByTestId('total-items').textContent).toBe('0');
+    await waitFor(() => {
+      expect(screen.getByTestId('total-items').textContent).toBe('0');
+    });
     expect(screen.getByTestId('subtotal').textContent).toBe('0');
 
     // Add multiple items
@@ -329,5 +451,66 @@ describe('CartContext', () => {
 
     // Cart should still initialize with empty state
     expect(screen.getByTestId('cart-count').textContent).toBe('0');
+  });
+
+  it('updates cart state when API returns updated cart data', async () => {
+    // Ensure we start with an empty cart by mocking localStorage to return null
+    mockLocalStorage.getItem.mockImplementation(key => {
+      if (key === CART_DATA_STORAGE_KEY) {
+        return null;
+      }
+      if (key === '__storage_test__') {
+        return 'test';
+      }
+      return null;
+    });
+
+    // Initialize cart context with empty cart
+    render(
+      <CartProvider>
+        <CartConsumer />
+      </CartProvider>
+    );
+
+    // Initial state check
+    await waitFor(() => {
+      expect(screen.getByTestId('cart-count').textContent).toBe('0');
+    });
+
+    // Setup mock data that will be returned from the API
+    const serverCartData = [
+      {
+        id: 'server-item',
+        cart_id: 'server-cart',
+        product_id: 'prod-server',
+        quantity: 3,
+        price: 15,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        variant_id: null,
+      },
+    ];
+
+    // Update mock data that will be returned by useFetcher
+    mockUseFetcherData = {
+      success: true,
+      cart: serverCartData,
+    };
+
+    // Trigger a re-render by simulating an action that uses the fetcher
+    fireEvent.click(screen.getByTestId('add-item'));
+
+    // Wait for state to update with server data
+    await waitFor(() => {
+      expect(screen.getByTestId('cart-count').textContent).toBe('1');
+    });
+
+    const itemElement = await waitFor(() => {
+      const element = screen.queryByTestId('item-server-item');
+      expect(element).toBeInTheDocument();
+      return element;
+    });
+
+    expect(itemElement!.textContent).toContain('prod-server - 3 x $15');
   });
 });

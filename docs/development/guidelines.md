@@ -231,6 +231,74 @@ Before implementing authentication in a feature:
      - Loading states
      - Empty states
 
+## Configuration Management
+
+### Centralized Configuration
+
+Configuration values should be centralized in the `app/config/` directory:
+
+```typescript
+// app/config/pagination/constants.ts
+export const DEFAULT_PAGE_LIMIT = 12;
+export const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
+export const MAX_PAGE_LIMIT = 100;
+```
+
+### Usage in Components and API Calls
+
+```typescript
+import { DEFAULT_PAGE_LIMIT } from '~/config/pagination';
+
+// Form data with pagination
+const formData = new FormData();
+formData.set('limit', DEFAULT_PAGE_LIMIT.toString());
+
+// URL parameters
+const buildQueryParams = (baseUrl: string) => {
+  const url = new URL(baseUrl);
+  url.searchParams.set('limit', DEFAULT_PAGE_LIMIT.toString());
+  return url;
+};
+```
+
+### Configuration Guidelines
+
+1. **Organization**
+   - Group related configuration by feature or function
+   - Use dedicated directories for complex configuration sets
+   - Export constants with clear, descriptive names
+
+2. **Naming Conventions**
+   - Use UPPERCASE for constant values
+   - Use PascalCase for configuration objects or classes
+   - Include type and units in the name when applicable
+
+3. **Documentation**
+   - Add JSDoc comments explaining purpose and usage
+   - Document units of measurement where applicable
+   - Note any related configuration parameters
+
+4. **Best Practices**
+   - Never hardcode configuration values in components or functions
+   - Use TypeScript types for complex configuration objects
+   - Provide sensible defaults for all configuration values
+   - Keep configuration separate from implementation logic
+
+5. **Common Configuration Types**
+   - Pagination limits and options
+   - Cache durations
+   - Feature flags
+   - API endpoint configuration
+   - UI customization options
+
+### Anti-patterns to Avoid
+
+- ❌ Duplicating configuration values across multiple files
+- ❌ Hardcoding numeric values without explanation
+- ❌ Mixing configuration with business logic
+- ❌ Using undocumented "magic numbers" in code
+- ❌ Inconsistent naming between related configuration values
+
 ## Code Patterns
 
 ### Loader Pattern

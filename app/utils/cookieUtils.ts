@@ -12,15 +12,15 @@ export const getCookieBrowser = (key: string): string | undefined => {
 export const setCookieBrowser = (
   key: string,
   value: string,
-  options?: { maxAge?: number; path?: string }
+  options?: { max_age?: number; path?: string }
 ) => {
   if (typeof document === 'undefined') {
     return;
   }
 
   let cookie = `${key}=${value}`;
-  if (options?.maxAge) {
-    cookie += `; Max-Age=${options.maxAge}`;
+  if (options?.max_age) {
+    cookie += `; Max-Age=${options.max_age}`;
   }
   if (options?.path) {
     cookie += `; path=${options.path}`;
@@ -28,10 +28,10 @@ export const setCookieBrowser = (
   document.cookie = cookie;
 };
 
-export const removeCookieBrowser = (key: string, options?: { path?: string }) => {
+export const removeCookieBrowser = (key: string, options?: { path?: string; max_age?: number }) => {
   if (typeof document === 'undefined') {
     return;
   }
 
-  document.cookie = `${key}=; Max-Age=0${options?.path ? `; path=${options.path}` : ''}`;
+  document.cookie = `${key}=; Max-Age=${options?.max_age ? options.max_age : 0}${options?.path ? `; path=${options.path}` : ''}`;
 };

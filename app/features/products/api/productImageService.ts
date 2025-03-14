@@ -101,7 +101,7 @@ export class ProductImageService {
     const { data: imageRecord, error: dbError } = await this.supabase
       .from('product_images')
       .insert({
-        product_id: productId,
+        product_id: productId, // Now allows null
         url: await this.publicUrl(filePath),
         storage_path: filePath,
         file_name: fileName,
@@ -256,33 +256,40 @@ export class ProductImageService {
       throw getError;
     }
 
-    // If this was primary, find a new primary image
-    console.log('Image is primary:', image.is_primary);
-    if (image.is_primary) {
-      console.log('Image is primary, finding new primary');
-      const { data: nextPrimary } = await this.supabase
-        .from('product_images')
-        .select('id, url')
-        .eq('product_id', image.product_id)
-        .neq('id', imageId)
-        .order('sort_order', { ascending: true })
-        .limit(1)
-        .single();
+    if (!image || !image.product_id) {
+      console.log('Image not found or missing product_id. Skipping product_id related operations.');
+    } else {
+      // If this was primary, find a new primary image
+      console.log('Image is primary:', image.is_primary);
+      if (image.is_primary) {
+        console.log('Image is primary, finding new primary');
+        const { data: nextPrimary } = await this.supabase
+          .from('product_images')
+          .select('id, url')
+          .eq('product_id', image.product_id)
+          .neq('id', imageId)
+          .order('sort_order', { ascending: true })
+          .limit(1)
+          .single();
 
-      if (nextPrimary) {
-        await Promise.all([
-          this.supabase
+        if (nextPrimary) {
+          await Promise.all([
+            this.supabase
+              .from('products')
+              .update({ image_url: nextPrimary.url })
+              .eq('id', image.product_id),
+            this.supabase
+              .from('product_images')
+              .update({ is_primary: true })
+              .eq('id', nextPrimary.id),
+          ]);
+        } else {
+          console.log('No new primary image found, setting to null');
+          await this.supabase
             .from('products')
-            .update({ image_url: nextPrimary.url })
-            .eq('id', image.product_id),
-          this.supabase
-            .from('product_images')
-            .update({ is_primary: true })
-            .eq('id', nextPrimary.id),
-        ]);
-      } else {
-        console.log('No new primary image found, setting to null');
-        await this.supabase.from('products').update({ image_url: null }).eq('id', image.product_id);
+            .update({ image_url: null })
+            .eq('id', image.product_id);
+        }
       }
     }
 
@@ -334,8 +341,8 @@ export class ProductImageService {
       throw error;
     }
 
-    if (!image) {
-      throw new Error('Image not found');
+    if (!image || !image.product_id) {
+      throw new Error('Image not found or product id is missing');
     }
 
     await Promise.all([
@@ -370,6 +377,10 @@ export class ProductImageService {
   }
 
   async reorderImages(productId: string): Promise<void> {
+    if (!productId) {
+      console.log('No product ID provided for reordering images. Skipping.');
+      return;
+    }
     console.log('Reordering images for product', productId);
     try {
       const { data: images, error } = await this.supabase

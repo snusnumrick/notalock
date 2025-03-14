@@ -1,8 +1,14 @@
 import { Link } from '@remix-run/react';
 import type { ProductSummary } from '../types/product.types';
 
+// Extended type to handle both image_url and thumbnail_url from test data
+interface RelatedProductItem extends Omit<ProductSummary, 'image_url'> {
+  image_url?: string;
+  thumbnail_url?: string;
+}
+
 interface RelatedProductsProps {
-  products: ProductSummary[];
+  products: RelatedProductItem[];
   title?: string;
 }
 
@@ -23,15 +29,19 @@ export function RelatedProducts({ products, title = 'Related Products' }: Relate
           <li key={product.id}>
             <Link to={`/products/${product.slug}`} className="group">
               <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
-                {product.thumbnail_url ? (
+                {product.thumbnail_url || product.image_url ? (
                   <img
-                    src={product.thumbnail_url}
+                    src={product.thumbnail_url ?? product.image_url ?? undefined}
                     alt={product.name}
                     className="h-full w-full object-cover object-center group-hover:opacity-75 transition-opacity"
                     loading="lazy"
                   />
                 ) : (
-                  <div className="h-full w-full flex items-center justify-center text-gray-400">
+                  <div
+                    className="h-full w-full flex items-center justify-center text-gray-400"
+                    aria-label={`No image for ${product.name}`}
+                    role="img"
+                  >
                     No Image
                   </div>
                 )}

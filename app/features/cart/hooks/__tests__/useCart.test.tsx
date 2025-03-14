@@ -3,14 +3,20 @@ import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { useCart } from '~/features/cart/hooks/useCart';
+import { CartProvider } from '~/features/cart/context/CartContext';
 
-// Create a wrapper that provides the necessary context
+// Create a wrapper that provides the CartProvider context
 const Wrapper = ({ children }: { children: React.ReactNode }) => {
-  return <>{children}</>;
+  return <CartProvider>{children}</CartProvider>;
 };
 
-// Import the mocked module - this must come before mocking
+// Move the import before the component so it gets mocked
 import { useFetcher } from '@remix-run/react';
+
+// Mock the useFetcher hook
+vi.mock('@remix-run/react', () => ({
+  useFetcher: vi.fn(),
+}));
 
 describe('useCart Hook', () => {
   // Mock fetcher object and state
@@ -20,7 +26,7 @@ describe('useCart Hook', () => {
     vi.resetAllMocks();
 
     // Default mock implementation
-    (useFetcher as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+    (useFetcher as jest.Mock).mockReturnValue({
       submit: mockSubmit,
       state: 'idle',
       data: null,
@@ -45,7 +51,7 @@ describe('useCart Hook', () => {
 
   it('sets loading state and calls submit when adding to cart', async () => {
     // Mock the fetcher to be in submitting state after submission
-    (useFetcher as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+    (useFetcher as jest.Mock).mockReturnValue({
       submit: mockSubmit,
       state: 'submitting', // This will make isAddingToCart true
       data: null,
@@ -188,10 +194,10 @@ describe('useCart Hook', () => {
   });
 
   it('resets loading state when fetcher completes', async () => {
-    // Initially set fetcher state to submitting
-    (useFetcher as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+    // Mock initial state
+    (useFetcher as jest.Mock).mockReturnValue({
       submit: mockSubmit,
-      state: 'submitting', // This makes isAddingToCart true
+      state: 'idle',
       data: null,
     });
 
@@ -199,26 +205,50 @@ describe('useCart Hook', () => {
       wrapper: Wrapper,
     });
 
-    // Should show submitting initially
+    // Initial state should not be loading
+    expect(result.current.isAddingToCart).toBe(false);
+
+    // Now simulate adding an item which sets loading state
+    (useFetcher as jest.Mock).mockReturnValue({
+      submit: mockSubmit,
+      state: 'submitting',
+      data: null,
+    });
+
+    // Trigger addToCart to set the loading states
+    await act(async () => {
+      await result.current.addToCart({
+        productId: 'test',
+        quantity: 1,
+        price: 10,
+      });
+    });
+
+    // Should be in loading state now
     expect(result.current.isAddingToCart).toBe(true);
 
-    // Change fetcher state to idle
-    (useFetcher as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+    // Now simulate fetcher completion
+    (useFetcher as jest.Mock).mockReturnValue({
       submit: mockSubmit,
       state: 'idle',
       data: { success: true },
     });
 
-    // Rerender the hook
+    // Trigger a rerender to process the state change
     rerender();
 
-    // Should reset submitting state
+    // Allow effects to run
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+
+    // Should reset loading state
     expect(result.current.isAddingToCart).toBe(false);
   });
 
   it('captures error message from fetcher', async () => {
     // Set fetcher to return error
-    (useFetcher as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+    (useFetcher as jest.Mock).mockReturnValue({
       submit: mockSubmit,
       state: 'idle',
       data: { error: 'Failed to add item to cart' },

@@ -27,7 +27,10 @@ import { generateProductMeta } from '~/features/products/components/ProductSEO';
 import { PageLayout } from '~/components/common/PageLayout';
 
 interface LoaderData {
-  product: Product & { images: ProductImage[]; variants?: ProductVariant[] };
+  product: Product & {
+    images: ProductImage[];
+    variants?: ProductVariant[];
+  };
   relatedProducts: ProductSummary[];
 }
 
@@ -48,7 +51,7 @@ export const loader = async ({
         variants:product_variants(*)
       `
       )
-      .eq('slug', params.slug)
+      .eq('slug', params.slug || '') // Add fallback in case slug is undefined
       .order('sort_order', { referencedTable: 'product_images' })
       .single();
 
@@ -56,22 +59,67 @@ export const loader = async ({
       throw new Response('Product not found', { status: 404 });
     }
 
+    // Define a more complete database product interface
+    interface DatabaseProduct extends Omit<Product, 'images'> {
+      category_id?: string;
+      images: Array<ProductImage>;
+      variants: Array<{
+        id: string;
+        product_id: string;
+        sku?: string | null;
+        name?: string;
+        price_adjustment?: number;
+        retail_price?: number | null;
+        business_price?: number | null;
+        stock?: number | null;
+        is_active?: boolean;
+        created_at?: string;
+        updated_at?: string;
+      }>;
+      [key: string]: string | number | boolean | object | null | undefined; // Allow for other fields from the database
+    }
+
+    const typedProduct = product as DatabaseProduct;
+
     // Fetch related products (same category or by manufacturer)
-    const { data: relatedProducts = [] } = await supabase
-      .from('products')
-      .select('id, name, slug, retail_price, thumbnail_url')
-      .neq('id', product.id) // Exclude current product
-      .eq('category_id', product.category_id)
-      .limit(4);
+    let relatedProducts: ProductSummary[] = [];
+    if (typedProduct.category_id) {
+      try {
+        const { data: relatedProductsData, error } = await supabase
+          .from('products')
+          .select('id, name, slug, retail_price, image_url') // Using image_url instead of thumbnail_url
+          .neq('id', typedProduct.id) // Exclude current product
+          .eq('category_id', typedProduct.category_id)
+          .limit(4);
+
+        if (error) {
+          console.error('Error fetching related products:', error);
+        } else if (relatedProductsData) {
+          // Map to ProductSummary format
+          relatedProducts = relatedProductsData.map(product => ({
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            retail_price: product.retail_price,
+            image_url: product.image_url || '',
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch related products:', error);
+      }
+    }
+
+    // Make sure the product conforms to the expected Product type with images and variants
+    const productWithProcessedData = {
+      ...typedProduct,
+      images: typedProduct.images || [],
+      variants: typedProduct.variants || [],
+    } as Product & { images: ProductImage[]; variants?: ProductVariant[] };
 
     return json(
       {
-        product,
-        relatedProducts: relatedProducts || [],
-        currentProduct: {
-          name: product.name,
-          slug: product.slug,
-        },
+        product: productWithProcessedData,
+        relatedProducts,
       },
       {
         headers: response.headers,
@@ -158,7 +206,12 @@ export default function ProductPage() {
           </div>
         </div>
 
-        <RelatedProducts products={relatedProducts} />
+        <RelatedProducts
+          products={relatedProducts?.map(product => ({
+            ...product,
+            image_url: product.image_url ?? undefined,
+          }))}
+        />
       </div>
     </PageLayout>
   );

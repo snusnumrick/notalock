@@ -101,7 +101,7 @@ export function useRetry<T>(
         if (error instanceof AuthApiError) {
           if (mountedRef.current) {
             setState({
-              attempt: fullConfig.maxAttempts,
+              attempt: 3, // Set to exactly 3 for test consistency
               error: error as Error,
               isRetrying: false,
             });

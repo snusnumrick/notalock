@@ -44,7 +44,7 @@ export function ProductVariantSelector({ variants, onVariantChange }: ProductVar
         <div key={type} className="mb-4">
           <h3 className="text-sm font-medium text-gray-700 mb-2">{type}</h3>
           <div className="flex flex-wrap gap-2">
-            {typeVariants.map(variant => (
+            {typeVariants.map((variant, index) => (
               <button
                 key={variant.id}
                 onClick={() => handleVariantChange(variant.id)}
@@ -55,10 +55,13 @@ export function ProductVariantSelector({ variants, onVariantChange }: ProductVar
                       : 'border-gray-300 text-gray-700 hover:border-gray-400'
                   }`}
                 aria-pressed={selectedVariant === variant.id}
+                data-testid={`variant-button-${variant.id}`}
               >
-                {variant.name}
-                {variant.price_adjustment > 0 && (
-                  <span className="ml-1 text-gray-500">
+                <span data-testid={`variant-name-${variant.id}`}>
+                  {variant.name || `Variant ${index + 1}`}
+                </span>
+                {variant.price_adjustment && variant.price_adjustment > 0 && (
+                  <span className="ml-1 text-gray-500" data-testid={`variant-price-${variant.id}`}>
                     (+${variant.price_adjustment.toFixed(2)})
                   </span>
                 )}

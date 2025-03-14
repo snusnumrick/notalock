@@ -48,9 +48,12 @@ notalock/
 ### Route Organization and Conventions
 - Routes follow Remix file-based routing conventions with some project-specific patterns
 - Route patterns:
-  - `_layout.tsx` - Main layout route
-  - `_layout._index.tsx` - Site index route
-  - `_layout.[page].tsx` - Pages using the main layout (about, cart, etc.)
+- `_layout.tsx` - Main layout route
+- `_layout._index.tsx` - Site index route
+- `_layout.[page].tsx` - Pages using the main layout (about, cart, etc.)
+    - Multi-step flows:
+      - `_layout.checkout.tsx` - Main checkout router
+      - `_layout.checkout.[step].tsx` - Individual checkout steps (information, shipping, payment, etc.)
   - Admin section:
     - `admin.tsx` - Admin layout
     - `admin.products.tsx` - Admin products management
@@ -74,6 +77,12 @@ notalock/
   - `debug/`: Debugging components
   - `features/`: Feature-specific shared components
   - `ui/`: shadcn/ui components and customizations
+
+### Configuration Organization
+- `app/config/`: Application-wide configuration
+  - `image-optimization.ts`: Image processing configuration
+  - `pagination/`: Pagination-related configuration
+    - `constants.ts`: Page size limits and options
 
 ### Feature Module Structure
 Each feature module is organized as:

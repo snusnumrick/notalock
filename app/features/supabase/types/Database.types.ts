@@ -5,12 +5,246 @@
 // Add this export statement
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered';
+export type CheckoutStep = 'information' | 'shipping' | 'payment' | 'review' | 'confirmation';
+export type OrderStatus = 'created' | 'processing' | 'completed' | 'cancelled' | 'refunded';
+export type PaymentMethodType = 'credit_card' | 'paypal' | 'bank_transfer' | 'square';
+export type PaymentStatus = 'pending' | 'paid' | 'failed';
 export type UserRole = 'customer' | 'business' | 'admin';
+export type CartStatus =
+  | 'active'
+  | 'merged'
+  | 'checkout'
+  | 'completed'
+  | 'abandoned'
+  | 'duplicate'
+  | 'cleared'
+  | 'consolidated';
 
 export interface Database {
   public: {
     Tables: {
+      checkout_sessions: {
+        Row: {
+          id: string;
+          cart_id: string;
+          user_id: string | null;
+          guest_email: string | null;
+          shipping_address: Json | null;
+          billing_address: Json | null;
+          shipping_method: string | null;
+          shipping_option: Json | null;
+          payment_method: string | null;
+          payment_info: Json | null;
+          current_step: CheckoutStep;
+          subtotal: number;
+          shipping_cost: number;
+          tax: number;
+          total: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          cart_id: string;
+          user_id?: string | null;
+          guest_email?: string | null;
+          shipping_address?: Json | null;
+          billing_address?: Json | null;
+          shipping_method?: string | null;
+          shipping_option?: Json | null;
+          payment_method?: string | null;
+          payment_info?: Json | null;
+          current_step?: CheckoutStep;
+          subtotal?: number;
+          shipping_cost?: number;
+          tax?: number;
+          total?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          cart_id?: string;
+          user_id?: string | null;
+          guest_email?: string | null;
+          shipping_address?: Json | null;
+          billing_address?: Json | null;
+          shipping_method?: string | null;
+          shipping_option?: Json | null;
+          payment_method?: string | null;
+          payment_info?: Json | null;
+          current_step?: CheckoutStep;
+          subtotal?: number;
+          shipping_cost?: number;
+          tax?: number;
+          total?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'checkout_sessions_cart_id_fkey';
+            columns: ['cart_id'];
+            referencedRelation: 'carts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'checkout_sessions_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      orders: {
+        Row: {
+          id: string;
+          checkout_session_id: string | null;
+          cart_id: string | null;
+          user_id: string | null;
+          guest_email: string | null;
+          order_number: string;
+          status: string;
+          shipping_address: Json;
+          billing_address: Json;
+          shipping_method: string;
+          shipping_cost: number;
+          subtotal: number;
+          tax: number;
+          total: number;
+          payment_method: string;
+          payment_status: string;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          checkout_session_id?: string | null;
+          cart_id?: string | null;
+          user_id?: string | null;
+          guest_email?: string | null;
+          order_number: string;
+          status?: string;
+          shipping_address: Json;
+          billing_address: Json;
+          shipping_method: string;
+          shipping_cost?: number;
+          subtotal?: number;
+          tax?: number;
+          total?: number;
+          payment_method: string;
+          payment_status?: string;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          checkout_session_id?: string | null;
+          cart_id?: string | null;
+          user_id?: string | null;
+          guest_email?: string | null;
+          order_number?: string;
+          status?: string;
+          shipping_address?: Json;
+          billing_address?: Json;
+          shipping_method?: string;
+          shipping_cost?: number;
+          subtotal?: number;
+          tax?: number;
+          total?: number;
+          payment_method?: string;
+          payment_status?: string;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'orders_checkout_session_id_fkey';
+            columns: ['checkout_session_id'];
+            referencedRelation: 'checkout_sessions';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'orders_cart_id_fkey';
+            columns: ['cart_id'];
+            referencedRelation: 'carts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'orders_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      order_items: {
+        Row: {
+          id: string;
+          order_id: string;
+          product_id: string;
+          variant_id: string | null;
+          name: string;
+          sku: string;
+          quantity: number;
+          price: number;
+          image_url: string | null;
+          options: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          product_id: string;
+          variant_id?: string | null;
+          name: string;
+          sku: string;
+          quantity: number;
+          price: number;
+          image_url?: string | null;
+          options?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          product_id?: string;
+          variant_id?: string | null;
+          name?: string;
+          sku?: string;
+          quantity?: number;
+          price?: number;
+          image_url?: string | null;
+          options?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'order_items_order_id_fkey';
+            columns: ['order_id'];
+            referencedRelation: 'orders';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'order_items_product_id_fkey';
+            columns: ['product_id'];
+            referencedRelation: 'products';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'order_items_variant_id_fkey';
+            columns: ['variant_id'];
+            referencedRelation: 'product_variants';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       admin_audit_log: {
         Row: {
           id: string;
@@ -157,7 +391,7 @@ export interface Database {
           id: string;
           user_id: string | null;
           anonymous_id: string | null;
-          status: string;
+          status: CartStatus;
           created_at: string;
           updated_at: string;
         };
@@ -165,7 +399,7 @@ export interface Database {
           id?: string;
           user_id?: string | null;
           anonymous_id?: string | null;
-          status?: string;
+          status?: CartStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -173,7 +407,7 @@ export interface Database {
           id?: string;
           user_id?: string | null;
           anonymous_id?: string | null;
-          status?: string;
+          status?: CartStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -345,6 +579,8 @@ export interface Database {
           file_name: string;
           is_primary: boolean;
           sort_order: number;
+          alt_text: string | null;
+          updated_by: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -356,6 +592,8 @@ export interface Database {
           file_name: string;
           is_primary?: boolean;
           sort_order?: number;
+          alt_text?: string | null;
+          updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -367,6 +605,8 @@ export interface Database {
           file_name?: string;
           is_primary?: boolean;
           sort_order?: number;
+          alt_text?: string | null;
+          updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -646,9 +886,81 @@ export interface Database {
         ];
       };
     };
-    Functions: Record<string, never>;
+    Functions: {
+      add_to_cart: {
+        Args: {
+          p_cart_id: string;
+          p_price: number;
+          p_product_id: string;
+          p_quantity: number;
+          p_variant_id: string | null;
+        };
+        Returns: string; // Returns the cart item ID
+      };
+      debug_cart: {
+        Args: {
+          p_cart_id: string;
+        };
+        Returns: {
+          cart_id: string;
+          cart_exists: boolean;
+          user_id: string | null;
+          anonymous_id: string | null;
+          status: string;
+          item_count: number;
+        }[];
+      };
+      force_delete_cart_item: {
+        Args: {
+          p_item_id: string;
+        };
+        Returns: boolean;
+      };
+      remove_cart_item: {
+        Args: {
+          p_item_id: string;
+        };
+        Returns: boolean;
+      };
+      remove_cart_item_fixed: {
+        Args: {
+          p_item_id: string;
+        };
+        Returns: boolean;
+      };
+      update_cart_item: {
+        Args: {
+          p_item_id: string;
+          p_quantity: number;
+        };
+        Returns: boolean;
+      };
+      update_hero_banner_positions: {
+        Args: {
+          banner_ids: string[];
+        };
+        Returns: void;
+      };
+      list_cart_items: {
+        Args: {
+          p_cart_id: string;
+        };
+        Returns: {
+          item_id: string;
+          product_id: string;
+          quantity: number;
+          price: number;
+          variant_id: string | null;
+          created_at: string;
+          updated_at: string;
+        }[];
+      };
+    };
     Enums: {
+      checkout_step: CheckoutStep;
       order_status: OrderStatus;
+      payment_method_type: PaymentMethodType;
+      payment_status: PaymentStatus;
       user_role: UserRole;
     };
   };

@@ -21,16 +21,26 @@ const CountDisplay = () => {
 
 // Mock window and localStorage
 let mockLocalStorage: Record<string, any> = {};
+let storedValues: Record<string, string> = {};
 let mockConsoleError: any;
 
 describe('CartContext Edge Cases', () => {
   beforeEach(() => {
+    // Reset stored values
+    storedValues = {};
+
     // Reset mocks
     mockLocalStorage = {
-      getItem: vi.fn(),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
+      getItem: vi.fn(key => storedValues[key] || null),
+      setItem: vi.fn((key, value) => {
+        storedValues[key] = value;
+      }),
+      removeItem: vi.fn(key => {
+        delete storedValues[key];
+      }),
+      clear: vi.fn(() => {
+        storedValues = {};
+      }),
     };
 
     Object.defineProperty(window, 'localStorage', {
@@ -38,8 +48,8 @@ describe('CartContext Edge Cases', () => {
       writable: true,
     });
 
-    // Mock console.error to prevent test output pollution
-    mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Mock console.error to prevent test output pollution and capture calls
+    mockConsoleError = vi.spyOn(console, 'error');
 
     // Mock window.dispatchEvent
     window.dispatchEvent = vi.fn();
@@ -50,8 +60,18 @@ describe('CartContext Edge Cases', () => {
   });
 
   it('handles corrupted localStorage data', async () => {
-    // Mock corrupted data in localStorage
-    mockLocalStorage.getItem.mockReturnValueOnce('invalid-json-data');
+    // Import the constant for correct key
+    const { CART_DATA_STORAGE_KEY } = await import('~/features/cart/constants');
+
+    // Mock corrupted data in localStorage with the correct key
+    const getItemMock = vi.fn(key => {
+      if (key === CART_DATA_STORAGE_KEY) {
+        return 'invalid-json-data';
+      }
+      return null;
+    });
+
+    mockLocalStorage.getItem = getItemMock;
 
     // Should not throw an error
     expect(() => {
@@ -62,20 +82,41 @@ describe('CartContext Edge Cases', () => {
       );
     }).not.toThrow();
 
-    // Should initialize with empty cart
+    // Should log an error about invalid JSON
     await waitFor(() => {
-      expect(mockConsoleError).toHaveBeenCalled();
+      const errorCalls = mockConsoleError.mock.calls;
+      const hasJsonError = errorCalls.some(
+        call =>
+          String(call).includes('Invalid') ||
+          String(call).includes('JSON') ||
+          String(call).includes('parse')
+      );
+      expect(hasJsonError).toBe(true);
     });
+
+    // Should initialize with empty cart
     await waitFor(() => {
       expect(screen.getByTestId('item-count')).toHaveTextContent('0');
     });
   });
 
   it('handles localStorage being unavailable', async () => {
-    // Mock localStorage.getItem throwing error
-    mockLocalStorage.getItem.mockImplementationOnce(() => {
-      throw new Error('localStorage unavailable');
+    // Import the constant to use the correct key
+    const { CART_DATA_STORAGE_KEY } = await import('~/features/cart/constants');
+
+    // Mock localStorage.getItem throwing error when accessing with the correct key
+    const getItemMock = vi.fn(key => {
+      if (key === CART_DATA_STORAGE_KEY) {
+        throw new Error('localStorage unavailable');
+      }
+      // Return normal value for test storage check
+      if (key === '__storage_test__') {
+        return 'test';
+      }
+      return null;
     });
+
+    mockLocalStorage.getItem = getItemMock;
 
     // Should not throw an error
     expect(() => {
@@ -88,8 +129,14 @@ describe('CartContext Edge Cases', () => {
 
     // Should log the error but continue
     await waitFor(() => {
-      expect(mockConsoleError).toHaveBeenCalled();
+      const errorCalls = mockConsoleError.mock.calls;
+      const hasLocalStorageError = errorCalls.some(
+        call => String(call).includes('localStorage') || String(call).includes('Error accessing')
+      );
+      expect(hasLocalStorageError).toBe(true);
     });
+
+    // Should initialize with empty cart
     await waitFor(() => {
       expect(screen.getByTestId('item-count')).toHaveTextContent('0');
     });
@@ -176,8 +223,18 @@ describe('CartContext Edge Cases', () => {
       },
     ];
 
-    // Mock localStorage to return localStorageItems
-    mockLocalStorage.getItem.mockReturnValueOnce(JSON.stringify(localStorageItems));
+    // Import the constant to use the correct key
+    const { CART_DATA_STORAGE_KEY } = await import('~/features/cart/constants');
+
+    // Mock localStorage to return localStorageItems with the correct key
+    const getItemMock = vi.fn(key => {
+      if (key === CART_DATA_STORAGE_KEY) {
+        return JSON.stringify(localStorageItems);
+      }
+      return null;
+    });
+
+    mockLocalStorage.getItem = getItemMock;
 
     const ItemIdChecker = () => {
       const { cartItems } = useCart();

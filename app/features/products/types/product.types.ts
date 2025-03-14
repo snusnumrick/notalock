@@ -10,26 +10,29 @@ export interface ProductSummary {
   name: string;
   slug: string;
   retail_price: number | null;
-  thumbnail_url: string | null;
+  image_url: string | null;
 }
 
 export interface ProductVariant {
   id: string;
   product_id: string;
-  name: string;
+  name?: string; // Making this optional since it might not exist in all variants
   type?: string; // e.g., 'color', 'size', 'material'
-  sku?: string;
-  price_adjustment: number; // Added or subtracted from base price
+  sku?: string | null;
+  price_adjustment?: number; // Added or subtracted from base price
+  retail_price?: number | null;
+  business_price?: number | null;
   stock?: number | null;
   is_active?: boolean;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface Product {
   id: string;
   name: string;
   slug: string;
-  sku: string;
+  sku: string | null;
   description: string | null;
   retail_price: number | null;
   business_price: number | null;
@@ -37,7 +40,9 @@ export interface Product {
   is_active: boolean | null;
   created_at: string;
   image_url: string | null;
+  alt_text?: string | null;
   manufacturer?: string | null;
+  category_id?: string | null;
   images?: ProductImage[];
   categories?: {
     id: string;
@@ -52,7 +57,8 @@ export interface TransformedProduct {
   description: string;
   price: number;
   image_url: string;
-  sku: string;
+  alt_text?: string | null;
+  sku: string | null;
   stock: number;
   featured: boolean;
   created_at: string;
@@ -81,13 +87,16 @@ export interface ProductManagementBaseProps {
 
 export interface ProductImage {
   id: string;
-  product_id: string;
+  product_id: string | null;
   url: string;
   storage_path: string;
   file_name: string;
   is_primary: boolean;
   sort_order: number;
+  alt_text?: string | null;
+  updated_by?: string | null;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface TempImage {
@@ -102,7 +111,7 @@ export interface ProductFormData {
   id?: string;
   name: string;
   slug?: string;
-  sku: string;
+  sku: string | null;
   description: string;
   retail_price: string;
   business_price: string;

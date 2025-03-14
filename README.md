@@ -75,6 +75,11 @@ Detailed documentation is available in the [docs](./docs/README.md) directory.
   - Tree visualization
   - Drag-and-drop ordering
   - Mobile responsiveness
+- [Checkout System](./docs/features/checkout.md)
+  - Multi-step checkout flow
+  - Consistent route structure
+  - Guest checkout support
+  - Error handling and recovery
 
 ### Planning
 - [Development Roadmap](./docs/roadmap/development-plan.md)

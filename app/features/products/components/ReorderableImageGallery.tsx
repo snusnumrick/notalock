@@ -34,6 +34,10 @@ export default function ReorderableImageGallery({
 }: ReorderableImageGalleryProps) {
   const handleUpload = useCallback(
     async (files: File[]): Promise<{ id: string; url: string; isPrimary: boolean }[]> => {
+      if (!productId) {
+        console.error('Cannot upload images - product ID is missing');
+        return [];
+      }
       const uploadedImages = await imageService.uploadMultipleImages(files, productId);
 
       // Get fresh list from server
@@ -53,6 +57,11 @@ export default function ReorderableImageGallery({
       console.log('handleDelete', imageId);
       await imageService.deleteImage(imageId);
 
+      if (!productId) {
+        console.warn('Cannot fetch updated images - product ID is missing');
+        return;
+      }
+
       // Get the updated list of images after deletion
       const updatedImages = await imageService.getProductImages(productId);
       onImagesChange(updatedImages);
@@ -64,6 +73,11 @@ export default function ReorderableImageGallery({
   const handleSetPrimary = useCallback(
     async (imageId: string): Promise<void> => {
       await imageService.setPrimaryImage(imageId);
+
+      if (!productId) {
+        console.warn('Cannot fetch updated images - product ID is missing');
+        return;
+      }
 
       // Get the updated list of images after changing primary
       const updatedImages = await imageService.getProductImages(productId);
@@ -80,6 +94,10 @@ export default function ReorderableImageGallery({
       newImages.splice(hoverIndex, 0, draggedImage);
 
       try {
+        if (!productId) {
+          console.warn('Cannot reorder images - product ID is missing');
+          return;
+        }
         await Promise.all(
           newImages.map((image, index) => imageService.updateImageOrder(image.id, index))
         );

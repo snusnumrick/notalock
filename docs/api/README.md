@@ -6,8 +6,13 @@ This directory contains documentation for the various APIs used in the Notalock 
 
 - [Image Optimization API](./image-optimization.md) - API for processing and optimizing images
 - [Cart API](./cart-api.md) - API for managing shopping cart functionality
+- [Checkout API](./checkout-api.md) - API for processing multi-step checkout flow
 - [Category Management API](./category-management.md) - API for managing product categories
 - [Product Management API](./product-management.md) - API for managing products
+- [Payment API](./payment-api.md) - API for processing payments with multiple providers
+- [Shipping API](./shipping-api.md) - API for calculating shipping rates and options
+- [Tax API](./tax-api.md) - API for tax calculation and compliance
+- [Currency API](./currency-api.md) - API for currency conversion and formatting
 
 ## Purpose
 

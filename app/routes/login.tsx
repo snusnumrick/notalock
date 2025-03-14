@@ -12,6 +12,9 @@ import { createSupabaseClient } from '~/server/services/supabase.server';
 import { useState } from 'react';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
+import { Database, UserRole } from '~/features/supabase/types/Database.types';
+
+type Profile = Database['public']['Tables']['profiles']['Row'];
 
 type ActionData = {
   fieldErrors?: {
@@ -188,7 +191,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     // After successful authentication
-    const { data: profile } = await supabase
+    const { data: profile }: { data: Profile | null } = await supabase
+
       .from('profiles')
       .select('role')
       .eq('id', session.user.id)
@@ -196,13 +200,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     // After successful authentication, check/create profile
     if (!profile) {
-      await supabase.from('profiles').insert([
-        {
-          id: session.user.id,
-          email: email,
-          role: 'customer', // Default role for new sign-ups
-        },
-      ]);
+      await supabase.from('profiles').insert({
+        id: session.user.id,
+        email: email as string,
+        role: 'customer' as UserRole, // Default role for new sign-ups
+      });
     }
 
     // If user has admin role, redirect to admin products, otherwise to home

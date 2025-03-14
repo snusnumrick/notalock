@@ -176,6 +176,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const { error: createError } = await supabase.from('products').insert({
       id: testProductId,
       name: 'Test Product',
+      slug: 'test-product', // Adding the required slug field
       sku: 'TEST-001',
       retail_price: 0,
       business_price: 0,
@@ -549,7 +550,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function TestImageFeatures() {
   const { productId, images: initialImages } = useLoaderData<typeof loader>();
-  const [images, setImages] = React.useState<ProductImage[]>(initialImages);
+  // Transform initialImages to ensure product_id is not null
+  const transformedImages = React.useMemo(() => {
+    return initialImages.map(img => ({
+      ...img,
+      product_id: img.product_id || productId, // Use productId as fallback
+    }));
+  }, [initialImages, productId]);
+  const [images, setImages] = React.useState<ProductImage[]>(transformedImages);
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
   const [results, setResults] = React.useState<{ [key: string]: ProductImage }>({});
@@ -563,13 +571,19 @@ export default function TestImageFeatures() {
   // Update results when action data is received
   React.useEffect(() => {
     if (actionData?.success && 'image' in actionData && actionData.image && actionData.tempId) {
+      // Make sure the image object has a non-null product_id
+      const image = actionData.image;
+      if (image.product_id === null) {
+        image.product_id = productId;
+      }
+
       setResults(prev => {
         const newResults = { ...prev };
         delete newResults[actionData.tempId];
         return newResults;
       });
     }
-  }, [actionData]);
+  }, [actionData, productId]);
 
   return (
     <div className="container mx-auto p-4">

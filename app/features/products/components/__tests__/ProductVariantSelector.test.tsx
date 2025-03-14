@@ -76,11 +76,11 @@ describe('ProductVariantSelector Component', () => {
     );
 
     // First variant should be selected by default
-    const smallButton = screen.getByRole('button', { name: /small/i });
+    const smallButton = screen.getByTestId('variant-button-var-1');
     expect(smallButton).toHaveClass('border-blue-500');
 
     // Other variants should not be selected
-    const mediumButton = screen.getByRole('button', { name: /medium/i });
+    const mediumButton = screen.getByTestId('variant-button-var-2');
     expect(mediumButton).not.toHaveClass('border-blue-500');
   });
 
@@ -90,7 +90,7 @@ describe('ProductVariantSelector Component', () => {
     );
 
     // Click the Medium variant
-    const mediumButton = screen.getByRole('button', { name: /medium/i });
+    const mediumButton = screen.getByTestId('variant-button-var-2');
     fireEvent.click(mediumButton);
 
     // onVariantChange should be called with the variant ID
@@ -100,7 +100,7 @@ describe('ProductVariantSelector Component', () => {
     expect(mediumButton).toHaveClass('border-blue-500');
 
     // Small should no longer be selected
-    const smallButton = screen.getByRole('button', { name: /small/i });
+    const smallButton = screen.getByTestId('variant-button-var-1');
     expect(smallButton).not.toHaveClass('border-blue-500');
   });
 
@@ -110,12 +110,12 @@ describe('ProductVariantSelector Component', () => {
     );
 
     // First select Medium
-    const mediumButton = screen.getByRole('button', { name: /medium/i });
+    const mediumButton = screen.getByTestId('variant-button-var-2');
     fireEvent.click(mediumButton);
     expect(mockOnVariantChange).toHaveBeenCalledWith('var-2');
 
     // Then select White
-    const whiteButton = screen.getByRole('button', { name: /white/i });
+    const whiteButton = screen.getByTestId('variant-button-var-4');
     fireEvent.click(whiteButton);
     expect(mockOnVariantChange).toHaveBeenCalledWith('var-4');
   });
@@ -159,8 +159,8 @@ describe('ProductVariantSelector Component', () => {
     expect(screen.getByText('Options')).toBeInTheDocument();
 
     // Variants should be shown
-    expect(screen.getByText('Option A')).toBeInTheDocument();
-    expect(screen.getByText('Option B')).toBeInTheDocument();
+    expect(screen.getByTestId('variant-name-var-1')).toHaveTextContent('Option A');
+    expect(screen.getByTestId('variant-name-var-2')).toHaveTextContent('Option B');
   });
 
   it('handles a mix of typed and untyped variants', () => {
@@ -192,7 +192,7 @@ describe('ProductVariantSelector Component', () => {
     expect(screen.getByText('Size')).toBeInTheDocument();
 
     // Both variants should be shown
-    expect(screen.getByText('Option A')).toBeInTheDocument();
-    expect(screen.getByText('Small')).toBeInTheDocument();
+    expect(screen.getByTestId('variant-name-var-1')).toHaveTextContent('Option A');
+    expect(screen.getByTestId('variant-name-var-2')).toHaveTextContent('Small');
   });
 });

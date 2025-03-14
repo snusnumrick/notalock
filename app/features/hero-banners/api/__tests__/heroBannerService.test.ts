@@ -60,6 +60,7 @@ describe('HeroBannerService', () => {
     // Create a fresh mock supabase client for each test
     mockSupabase = {
       from: vi.fn(),
+      rpc: vi.fn(),
     };
 
     heroBannerService = new HeroBannerService(mockSupabase);
@@ -271,39 +272,33 @@ describe('HeroBannerService', () => {
   describe('reorderHeroBanners', () => {
     it('reorders hero banners', async () => {
       const orderedIds = ['2', '1'];
-      const expectedUpdates = [
-        { id: '2', position: 0 },
-        { id: '1', position: 1 },
-      ];
 
-      // Setup upsert builder
-      const builder = {
-        upsert: vi.fn().mockResolvedValue({ error: null }),
-      };
-      mockSupabase.from.mockReturnValue(builder);
+      // Setup RPC mock
+      mockSupabase.rpc = vi.fn().mockResolvedValue({ error: null });
 
       await heroBannerService.reorderHeroBanners(orderedIds);
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('hero_banners');
-      expect(builder.upsert).toHaveBeenCalledWith(expectedUpdates);
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('update_hero_banner_positions', {
+        banner_ids: orderedIds,
+      });
     });
 
     it('handles errors when reordering banners', async () => {
       const orderedIds = ['2', '1'];
-
-      // Setup error builder
       const errorMsg = 'Error reordering banners';
-      const builder = {
-        upsert: vi.fn().mockResolvedValue({ error: new Error(errorMsg) }),
-      };
-      mockSupabase.from.mockReturnValue(builder);
+
+      // Setup RPC error mock
+      mockSupabase.rpc = vi.fn().mockResolvedValue({
+        error: new Error(errorMsg),
+      });
 
       await expect(heroBannerService.reorderHeroBanners(orderedIds)).rejects.toThrow(
         `Failed to reorder hero banners: ${errorMsg}`
       );
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('hero_banners');
-      expect(builder.upsert).toHaveBeenCalled();
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('update_hero_banner_positions', {
+        banner_ids: orderedIds,
+      });
     });
   });
 });

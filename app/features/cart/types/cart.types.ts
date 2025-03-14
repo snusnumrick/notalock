@@ -1,3 +1,5 @@
+import { CartStatus } from '../../supabase/types/Database.types';
+
 /**
  * Represents a shopping cart
  */
@@ -5,7 +7,7 @@ export interface Cart {
   id: string;
   user_id?: string | null;
   anonymous_id?: string | null;
-  status: 'active' | 'checkout' | 'completed' | 'abandoned';
+  status: CartStatus;
   created_at: string;
   updated_at: string;
   items?: CartItem[];

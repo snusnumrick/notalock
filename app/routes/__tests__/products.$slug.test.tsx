@@ -168,7 +168,7 @@ vi.mock('~/features/products/components/RelatedProducts', () => ({
   RelatedProducts: ({
     products,
   }: {
-    products?: { id: string; name: string; retail_price: number; thumbnail_url: string }[];
+    products?: { id: string; name: string; retail_price: number; image_url: string }[];
   }) => (
     <div data-testid="related-products">
       Mock Related Products ({products?.length || 0} products)
@@ -187,7 +187,7 @@ const mockProduct = {
   id: 'product-1',
   name: 'Test Product',
   slug: 'test-product',
-  sku: 'SKU123',
+  sku: null,
   description: 'Test description',
   retail_price: 99.99,
   stock: 10,
@@ -219,14 +219,14 @@ const mockRelatedProducts = [
     name: 'Related Product 1',
     slug: 'related-product-1',
     retail_price: 79.99,
-    thumbnail_url: '/thumb-1.jpg',
+    image_url: '/thumb-1.jpg',
   },
   {
     id: 'related-2',
     name: 'Related Product 2',
     slug: 'related-product-2',
     retail_price: 89.99,
-    thumbnail_url: '/thumb-2.jpg',
+    image_url: '/thumb-2.jpg',
   },
 ];
 
@@ -442,11 +442,15 @@ describe('Product Detail Loader', () => {
       throw new Error('Unexpected error');
     });
 
-    // Expect loader to throw a 500 Response
-    await expect(loader({ request: mockRequest, params: mockParams, context: {} })).rejects.toEqual(
-      expect.objectContaining({
-        status: 500,
-      })
-    );
+    // The loader should throw a Response with status 500
+    try {
+      await loader({ request: mockRequest, params: mockParams, context: {} });
+      // If we reach here, the test should fail because an error should have been thrown
+      expect('This should not be reached').toBe('Error should be thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(Response);
+      expect((error as Response).status).toBe(500);
+      expect((error as Response).statusText).toBe('Unexpected error');
+    }
   });
 });

@@ -30,7 +30,7 @@ export function ProductForm({
   const [formData, setFormData] = useState<ProductFormData>({
     name: initialData?.name || '',
     slug: initialData?.slug || '',
-    sku: initialData?.sku || '',
+    sku: initialData?.sku ?? '',
     description: initialData?.description || '',
     retail_price: initialData?.retail_price?.toString() || '',
     business_price: initialData?.business_price?.toString() || '',
@@ -208,7 +208,7 @@ export function ProductForm({
                   <input
                     id="sku"
                     type="text"
-                    value={formData.sku}
+                    value={formData.sku || ''}
                     onChange={e => handleInputChange('sku', e.target.value)}
                     className={`mt-1 block w-full rounded-md text-sm ${
                       validationErrors.sku

@@ -78,13 +78,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     // Create admin profile
-    const { error: profileError } = await supabase.from('profiles').insert([
-      {
-        id: data.user.id,
-        email: email,
-        role: 'admin',
-      },
-    ]);
+    const { error: profileError } = await supabase.from('profiles').insert({
+      id: data.user.id,
+      email: email as string,
+      role: 'admin' as const,
+    });
 
     if (profileError) {
       throw new Response('Failed to create admin profile', {

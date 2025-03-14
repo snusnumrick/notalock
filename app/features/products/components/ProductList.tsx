@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import type { SetURLSearchParams } from 'react-router-dom';
-import { useNavigation, Link, useLocation } from '@remix-run/react';
+import { useNavigation, useLocation } from '@remix-run/react';
 import { Card, CardContent } from '~/components/ui/card';
-import { Badge } from '~/components/ui/badge';
-import { formattedPrice } from '~/lib/utils';
 import { TransformedProduct } from '../types/product.types';
 import { storeReferringCategory } from '~/features/categories/utils/referringCategoryUtils';
 import { findCategoryBySlug } from '~/features/categories/utils/categoryUtils';
 import type { Category } from '~/features/categories/types/category.types';
+import { ProductListItem } from './ProductListItem';
+import { DEFAULT_PAGE_LIMIT } from '~/config/pagination';
 
 interface ProductListProps {
   products: TransformedProduct[];
@@ -71,7 +71,7 @@ export const ProductList: React.FC<ProductListProps> = ({
 
     // Calculate remaining items and adjust the limit if needed
     const remaining = total - products.length;
-    if (remaining < 12) {
+    if (remaining < DEFAULT_PAGE_LIMIT) {
       newParams.set('limit', remaining.toString());
     }
 
@@ -144,43 +144,11 @@ export const ProductList: React.FC<ProductListProps> = ({
     <div className="flex flex-col gap-8 relative z-10">
       <div className="space-y-4">
         {products.map(product => (
-          <Link key={product.id} to={`/products/${product.slug}`} onClick={handleStoreCategory}>
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex gap-4">
-                  <div className="w-40 h-40 flex-shrink-0">
-                    <div className="aspect-square w-full relative overflow-hidden rounded-lg">
-                      <img
-                        src={product.image_url || '/images/placeholder-product.png'}
-                        alt={product.name}
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex-grow">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold text-lg">{product.name}</h3>
-                        <p className="text-sm text-gray-600 mt-2 line-clamp-3">
-                          {product.description}
-                        </p>
-                        {product.categories && product.categories.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {product.categories.map(category => (
-                              <Badge key={category.id} variant="secondary">
-                                {category.name}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <p className="font-bold text-lg">{formattedPrice(product.price)}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+          <ProductListItem
+            key={product.id}
+            product={product}
+            onCategoryClick={handleStoreCategory}
+          />
         ))}
       </div>
 

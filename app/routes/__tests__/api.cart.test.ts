@@ -3,19 +3,32 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { action } from '~/routes/api.cart';
 
 // Mock the CartService and Supabase client
-vi.mock('~/features/cart/api/cartService', () => ({
-  CartService: vi.fn().mockImplementation(() => ({
+vi.mock('~/features/cart/api/cartServiceRPC', () => ({
+  CartServiceRPC: vi.fn().mockImplementation(() => ({
     addToCart: vi.fn(),
+    getCartItems: vi.fn(),
   })),
 }));
 
 vi.mock('~/server/services/supabase.server', () => ({
-  createSupabaseClient: vi.fn(),
+  createSupabaseClient: vi.fn().mockReturnValue({
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+    },
+  }),
+}));
+
+// Mock the cookie functions
+vi.mock('~/features/cart/utils/serverCookie', () => ({
+  getAnonymousCartId: vi.fn().mockResolvedValue('test-anonymous-cart-id'),
+  setAnonymousCartId: vi.fn().mockImplementation(response => response),
+  anonymousCartCookie: { parse: vi.fn(), serialize: vi.fn() },
 }));
 
 // Import the mocks directly
-import { CartService } from '~/features/cart/api/cartService';
+import { CartServiceRPC } from '~/features/cart/api/cartServiceRPC';
 import { createSupabaseClient } from '~/server/services/supabase.server';
+import { getAnonymousCartId, setAnonymousCartId } from '~/features/cart/utils/serverCookie';
 
 describe('Cart API Action', () => {
   // Mock FormData and Request
@@ -25,6 +38,10 @@ describe('Cart API Action', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+
+    // Reset our cookie mock functions
+    (getAnonymousCartId as ReturnType<typeof vi.fn>).mockResolvedValue('test-anonymous-cart-id');
+    (setAnonymousCartId as ReturnType<typeof vi.fn>).mockImplementation(response => response);
 
     // Setup form data mock with default values
     mockFormData = {
@@ -40,16 +57,31 @@ describe('Cart API Action', () => {
       }),
     };
 
-    // Setup request mock
+    // Setup request mock with headers for cookie handling
     mockRequest = {
       formData: vi.fn().mockResolvedValue(mockFormData),
+      headers: {
+        get: vi.fn(name => (name === 'Cookie' ? 'anonymousCartId=test-anonymous-cart-id' : null)),
+      },
     };
 
-    // Setup Supabase client mock
+    // Setup Supabase client mock with proper auth session response
     createSupabaseClient.mockReturnValue({
       auth: {
-        getSession: vi.fn(),
+        getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
       },
+      rpc: vi.fn().mockReturnValue({ data: null, error: null }),
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        delete: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        neq: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        single: vi.fn().mockReturnValue({ data: null, error: null }),
+      }),
     });
 
     // Setup cart service mock
@@ -60,13 +92,41 @@ describe('Cart API Action', () => {
         quantity: 2,
         price: 99.99,
       }),
+      getCartItems: vi.fn().mockResolvedValue([
+        {
+          id: 'item-123',
+          product_id: 'prod-123',
+          quantity: 2,
+          price: 99.99,
+        },
+      ]),
     };
 
-    // Override the CartService constructor mock
-    (CartService as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => mockCartService);
+    // Override the CartServiceRPC constructor mock
+    (CartServiceRPC as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      () => mockCartService
+    );
   });
 
   it('successfully adds an item to the cart', async () => {
+    // Make sure mockCartService.addToCart actually returns a value
+    mockCartService.addToCart.mockResolvedValue({
+      id: 'item-123',
+      product_id: 'prod-123',
+      quantity: 2,
+      price: 99.99,
+    });
+
+    // Mock getCartItems to return an array with the new item
+    mockCartService.getCartItems = vi.fn().mockResolvedValue([
+      {
+        id: 'item-123',
+        product_id: 'prod-123',
+        quantity: 2,
+        price: 99.99,
+      },
+    ]);
+
     // Execute action
     const result = await action({ request: mockRequest as any, params: {}, context: {} });
     const data = await result.json();

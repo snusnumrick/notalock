@@ -88,12 +88,10 @@ export class HeroBannerService {
   }
 
   async reorderHeroBanners(orderedIds: string[]): Promise<void> {
-    const updates = orderedIds.map((id, index) => ({
-      id,
-      position: index,
-    }));
-
-    const { error } = await this.supabase.from('hero_banners').upsert(updates);
+    // Use a stored procedure to update all positions in a single transaction
+    const { error } = await this.supabase.rpc('update_hero_banner_positions', {
+      banner_ids: orderedIds,
+    });
 
     if (error) {
       console.error('Error reordering hero banners:', error);
