@@ -98,7 +98,7 @@ const ProductCardComponent = React.memo(
             >
               {product.image_url ? (
                 <img
-                  src={product.image_url || '/placeholder-product.png'}
+                  src={product.image_url}
                   alt={product.name}
                   className={`object-cover w-full h-full ${isFeatured ? 'transition-transform duration-300 group-hover:scale-110' : ''} ${imageClassName}`}
                   loading={index < 8 ? 'eager' : 'lazy'}

@@ -1,16 +1,49 @@
 import { Link } from '@remix-run/react';
-import React from 'react';
-import { EnvelopeIcon, PhoneIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect } from 'react';
+import { EnvelopeIcon, PhoneIcon, MapPinIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 
 export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
+  const [isMobile, setIsMobile] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    shop: false,
+    company: false,
+    contact: false,
+  });
+
+  // Check if the viewport is mobile sized
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // 768px is md breakpoint in Tailwind
+    };
+
+    // Initial check
+    checkMobile();
+
+    // Add resize listener
+    window.addEventListener('resize', checkMobile);
+
+    // Cleanup on unmount
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Toggle a section's expanded state
+  const toggleSection = (section: string) => {
+    if (isMobile) {
+      setExpandedSections(prev => ({
+        ...prev,
+        [section]: !prev[section],
+      }));
+    }
+  };
 
   return (
     <footer className="bg-gray-100 border-t border-gray-300 mt-auto shadow-inner">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-8">
           {/* Company Information */}
-          <div className="space-y-4">
+          {/* Company information - always visible */}
+          <div className="space-y-3 md:space-y-4">
             <Link
               to="/"
               className="flex items-center group transition-transform duration-300 hover:scale-105"
@@ -43,11 +76,32 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Navigation Links */}
+          {/* Shop links - collapsible on mobile */}
           <div>
-            <h3 className="text-sm font-bold text-gray-900 tracking-wider uppercase mb-4 border-b border-gray-200 pb-2">
-              Shop
-            </h3>
-            <ul className="space-y-3">
+            <div
+              className="flex items-center justify-between border-b border-gray-200 pb-2 mb-3 md:mb-4 cursor-pointer md:cursor-default"
+              onClick={() => toggleSection('shop')}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  toggleSection('shop');
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-expanded={expandedSections.shop}
+              aria-controls="shop-links"
+            >
+              <h3 className="text-sm font-bold text-gray-900 tracking-wider uppercase">Shop</h3>
+              {isMobile && (
+                <ChevronDownIcon
+                  className={`h-5 w-5 text-gray-500 transition-transform ${expandedSections.shop ? 'rotate-180' : ''}`}
+                />
+              )}
+            </div>
+            <ul
+              className={`space-y-3 ${isMobile && !expandedSections.shop ? 'hidden' : 'block'}`}
+              data-testid="shop-links"
+            >
               <li>
                 <Link
                   to="/products"
@@ -88,11 +142,34 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Legal */}
+          {/* Company links - collapsible on mobile */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">
-              Company
-            </h3>
-            <ul className="space-y-3">
+            <div
+              className="flex items-center justify-between border-b border-gray-200 pb-2 mb-3 md:mb-4 cursor-pointer md:cursor-default"
+              onClick={() => toggleSection('company')}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  toggleSection('company');
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-expanded={expandedSections.company}
+              aria-controls="company-links"
+            >
+              <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase">
+                Company
+              </h3>
+              {isMobile && (
+                <ChevronDownIcon
+                  className={`h-5 w-5 text-gray-500 transition-transform ${expandedSections.company ? 'rotate-180' : ''}`}
+                />
+              )}
+            </div>
+            <ul
+              className={`space-y-3 ${isMobile && !expandedSections.company ? 'hidden' : 'block'}`}
+              data-testid="company-links"
+            >
               <li>
                 <Link
                   to="/about"
@@ -133,11 +210,34 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Contact Information */}
+          {/* Contact information - collapsible on mobile */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">
-              Contact
-            </h3>
-            <ul className="space-y-3">
+            <div
+              className="flex items-center justify-between border-b border-gray-200 pb-2 mb-3 md:mb-4 cursor-pointer md:cursor-default"
+              onClick={() => toggleSection('contact')}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  toggleSection('contact');
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-expanded={expandedSections.contact}
+              aria-controls="contact-links"
+            >
+              <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase">
+                Contact
+              </h3>
+              {isMobile && (
+                <ChevronDownIcon
+                  className={`h-5 w-5 text-gray-500 transition-transform ${expandedSections.contact ? 'rotate-180' : ''}`}
+                />
+              )}
+            </div>
+            <ul
+              className={`space-y-3 ${isMobile && !expandedSections.contact ? 'hidden' : 'block'}`}
+              data-testid="contact-links"
+            >
               <li className="text-gray-600 text-sm flex items-center space-x-2">
                 <EnvelopeIcon className="h-4 w-4 text-blue-500" />
                 <a
@@ -165,7 +265,7 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Social Media Links */}
-        <div className="flex items-center justify-center space-x-6 mt-8">
+        <div className="flex items-center justify-center space-x-6 mt-6 md:mt-8">
           <a
             href="https://twitter.com/notalock"
             className="text-gray-500 hover:text-blue-600 transition-colors duration-200 transform hover:scale-110"
@@ -217,7 +317,7 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Copyright */}
-        <div className="mt-8 border-t border-gray-300 pt-6 text-center">
+        <div className="mt-6 md:mt-8 border-t border-gray-300 pt-4 md:pt-6 text-center">
           <p className="text-gray-600 text-sm font-medium">
             &copy; {currentYear} Notalock. All rights reserved.
           </p>

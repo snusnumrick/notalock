@@ -18,16 +18,21 @@ import type {
   ProductSummary,
   ProductVariant,
 } from '~/features/products/types/product.types';
+
+// Extended product interface for additional optional properties
+interface ExtendedProduct extends Product {
+  specifications?: string | null;
+  features?: string | null;
+}
 import ProductGallery from '~/features/products/components/ProductGallery';
 import { ProductInfo } from '~/features/products/components/ProductInfo';
-import CategoryBreadcrumbs from '~/features/categories/components/Breadcrumbs/CategoryBreadcrumbs';
 import { ProductVariantSelector } from '~/features/products/components/ProductVariantSelector';
 import { RelatedProducts } from '~/features/products/components/RelatedProducts';
 import { generateProductMeta } from '~/features/products/components/ProductSEO';
 import { PageLayout } from '~/components/common/PageLayout';
 
 interface LoaderData {
-  product: Product & {
+  product: ExtendedProduct & {
     images: ProductImage[];
     variants?: ProductVariant[];
   };
@@ -109,12 +114,12 @@ export const loader = async ({
       }
     }
 
-    // Make sure the product conforms to the expected Product type with images and variants
+    // Make sure the product conforms to the expected ExtendedProduct type with images and variants
     const productWithProcessedData = {
       ...typedProduct,
       images: typedProduct.images || [],
       variants: typedProduct.variants || [],
-    } as Product & { images: ProductImage[]; variants?: ProductVariant[] };
+    } as ExtendedProduct & { images: ProductImage[]; variants?: ProductVariant[] };
 
     return json(
       {
@@ -189,22 +194,162 @@ export default function ProductPage() {
   return (
     <PageLayout>
       <div className="bg-white rounded-lg shadow">
-        <CategoryBreadcrumbs className="p-4" />
+        {/*<CategoryBreadcrumbs className="p-4" />*/}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
-          <div className="w-full">
-            <ProductGallery images={product.images} />
+        {/* Conditional layout: Full layout if there are images or a main image_url, text-only layout if there are none */}
+        {(product.images && product.images.length > 0) || product.image_url ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
+            <div className="w-full">
+              {product.images && product.images.length > 0 ? (
+                <ProductGallery images={product.images} />
+              ) : product.image_url ? (
+                <div
+                  className="w-full space-y-4"
+                  role="tabpanel"
+                  aria-label="Product image gallery"
+                >
+                  <div className="relative w-full aspect-square bg-white rounded-lg overflow-hidden border">
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="w-full h-full object-contain transition-transform duration-300"
+                      loading="eager"
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            <div className="space-y-6">
+              <ProductInfo product={product} />
+              {product.variants && product.variants.length > 0 && (
+                <ProductVariantSelector
+                  variants={product.variants}
+                  onVariantChange={variantId => console.log('Selected variant:', variantId)}
+                />
+              )}
+            </div>
           </div>
-          <div className="space-y-6">
-            <ProductInfo product={product} />
-            {product.variants && product.variants.length > 0 && (
-              <ProductVariantSelector
-                variants={product.variants}
-                onVariantChange={variantId => console.log('Selected variant:', variantId)}
-              />
-            )}
+        ) : (
+          <div className="p-8">
+            {/* Text-only layout when no images are available */}
+            <div className="border border-gray-200 rounded-lg p-6 mb-8 text-center">
+              <div className="w-full max-w-md mx-auto">
+                <div className="text-gray-400 mb-4">
+                  <svg
+                    className="w-16 h-16 mx-auto"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    ></path>
+                  </svg>
+                </div>
+                <p className="text-gray-600">No product images are currently available.</p>
+              </div>
+            </div>
+            <div className="max-w-4xl mx-auto">
+              <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
+                <p className="mt-1 text-sm text-gray-500">
+                  {product.sku ? `SKU: ${product.sku}` : ''}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="border-t border-gray-200 pt-4">
+                    <h2 className="text-xl font-medium text-gray-900 mb-4">Description</h2>
+                    <div className="prose max-w-none text-gray-600">{product.description}</div>
+                  </div>
+
+                  {/* Additional product details */}
+                  {product.specifications && (
+                    <div className="border-t border-gray-200 pt-4">
+                      <h2 className="text-xl font-medium text-gray-900 mb-4">Specifications</h2>
+                      <div className="prose max-w-none text-gray-600">{product.specifications}</div>
+                    </div>
+                  )}
+
+                  {product.features && (
+                    <div className="border-t border-gray-200 pt-4">
+                      <h2 className="text-xl font-medium text-gray-900 mb-4">Features</h2>
+                      <div className="prose max-w-none text-gray-600">{product.features}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right sidebar with pricing and add to cart */}
+                <div className="bg-gray-50 p-6 rounded-lg">
+                  <div className="text-lg font-medium text-gray-900 mb-2">
+                    Pricing & Availability
+                  </div>
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Retail Price</p>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {product.retail_price != null ? (
+                          <>${product.retail_price.toFixed(2)}</>
+                        ) : (
+                          '$N/A'
+                        )}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">Stock</p>
+                      <p className="text-lg text-gray-900">{product.stock} available</p>
+                    </div>
+                  </div>
+
+                  {/* Add to cart form */}
+                  <div className="mt-4">
+                    <label
+                      htmlFor="quantity-no-image"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Quantity
+                    </label>
+                    <div className="flex items-center space-x-2 mb-4">
+                      <input
+                        id="quantity-no-image"
+                        type="number"
+                        min="1"
+                        max={product.stock || 0}
+                        defaultValue="1"
+                        className="w-20 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      />
+                      <button
+                        type="button"
+                        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md font-medium
+                               hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2
+                               focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        disabled={(product.stock ?? 0) <= 0}
+                      >
+                        {(product.stock ?? 0) <= 0 ? 'Out of Stock' : 'Add to Cart'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Variant selector if needed */}
+                  {product.variants && product.variants.length > 0 && (
+                    <div className="mt-6 border-t border-gray-200 pt-4">
+                      <h3 className="text-sm font-medium text-gray-900 mb-2">Options</h3>
+                      <ProductVariantSelector
+                        variants={product.variants}
+                        onVariantChange={variantId => console.log('Selected variant:', variantId)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         <RelatedProducts
           products={relatedProducts?.map(product => ({

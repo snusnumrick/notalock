@@ -10,7 +10,7 @@ import { ProductView, TransformedProduct } from '~/features/products/types/produ
 import type { CustomerFilterOptions } from '~/features/products/components/ProductFilter';
 import { productsLoader } from '~/features/products/api/loaders';
 import { useMediaQuery } from '~/hooks/useMediaQuery';
-import { LayoutGrid, List, Search } from 'lucide-react';
+import { LayoutGrid, List } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 
 export const loader: LoaderFunction = async ({ request, params, context }) => {
@@ -199,30 +199,18 @@ export default function Products() {
           {!isMobile && <div className="hidden md:block w-64 shrink-0"></div>}
           {/* Mobile view components */}
           {isMobile && (
-            <div className="fixed z-30 bg-white bottom-4 right-0  m-0 p-0 pl-2 pr-2 border border-gray-300 shadow">
+            <div className="fixed z-30 bg-white bottom-4 left-0 right-0  m-0 p-0 pl-2 pr-2 border border-gray-300 shadow">
               <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
-                  <div
-                    className={`transition-all duration-300 ease-in-out overflow-hidden ${searchExpanded ? 'w-full' : 'w-0'}`}
-                  >
+                  <div className={`transition-all duration-300 ease-in-out overflow-hidden w-full`}>
                     <SimpleSearch
                       initialValue={searchParams.get('searchTerm') || ''}
                       onSearch={term => {
                         handleSearch(term);
-                        setSearchExpanded(false);
                       }}
                     />
                   </div>
-                  <div className={`flex items-center gap-2 ${searchExpanded ? 'ml-2' : 'ml-auto'}`}>
-                    <Button
-                      className="h-4 w-4"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setSearchExpanded(!searchExpanded)}
-                      aria-label="Toggle search"
-                    >
-                      <Search className="h-4 w-4" />
-                    </Button>
+                  <div className={`flex items-center gap-2 ml-2'}`}>
                     <ProductFilter
                       onFilterChange={handleFilterChange}
                       defaultFilters={filters}

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { vi, describe, it, expect } from 'vitest';
 import { Footer } from '../Footer';
 
@@ -26,20 +26,39 @@ vi.mock('@heroicons/react/24/outline', () => ({
       Address icon
     </span>
   ),
+  ChevronDownIcon: ({ className }: { className: string }) => (
+    <span className={className} data-testid="chevron-down-icon">
+      Expand icon
+    </span>
+  ),
 }));
 
+// Mock window resize for testing mobile view
+const mockWindowInnerWidth = (width: number) => {
+  Object.defineProperty(window, 'innerWidth', {
+    writable: true,
+    configurable: true,
+    value: width,
+  });
+  window.dispatchEvent(new Event('resize'));
+};
+
 describe('Footer Component', () => {
-  it('renders all expected sections', () => {
+  // Reset window size after each test
+  afterEach(() => {
+    mockWindowInnerWidth(1024); // Reset to desktop
+  });
+  it('renders all expected sections in desktop view', () => {
+    mockWindowInnerWidth(1024); // Desktop width
     render(<Footer />);
 
     // Company information
     expect(screen.getByText('Notalock')).toBeInTheDocument();
 
-    // Check for company description - look for any paragraph after logo
-    const paragraphs = screen.getAllByText(/.+/, { selector: 'p' });
-    // Find the company description paragraph (it should be near the top and contain at least 10 characters)
-    const descriptionParagraph = paragraphs.find(p => p.textContent && p.textContent.length > 10);
-    expect(descriptionParagraph).toBeInTheDocument();
+    // Check for company description
+    expect(
+      screen.getByText(/Premium European door hardware solutions for homes and businesses/i)
+    ).toBeInTheDocument();
 
     // Navigation categories
     expect(screen.getByText('Shop')).toBeInTheDocument();
@@ -79,42 +98,67 @@ describe('Footer Component', () => {
     expect(screen.getByText(new RegExp(`© ${currentYear} Notalock`))).toBeInTheDocument();
   });
 
+  it('collapses sections on mobile and expands them when clicked', () => {
+    mockWindowInnerWidth(375); // Mobile width
+    render(<Footer />);
+
+    // Initially collapsed sections
+    expect(screen.getByTestId('shop-links')).toHaveClass('hidden');
+    expect(screen.getByTestId('company-links')).toHaveClass('hidden');
+    expect(screen.getByTestId('contact-links')).toHaveClass('hidden');
+
+    // Expand Shop section
+    const shopHeader = screen.getByText('Shop');
+    fireEvent.click(shopHeader);
+    expect(screen.getByTestId('shop-links')).not.toHaveClass('hidden');
+
+    // Expand Company section
+    const companyHeader = screen.getByText('Company');
+    fireEvent.click(companyHeader);
+    expect(screen.getByTestId('company-links')).not.toHaveClass('hidden');
+
+    // Expand Contact section
+    const contactHeader = screen.getByText('Contact');
+    fireEvent.click(contactHeader);
+    expect(screen.getByTestId('contact-links')).not.toHaveClass('hidden');
+  });
+
   it('has correct navigation links', () => {
+    mockWindowInnerWidth(1024); // Desktop width
     render(<Footer />);
 
     // Shop links
-    // Using getByTestId would be better but for this test we can use text content
-    const shopLinks = screen.getAllByRole('link');
-
-    // Filter out all links in the page that have these texts
-    const allProductsLink = shopLinks.find(link => link.textContent?.includes('All Products'));
-    expect(allProductsLink).toHaveAttribute('href', '/products');
-
-    const categoriesLink = shopLinks.find(link => link.textContent?.includes('Categories'));
-    expect(categoriesLink).toHaveAttribute('href', '/categories');
-
-    const newArrivalsLink = shopLinks.find(link => link.textContent?.includes('New Arrivals'));
-    expect(newArrivalsLink).toHaveAttribute('href', '/new-arrivals');
-
-    const featuredProductsLink = shopLinks.find(link =>
-      link.textContent?.includes('Featured Products')
+    expect(screen.getByRole('link', { name: /All Products/i })).toHaveAttribute(
+      'href',
+      '/products'
     );
-    expect(featuredProductsLink).toHaveAttribute('href', '/featured');
+    expect(screen.getByRole('link', { name: /Categories/i })).toHaveAttribute(
+      'href',
+      '/categories'
+    );
+    expect(screen.getByRole('link', { name: /New Arrivals/i })).toHaveAttribute(
+      'href',
+      '/new-arrivals'
+    );
+    expect(screen.getByRole('link', { name: /Featured Products/i })).toHaveAttribute(
+      'href',
+      '/featured'
+    );
 
     // Company links
-    const aboutUsLink = shopLinks.find(link => link.textContent?.includes('About Us'));
-    expect(aboutUsLink).toHaveAttribute('href', '/about');
-
-    const privacyPolicyLink = shopLinks.find(link => link.textContent?.includes('Privacy Policy'));
-    expect(privacyPolicyLink).toHaveAttribute('href', '/privacy');
-
-    const termsLink = shopLinks.find(link => link.textContent?.includes('Terms & Conditions'));
-    expect(termsLink).toHaveAttribute('href', '/terms');
-
-    const shippingPolicyLink = shopLinks.find(link =>
-      link.textContent?.includes('Shipping Policy')
+    expect(screen.getByRole('link', { name: /About Us/i })).toHaveAttribute('href', '/about');
+    expect(screen.getByRole('link', { name: /Privacy Policy/i })).toHaveAttribute(
+      'href',
+      '/privacy'
     );
-    expect(shippingPolicyLink).toHaveAttribute('href', '/shipping');
+    expect(screen.getByRole('link', { name: /Terms & Conditions/i })).toHaveAttribute(
+      'href',
+      '/terms'
+    );
+    expect(screen.getByRole('link', { name: /Shipping Policy/i })).toHaveAttribute(
+      'href',
+      '/shipping'
+    );
 
     // Contact links
     expect(screen.getByRole('link', { name: 'support@notalock.com' })).toHaveAttribute(
