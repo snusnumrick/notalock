@@ -22,6 +22,7 @@
 - [Products Management](features/product-management.md)
 - [Product Detail Page](features/product-detail.md)
 - [Checkout](features/checkout.md)
+- [Payment Integration](features/payment-integration.md)
 
 ## Planning & Roadmap
 - [Development Roadmap](./roadmap/development-plan.md)

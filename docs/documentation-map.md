@@ -32,7 +32,9 @@ docs/
 │   ├── category-management.md         # Category management feature
 │   ├── checkout.md                   # Checkout feature
 │   ├── image-management.md            # Image management feature
-│   ├── payment-integration.md          # Payment provider integration
+│   ├── payment-integration.md         # Payment provider integration
+│   ├── payment-integration.env.md    # Payment integration environment variables
+│   ├── payment-security.md           # Payment security and PCI compliance
 │   ├── product-detail.md              # Product detail page feature
 │   ├── product-management.md          # Product management feature
 │   └── shipping-tax-calculations.md    # Shipping and tax calculation system

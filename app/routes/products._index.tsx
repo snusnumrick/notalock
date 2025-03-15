@@ -33,10 +33,6 @@ export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
   const lastSearchParams = useRef<URLSearchParams>(new URLSearchParams());
   const [view, setView] = useState<ProductView>('grid');
-  // Initialize searchExpanded to true if searchTerm exists in URL
-  const [searchExpanded, setSearchExpanded] = useState(() =>
-    Boolean(searchParams.get('searchTerm'))
-  );
   const isMobile = useMediaQuery('(max-width: 768px)');
   const hasHydrated = useRef(false);
   const [allProducts, setAllProducts] = useState<TransformedProduct[]>(products);

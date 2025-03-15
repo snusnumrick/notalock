@@ -90,7 +90,7 @@ export class PaymentService {
   /**
    * Set the active payment provider by ID
    */
-  async setActiveProvider(providerId: string, config?: Record<string, never>): Promise<boolean> {
+  async setActiveProvider(providerId: string, config?: Record<string, unknown>): Promise<boolean> {
     const provider = this.providers.get(providerId);
 
     if (!provider) {
@@ -121,9 +121,16 @@ export class PaymentService {
   }
 
   /**
+   * Get a specific payment provider by ID
+   */
+  getProvider(providerId: string): PaymentProviderInterface | null {
+    return this.providers.get(providerId) || null;
+  }
+
+  /**
    * Get the currently active provider
    */
-  private getProvider(): PaymentProviderInterface {
+  private getCurrentProvider(): PaymentProviderInterface {
     if (this.activeProvider) {
       return this.activeProvider;
     }
@@ -144,7 +151,7 @@ export class PaymentService {
     amount: PaymentAmount,
     options?: PaymentOptions
   ): Promise<{ clientSecret?: string; paymentIntentId?: string; error?: string }> {
-    const provider = this.getProvider();
+    const provider = this.getCurrentProvider();
     return provider.createPayment(amount, options);
   }
 
@@ -159,7 +166,7 @@ export class PaymentService {
     }
 
     // Otherwise use the active/default provider
-    const provider = this.getProvider();
+    const provider = this.getCurrentProvider();
     return provider.processPayment(paymentIntentId, {
       ...paymentInfo,
       provider: provider.provider,
@@ -170,7 +177,7 @@ export class PaymentService {
    * Verify the status of a payment
    */
   async verifyPayment(paymentId: string, providerId?: string): Promise<PaymentResult> {
-    const provider = providerId ? this.providers.get(providerId) : this.getProvider();
+    const provider = providerId ? this.providers.get(providerId) : this.getCurrentProvider();
 
     if (!provider) {
       throw new Error(`Payment provider '${providerId}' not found`);
@@ -186,7 +193,7 @@ export class PaymentService {
     paymentId: string,
     providerId?: string
   ): Promise<{ success: boolean; error?: string }> {
-    const provider = providerId ? this.providers.get(providerId) : this.getProvider();
+    const provider = providerId ? this.providers.get(providerId) : this.getCurrentProvider();
 
     if (!provider) {
       throw new Error(`Payment provider '${providerId}' not found`);
@@ -203,7 +210,7 @@ export class PaymentService {
     amount?: number,
     providerId?: string
   ): Promise<{ success: boolean; refundId?: string; error?: string }> {
-    const provider = providerId ? this.providers.get(providerId) : this.getProvider();
+    const provider = providerId ? this.providers.get(providerId) : this.getCurrentProvider();
 
     if (!provider) {
       throw new Error(`Payment provider '${providerId}' not found`);
@@ -213,10 +220,28 @@ export class PaymentService {
   }
 
   /**
+   * Get a payment intent by ID
+   * This is a convenience method used primarily for webhook handling
+   */
+  async getPaymentIntent(paymentIntentId: string, providerId?: string): Promise<unknown> {
+    const provider = providerId ? this.providers.get(providerId) : this.getCurrentProvider();
+
+    if (!provider) {
+      throw new Error(`Payment provider not found: ${providerId || 'default'}`);
+    }
+
+    if (provider.provider === 'stripe' && provider instanceof StripePaymentProvider) {
+      return provider.getPaymentIntent(paymentIntentId);
+    }
+
+    throw new Error(`Get payment intent not implemented for provider: ${provider.provider}`);
+  }
+
+  /**
    * Get client-side configuration for the current payment provider
    */
   getClientConfig(providerId?: string): Record<string, string | number | boolean | object> {
-    const provider = providerId ? this.providers.get(providerId) : this.getProvider();
+    const provider = providerId ? this.providers.get(providerId) : this.getCurrentProvider();
 
     if (!provider) {
       throw new Error(`Payment provider '${providerId}' not found`);

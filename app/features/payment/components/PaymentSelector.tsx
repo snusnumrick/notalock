@@ -3,13 +3,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { Card, CardContent } from '~/components/ui/card';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/components/ui/select';
 import { getPaymentService } from '../PaymentService';
+import { SquarePaymentForm } from './providers/SquarePaymentForm';
+import { StripePaymentForm } from './providers/StripePaymentForm';
 
 interface PaymentSelectorProps {
   onPaymentTypeChange: (type: string, provider: string) => void;
+  onPaymentMethodCreated?: (paymentMethodId: string, provider: string) => void;
+  clientSecret?: string;
+  paymentIntentId?: string;
+  amount?: number;
+  currency?: string;
   selectedProvider?: string;
   selectedType?: string;
   errors?: Record<string, string>;
+  isProcessing?: boolean;
 }
 
 /**
@@ -18,20 +33,37 @@ interface PaymentSelectorProps {
  */
 export function PaymentSelector({
   onPaymentTypeChange,
+  onPaymentMethodCreated,
+  clientSecret,
+  // Not using paymentIntentId currently
+  _paymentIntentId,
+  amount = 0,
+  currency = 'USD',
   selectedProvider = 'mock',
   selectedType = 'credit_card',
   errors = {},
+  isProcessing = false,
 }: PaymentSelectorProps) {
   const [providers, setProviders] = useState<{ id: string; name: string }[]>([]);
   const [activeProvider, setActiveProvider] = useState(selectedProvider);
   const [activeType, setActiveType] = useState(selectedType);
+  const [providerConfig, setProviderConfig] = useState<Record<string, unknown>>({});
+  const [cardholderName, setCardholderName] = useState('');
 
   // Load available payment providers
   useEffect(() => {
     const paymentService = getPaymentService();
     const availableProviders = paymentService.getAvailableProviders();
     setProviders(availableProviders);
-  }, []);
+
+    // Load client config for the selected provider
+    try {
+      const config = paymentService.getClientConfig(selectedProvider);
+      setProviderConfig(config);
+    } catch (error) {
+      console.error('Failed to load payment provider configuration:', error);
+    }
+  }, [selectedProvider]);
 
   // Handle payment type change
   const handleTypeChange = (type: string) => {
@@ -43,27 +75,48 @@ export function PaymentSelector({
   const handleProviderChange = (provider: string) => {
     setActiveProvider(provider);
     onPaymentTypeChange(activeType, provider);
+
+    // Load updated provider config
+    const paymentService = getPaymentService();
+    try {
+      const config = paymentService.getClientConfig(provider);
+      setProviderConfig(config);
+    } catch (error) {
+      console.error('Failed to load payment provider configuration:', error);
+    }
+  };
+
+  // Handle payment method creation
+  const handlePaymentMethodCreated = (paymentMethodId: string) => {
+    if (onPaymentMethodCreated) {
+      onPaymentMethodCreated(paymentMethodId, activeProvider);
+    }
+  };
+
+  // Handle payment errors
+  const handlePaymentError = (error: string) => {
+    console.error('Payment error:', error);
+    // Here you would typically display the error to the user
   };
 
   return (
     <div className="space-y-4">
-      {/* Provider selection - would typically be hidden in production */}
+      {/* Provider selection - would typically be hidden in production for normal users */}
       {providers.length > 1 && (
         <div className="mb-4">
           <Label htmlFor="paymentProvider">Payment Provider</Label>
-          <select
-            id="paymentProvider"
-            name="paymentProvider"
-            value={activeProvider}
-            onChange={e => handleProviderChange(e.target.value)}
-            className="block w-full mt-1 rounded-md border border-gray-300 px-3 py-2"
-          >
-            {providers.map(provider => (
-              <option key={provider.id} value={provider.id}>
-                {provider.name}
-              </option>
-            ))}
-          </select>
+          <Select value={activeProvider} onValueChange={handleProviderChange}>
+            <SelectTrigger id="paymentProvider" className="w-full">
+              <SelectValue placeholder="Select payment provider" />
+            </SelectTrigger>
+            <SelectContent>
+              {providers.map(provider => (
+                <SelectItem key={provider.id} value={provider.id}>
+                  {provider.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
 
@@ -78,37 +131,88 @@ export function PaymentSelector({
         </TabsList>
 
         <TabsContent value="credit_card">
-          <Card>
-            <CardContent className="pt-4">
-              {/* Credit Card Form */}
-              <div className="space-y-4">
+          {activeProvider === 'square' && providerConfig.applicationId && (
+            <SquarePaymentForm
+              applicationId={providerConfig.applicationId}
+              locationId={providerConfig.locationId}
+              clientSecret={clientSecret}
+              amount={amount}
+              currency={currency}
+              onPaymentMethodCreated={handlePaymentMethodCreated}
+              onError={handlePaymentError}
+              isProcessing={isProcessing}
+            />
+          )}
+
+          {activeProvider === 'stripe' && providerConfig.publishableKey && clientSecret && (
+            <StripePaymentForm
+              publishableKey={providerConfig.publishableKey}
+              clientSecret={clientSecret}
+              amount={amount}
+              currency={currency}
+              onPaymentMethodCreated={handlePaymentMethodCreated}
+              onError={handlePaymentError}
+              isProcessing={isProcessing}
+            />
+          )}
+
+          {activeProvider === 'mock' && (
+            <Card>
+              <CardContent className="pt-6 space-y-4">
                 <div>
                   <Label htmlFor="cardholderName">Cardholder Name</Label>
                   <Input
                     id="cardholderName"
                     name="cardholderName"
-                    type="text"
-                    className={errors.cardholderName ? 'border-red-500' : ''}
+                    value={cardholderName}
+                    onChange={e => setCardholderName(e.target.value)}
                     placeholder="John Smith"
                     required
+                    disabled={isProcessing}
+                    className={errors.cardholderName ? 'border-red-500' : ''}
                   />
                   {errors.cardholderName && (
                     <p className="text-sm text-red-500 mt-1">{errors.cardholderName}</p>
                   )}
                 </div>
 
-                {/* In a real implementation, this would be where we integrate with Square or Stripe Elements */}
-                <div id="card-container" className="min-h-24 p-4 border rounded-md">
-                  <p className="text-sm text-gray-600">
-                    In a real implementation, this would integrate with the{' '}
-                    {activeProvider === 'stripe' ? 'Stripe Elements' : 'Square Web Payments SDK'} to
-                    securely collect and process payment information. For this demo, we&apos;ll
-                    simply simulate the payment process.
-                  </p>
+                {/* Mock credit card form for testing */}
+                <div>
+                  <Label htmlFor="cardNumber">Card Number</Label>
+                  <Input
+                    id="cardNumber"
+                    name="cardNumber"
+                    placeholder="4111 1111 1111 1111"
+                    required
+                    disabled={isProcessing}
+                  />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="expiryDate">Expiry Date</Label>
+                    <Input
+                      id="expiryDate"
+                      name="expiryDate"
+                      placeholder="MM/YY"
+                      required
+                      disabled={isProcessing}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cvv">CVV</Label>
+                    <Input id="cvv" name="cvv" placeholder="123" required disabled={isProcessing} />
+                  </div>
+                </div>
+
+                <div className="text-xs text-gray-500 text-center mt-2">
+                  This is a mock payment form for testing purposes.
+                  <br />
+                  No real payment will be processed.
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="paypal">

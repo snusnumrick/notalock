@@ -1,199 +1,243 @@
-import { type LoaderFunctionArgs } from '@remix-run/node';
+import { useEffect, useState } from 'react';
+import { json, redirect, type LoaderFunctionArgs } from '@remix-run/node';
 import { useLoaderData, Link } from '@remix-run/react';
-import { useEffect } from 'react';
 import { PageLayout } from '~/components/common/PageLayout';
+import { CheckoutSteps } from '~/features/checkout/components/CheckoutSteps';
 import { Button } from '~/components/ui/button';
-import { Separator } from '~/components/ui/separator';
-import { CheckCircleIcon } from '@heroicons/react/24/solid';
-import { AddressForm } from '~/features/checkout/components/AddressForm';
-import { checkoutConfirmationLoader } from '~/features/checkout/api/loaders';
-import { CART_COUNT_EVENT_NAME, CART_DATA_STORAGE_KEY } from '~/features/cart/constants';
+import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
+import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { getPaymentService } from '~/features/payment/PaymentService';
+import { getOrderById } from '~/features/orders/api/queries.server';
 
 /**
- * Order confirmation - final step of checkout
+ * Payment confirmation page - final step of checkout
  */
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  return checkoutConfirmationLoader({ request, params: {}, context: {} });
-};
+export async function loader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url);
+  const sessionId = url.searchParams.get('session');
+  const paymentId = url.searchParams.get('paymentId');
+  const orderId = url.searchParams.get('orderId');
+
+  if (!sessionId) {
+    return redirect('/checkout');
+  }
+
+  // If no payment ID or order ID, redirect to checkout
+  if (!paymentId || !orderId) {
+    return redirect(`/checkout?session=${sessionId}`);
+  }
+
+  try {
+    // Get order details
+    const order = await getOrderById(orderId);
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    // Get payment details
+    const paymentService = getPaymentService();
+    const paymentResult = await paymentService.verifyPayment(paymentId);
+
+    // Return data for the confirmation page
+    return json({
+      sessionId,
+      paymentId,
+      orderId,
+      paymentStatus: paymentResult.status,
+      orderStatus: order.status,
+      orderReference: order.reference,
+      orderDate: order.createdAt,
+      customerEmail: order.customer?.email,
+      totalAmount: order.total,
+      currency: order.currency,
+    });
+  } catch (error) {
+    console.error('Error loading confirmation page:', error);
+
+    // Return partial data if error occurs
+    return json({
+      sessionId,
+      paymentId,
+      orderId,
+      paymentStatus: 'unknown',
+      orderStatus: 'unknown',
+      error: 'Failed to load order or payment details',
+    });
+  }
+}
 
 export default function CheckoutConfirmationPage() {
-  const { order } = useLoaderData<typeof loader>();
+  const data = useLoaderData<typeof loader>();
+  const [isVerifying, setIsVerifying] = useState(data.paymentStatus === 'pending');
+  const [paymentStatus, setPaymentStatus] = useState(data.paymentStatus);
 
-  // Clear cart when confirmation page loads
+  // If payment is pending, poll for status updates
   useEffect(() => {
-    // Clear localStorage cart data
-    if (typeof window !== 'undefined') {
-      try {
-        // Remove cart data from localStorage
-        localStorage.removeItem(CART_DATA_STORAGE_KEY);
+    if (paymentStatus === 'pending') {
+      const intervalId = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/payment/verify?paymentId=${data.paymentId}`);
+          const result = await response.json();
 
-        // Dispatch cart-count-update event to update UI
-        console.log('count event 24', 0);
-        window.dispatchEvent(
-          new CustomEvent(CART_COUNT_EVENT_NAME, {
-            detail: {
-              count: 0,
-              timestamp: Date.now(),
-            },
-          })
-        );
+          if (result.status !== 'pending') {
+            setPaymentStatus(result.status);
+            setIsVerifying(false);
+            clearInterval(intervalId);
+          }
+        } catch (error) {
+          console.error('Error verifying payment:', error);
+        }
+      }, 3000); // Check every 3 seconds
 
-        // Dispatch cart-cleared event for any listeners
-        window.dispatchEvent(new CustomEvent('cart-cleared'));
-
-        console.log('Cart cleared in confirmation page component');
-      } catch (error) {
-        console.error('Error clearing cart in confirmation page:', error);
-      }
+      // Clean up interval
+      return () => clearInterval(intervalId);
     }
-  }, []);
+  }, [data.paymentId, paymentStatus]);
 
-  // Format date for display
-  const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  // Get payment method display name
-  const getPaymentMethodName = (method: string) => {
-    switch (method) {
-      case 'credit_card':
-        return 'Credit Card';
-      case 'paypal':
-        return 'PayPal';
-      case 'bank_transfer':
-        return 'Bank Transfer';
-      case 'square':
-        return 'Square';
-      default:
-        return method;
-    }
-  };
+  // Determine UI based on payment status
+  const isSuccess = paymentStatus === 'completed';
+  const isFailed = paymentStatus === 'failed';
 
   return (
     <PageLayout>
       <div className="py-8">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <div className="bg-green-100 rounded-full p-2">
-                <CheckCircleIcon className="h-12 w-12 text-green-600" />
-              </div>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">Order Confirmed!</h1>
-            <p className="text-gray-600">
-              Thank you for your order. We&apos;ve received your purchase and will begin processing
-              it soon.
-            </p>
-            <p className="text-gray-600 mt-1">
-              A confirmation email has been sent to {order.guestEmail || 'your email address'}.
-            </p>
-          </div>
+        <h1 className="text-2xl font-bold text-center mb-2">Order Confirmation</h1>
 
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6">
-              <div>
-                <h2 className="text-xl font-semibold mb-1">Order #{order.orderNumber}</h2>
-                <p className="text-gray-600">Placed on {orderDate}</p>
-              </div>
-              <div className="mt-4 md:mt-0">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                </span>
-              </div>
-            </div>
+        <CheckoutSteps
+          currentStep="confirmation"
+          sessionId={data.sessionId}
+          completedSteps={['information', 'shipping', 'payment']}
+        />
 
-            <Separator className="mb-6" />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <h3 className="font-semibold mb-3">Shipping Information</h3>
-                <AddressForm address={order.shippingAddress} readOnly={true} />
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-3">Payment Information</h3>
-                <p className="font-medium">{getPaymentMethodName(order.paymentMethod)}</p>
-                <p className="text-sm text-gray-600 mb-3">
-                  {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
-                </p>
-
-                <h3 className="font-semibold mb-3 mt-6">Billing Address</h3>
-                <AddressForm address={order.billingAddress} readOnly={true} />
-              </div>
-            </div>
-
-            <Separator className="mb-6" />
-
-            <h3 className="font-semibold mb-4">Order Summary</h3>
-
-            <div className="mb-6">
-              {order.items.map(item => (
-                <div
-                  key={item.id}
-                  className="flex items-start border-b border-gray-200 py-4 last:border-0"
-                >
-                  <div className="relative w-16 h-16 bg-gray-100 rounded flex-shrink-0 mr-4">
-                    {item.imageUrl ? (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        className="w-full h-full object-cover rounded"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                        No Image
-                      </div>
-                    )}
-                    <span className="absolute -top-2 -right-2 bg-gray-200 text-gray-800 text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {item.quantity}
-                    </span>
+        <div className="max-w-3xl mx-auto mt-8">
+          <Card>
+            <CardHeader className="text-center border-b">
+              <div className="mx-auto mb-4">
+                {isVerifying && (
+                  <div className="rounded-full bg-yellow-100 p-3 inline-flex">
+                    <Loader2 className="h-8 w-8 text-yellow-600 animate-spin" />
                   </div>
-                  <div className="flex-grow">
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-gray-500">SKU: {item.sku}</p>
-                    <p className="text-sm font-medium mt-1">
-                      ${item.price.toFixed(2)} × {item.quantity}
+                )}
+
+                {isSuccess && (
+                  <div className="rounded-full bg-green-100 p-3 inline-flex">
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                )}
+
+                {isFailed && (
+                  <div className="rounded-full bg-red-100 p-3 inline-flex">
+                    <AlertCircle className="h-8 w-8 text-red-600" />
+                  </div>
+                )}
+              </div>
+
+              <CardTitle className="text-xl">
+                {isVerifying && 'Processing Your Order...'}
+                {isSuccess && 'Order Confirmed!'}
+                {isFailed && 'Payment Failed'}
+              </CardTitle>
+
+              {isVerifying && (
+                <p className="text-gray-500 mt-1">
+                  We&apos;re processing your payment. This may take a moment...
+                </p>
+              )}
+
+              {isSuccess && (
+                <p className="text-gray-500 mt-1">
+                  Thank you for your order! We&apos;ve sent a confirmation to{' '}
+                  {data.customerEmail || 'your email address'}.
+                </p>
+              )}
+
+              {isFailed && (
+                <p className="text-gray-500 mt-1">
+                  There was a problem processing your payment. Please try again or contact support.
+                </p>
+              )}
+            </CardHeader>
+
+            <CardContent className="pt-6">
+              {(isSuccess || isVerifying) && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Order Details</h3>
+                    <div className="mt-2 border-t border-b py-2">
+                      <div className="flex justify-between py-1">
+                        <span className="font-medium">Order Number:</span>
+                        <span>{data.orderReference || data.orderId}</span>
+                      </div>
+                      {data.orderDate && (
+                        <div className="flex justify-between py-1">
+                          <span className="font-medium">Order Date:</span>
+                          <span>{new Date(data.orderDate).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                      {data.totalAmount && (
+                        <div className="flex justify-between py-1">
+                          <span className="font-medium">Total Amount:</span>
+                          <span>
+                            {data.currency || '$'}{' '}
+                            {typeof data.totalAmount === 'number'
+                              ? data.totalAmount.toFixed(2)
+                              : data.totalAmount}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">What&apos;s Next?</h3>
+                    <ul className="mt-2 list-disc pl-5 space-y-1 text-sm">
+                      <li>You&apos;ll receive an email confirmation shortly.</li>
+                      <li>We&apos;re preparing your order for shipment.</li>
+                      <li>You&apos;ll be notified once your order ships.</li>
+                    </ul>
+                  </div>
+
+                  <div className="flex justify-between pt-4 border-t">
+                    <Button variant="outline" asChild>
+                      <a
+                        href={`/api/payment/receipt?paymentId=${data.paymentId}&orderId=${data.orderId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View Receipt
+                      </a>
+                    </Button>
+
+                    <Button asChild>
+                      <Link to="/">Continue Shopping</Link>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {isFailed && (
+                <div className="space-y-6">
+                  <div className="bg-red-50 p-4 rounded-md">
+                    <p className="text-sm text-red-800">
+                      Your payment could not be processed. This could be due to insufficient funds,
+                      an expired card, or other issues with your payment method.
                     </p>
                   </div>
-                  <div className="text-right whitespace-nowrap font-medium">
-                    ${(item.price * item.quantity).toFixed(2)}
+
+                  <div className="space-y-4">
+                    <Button className="w-full" asChild>
+                      <a href={`/checkout/payment?session=${data.sessionId}`}>Try Again</a>
+                    </Button>
+
+                    <Button variant="outline" className="w-full" asChild>
+                      <a href="/contact">Contact Support</a>
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-
-            <div className="space-y-2 max-w-xs ml-auto">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Subtotal</span>
-                <span>${order.subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Shipping</span>
-                <span>${order.shippingCost.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Tax</span>
-                <span>${order.tax.toFixed(2)}</span>
-              </div>
-              <div className="pt-2 border-t border-gray-200">
-                <div className="flex justify-between font-semibold">
-                  <span>Total</span>
-                  <span>${order.total.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row justify-center gap-4 mt-8">
-            <Button asChild>
-              <Link to="/">Continue Shopping</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to="/account/orders">View Your Orders</Link>
-            </Button>
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </PageLayout>

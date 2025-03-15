@@ -5,6 +5,7 @@ This directory contains documentation about the future development plans for the
 ## Contents
 
 - [Development Plan](./development-plan.md) - Detailed development roadmap and milestones
+- [Payment Gateway Integration](./payment-gateway-integration.md) - Detailed plan for payment provider integration
 
 ## Purpose
 

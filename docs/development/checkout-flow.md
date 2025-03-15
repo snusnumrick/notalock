@@ -5,6 +5,8 @@
 > - [Checkout API Documentation](../api/checkout-api.md) - API endpoints and service architecture
 > - [Checkout Fixes](./checkout-fixes.md) - Recent fixes to the checkout system
 > - [Error Handling Guidelines](./error-handling.md) - General error handling patterns
+> - [Payment Integration](../features/payment-integration.md) - Payment gateway integration
+> - [Payment Security](../features/payment-security.md) - Payment security and PCI compliance
 
 ## Overview
 
@@ -39,7 +41,9 @@ The main checkout route (`_layout.checkout.tsx`) serves as a router that redirec
 
 - **CheckoutSteps**: Navigation component showing progress through checkout
 - **AddressForm**: Form for collecting shipping/billing addresses
-- **PaymentSelector**: Interface for selecting and processing payments
+- **PaymentSelector**: Interface for selecting and processing payments through Square or Stripe
+- **SquarePaymentForm**: Square-specific payment form using Square Web Payments SDK
+- **StripePaymentForm**: Stripe-specific payment form using Stripe Elements
 - **OrderSummary**: Shows cart items and order totals
 
 ## Error Handling 
@@ -125,20 +129,19 @@ The checkout flow integrates with several other systems:
 
 1. **Authentication**: For identifying logged-in users
 2. **Cart System**: For retrieving cart items and totals
-3. **Payment Gateway**: For processing payments (currently mocked)
+3. **Payment Gateway**: For processing payments with Square and Stripe
 4. **Inventory**: For verifying stock availability (future enhancement)
-5. **Email Service**: For sending order confirmations (future enhancement)
+5. **Email Service**: For sending order confirmations
 
 ## Future Enhancements
 
 Planned improvements for the checkout flow:
 
-1. **Payment Gateway Integration**: Implement real payment processing
-2. **Address Validation**: Add address validation and normalization
-3. **Tax Calculation**: Integrate with tax calculation service
-4. **Saved Addresses**: Allow users to save and reuse addresses
-5. **Order Tracking**: Provide order status and tracking information
-6. **Abandoned Cart Recovery**: Implement reminders for incomplete checkouts
+1. **Address Validation**: Add address validation and normalization
+2. **Tax Calculation**: Integrate with tax calculation service
+3. **Saved Addresses**: Allow users to save and reuse addresses
+4. **Order Tracking**: Provide order status and tracking information
+5. **Abandoned Cart Recovery**: Implement reminders for incomplete checkouts
 
 ## Debugging
 
@@ -168,4 +171,6 @@ console.log('Current checkout step:', document.querySelector('.checkout-step.act
 - [Error Handling Guidelines](./error-handling.md) - Error handling patterns and best practices
 - [Cart System](./cart-system.md) - Cart functionality documentation
 - [Supabase Integration](./supabase-integration.md) - Supabase database integration
-- [Payment Processing](./payment-processing.md) - Payment processing details
+- [Payment Integration](../features/payment-integration.md) - Payment gateway integration
+- [Payment API Documentation](../api/payment-api.md) - Payment API endpoints and usage
+- [Payment Webhook API](../api/payment-webhook-api.md) - Payment webhook handlers

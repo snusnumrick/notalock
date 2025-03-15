@@ -1,63 +1,78 @@
 /**
- * Payment provider types and interfaces
+ * Payment amount details
  */
-
-/**
- * Payment method types
- */
-export type PaymentMethodType = 'credit_card' | 'paypal' | 'bank_transfer' | 'square' | 'stripe';
-
-/**
- * Basic payment info structure
- */
-export interface PaymentInfo {
-  type: PaymentMethodType;
-  cardholderName?: string;
-  // We don't store actual payment details like card numbers
-  // Those will be handled by the payment provider
-  paymentMethodId?: string;
-  paymentIntentId?: string;
-  billingAddressSameAsShipping?: boolean;
-  provider: string;
-  providerData?: Record<string, string | number | boolean | object>;
+export interface PaymentAmount {
+  value: number;
+  currency: string;
+  items?: Array<{
+    name: string;
+    price: number;
+    quantity: number;
+  }>;
 }
 
 /**
- * Payment status
+ * Additional payment options
  */
-export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
+export interface PaymentOptions {
+  provider?: string;
+  customerId?: string;
+  orderReference?: string;
+  description?: string;
+  metadata?: Record<string, string>;
+  savePaymentMethod?: boolean;
+}
 
 /**
- * Payment result returned by payment provider
+ * Payment information for processing
+ */
+export interface PaymentInfo {
+  provider: string;
+  type: string;
+  paymentMethodId?: string;
+  customerId?: string;
+  billingInfo?: {
+    name?: string;
+    email?: string;
+    address?: {
+      line1?: string;
+      line2?: string;
+      city?: string;
+      state?: string;
+      postalCode?: string;
+      country?: string;
+    };
+  };
+  savePaymentMethod?: boolean;
+}
+
+/**
+ * Payment status types
+ */
+export type PaymentStatus = 'completed' | 'pending' | 'failed' | 'refunded' | 'canceled';
+
+/**
+ * Payment result from providers
  */
 export interface PaymentResult {
   success: boolean;
   paymentId?: string;
-  paymentMethodId?: string;
   paymentIntentId?: string;
+  paymentMethodId?: string;
   status: PaymentStatus;
   error?: string;
-  providerData?: Record<string, string | number | boolean | object>;
+  providerData?: Record<string, unknown>;
+  refundAmount?: number;
+  refundReason?: string;
+  refundDate?: string;
 }
 
 /**
- * Payment amount structure
+ * SDK window augmentation for global SDKs
  */
-export interface PaymentAmount {
-  subtotal: number;
-  tax: number;
-  shipping: number;
-  total: number;
-  currency: string;
-}
-
-/**
- * Payment options for configuring the payment flow
- */
-export interface PaymentOptions {
-  paymentMethodTypes?: PaymentMethodType[];
-  clientName?: string;
-  clientEmail?: string;
-  // Other options specific to payment providers
-  [key: string]: PaymentMethodType[] | string | undefined;
+declare global {
+  interface Window {
+    Square?: unknown;
+    Stripe?: unknown;
+  }
 }

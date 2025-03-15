@@ -18,7 +18,10 @@ notalock/
 │   ├── features/        # Feature modules
 │   │   ├── cart/        # Shopping cart feature
 │   │   ├── categories/  # Category management
+│   │   ├── checkout/    # Checkout process feature
 │   │   ├── hero-banners/# Hero banner/slider
+│   │   ├── orders/      # Order management
+│   │   ├── payment/     # Payment processing
 │   │   ├── products/    # Product management
 │   │   └── supabase/    # Supabase integration
 │   ├── hooks/           # Shared React hooks
@@ -28,6 +31,8 @@ notalock/
 │   │   ├── _layout.tsx  # Main layout route
 │   │   ├── _layout._index.tsx # Index route
 │   │   ├── api/         # API routes
+│   │   │   ├── payment/ # Payment API endpoints
+│   │   │   └── webhooks/# Payment webhook handlers
 │   │   ├── admin/       # Admin routes
 │   │   └── products/    # Product routes
 │   ├── server/          # Server-side code
@@ -54,6 +59,7 @@ notalock/
     - Multi-step flows:
       - `_layout.checkout.tsx` - Main checkout router
       - `_layout.checkout.[step].tsx` - Individual checkout steps (information, shipping, payment, etc.)
+      - `_layout.checkout.confirmation.tsx` - Order confirmation page
   - Admin section:
     - `admin.tsx` - Admin layout
     - `admin.products.tsx` - Admin products management
@@ -68,6 +74,8 @@ notalock/
     - `products.category.$grandparentSlug.$parentSlug.$slug.tsx` - Deep nested category page
   - API routes:
     - `api.[endpoint].tsx/ts` - API endpoints (e.g., `api.cart.tsx`, `api.upload-product-image.ts`)
+    - `api/payment/` - Payment processing API endpoints
+    - `api/webhooks/` - Webhook handlers for payment providers
 - Loaders and actions defined in route modules
 - Complex logic moved to feature modules
 
@@ -106,10 +114,31 @@ feature/
 └── utils/              # Helper functions and utilities
 ```
 
-Example implementation: The hero-banners feature module contains:
-- API layer with HeroBannerService and related loaders/actions
-- Components for both public-facing and admin interfaces
-- Type definitions for hero banner data
+Example implementation: The payment feature module contains:
+```
+payment/
+├── components/         # Payment form components
+│   ├── PaymentSelector.tsx
+│   └── providers/     # Provider-specific components
+│       ├── SquarePaymentForm.tsx
+│       └── StripePaymentForm.tsx
+├── config/            # Payment configuration
+│   └── paymentConfig.server.ts
+├── errors/            # Error handling
+│   └── PaymentError.ts
+├── providers/         # Provider implementations
+│   ├── PaymentProviderInterface.ts
+│   ├── SquarePaymentProvider.ts
+│   └── StripePaymentProvider.ts
+├── receipts/          # Receipt generation
+│   └── ReceiptGenerator.ts
+├── types/             # TypeScript type definitions
+│   └── index.ts
+├── utils/             # Utility functions
+│   └── sdkLoader.ts
+├── PaymentService.ts  # Main service facade
+└── initializePayment.server.ts
+```
 
 ## File Naming Conventions
 - Layout routes: Start with `_layout` (e.g., `_layout.tsx`, `_layout.about.tsx`)
@@ -119,6 +148,9 @@ Example implementation: The hero-banners feature module contains:
 - Components: PascalCase (e.g., `ProductList.tsx`, `HeroSlider.tsx`)
 - Loaders/Actions: camelCase (e.g., `categoryLoader.ts`, `heroBannersLoader.ts`)
 - Service classes: PascalCase with 'Service' suffix (e.g., `CategoryService.ts`, `HeroBannerService.server.ts`)
+- Interface files: PascalCase with 'Interface' suffix (e.g., `PaymentProviderInterface.ts`)
+- Configuration files: camelCase with descriptive names (e.g., `paymentConfig.server.ts`)
+- Server-only files: Use `.server.ts` suffix to indicate server-only usage
 
 ## Test Organization
 - Route tests: In `routes/__tests__`

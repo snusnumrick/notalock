@@ -19,6 +19,11 @@ This directory contains detailed documentation for developers working on the Not
 - [Anonymous Carts](./anonymous-carts.md) - Implementation of guest shopping carts
 - [Cart Item Removal](./cart-removal.md) - Robust cart item removal implementation
 
+## Payment System
+
+- [Extending Payment Providers](./extending-payment-providers.md) - Guide to adding new payment providers
+- [Testing Payment Integration](./testing-payment-integration.md) - Guide to testing payment functionality
+
 ## Image Handling
 
 - [Image Optimization Guide](./image-optimization-guide.md) - Guide to image optimization implementation
