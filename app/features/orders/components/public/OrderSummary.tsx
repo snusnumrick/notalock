@@ -83,7 +83,7 @@ export function OrderSummary({ order, showDetailLink = true }: OrderSummaryProps
 
           <div className="flex justify-between text-sm mb-2">
             <span>{order.items.reduce((total, item) => total + item.quantity, 0)} items</span>
-            <span>Order total: ${order.totalAmount.toFixed(2)}</span>
+            <span>Order total: ${(order.totalAmount || 0).toFixed(2)}</span>
           </div>
 
           <div className="border-t border-b py-3">
@@ -106,11 +106,11 @@ export function OrderSummary({ order, showDetailLink = true }: OrderSummaryProps
                       {item.name.length > 30 ? `${item.name.substring(0, 30)}...` : item.name}
                     </div>
                     <div className="text-sm text-gray-500">
-                      Qty: {item.quantity} × ${item.unitPrice.toFixed(2)}
+                      Qty: {item.quantity} × ${(item.unitPrice || 0).toFixed(2)}
                     </div>
                   </div>
                 </div>
-                <div className="font-medium">${item.totalPrice.toFixed(2)}</div>
+                <div className="font-medium">${(item.totalPrice || 0).toFixed(2)}</div>
               </div>
             ))}
 
@@ -124,19 +124,19 @@ export function OrderSummary({ order, showDetailLink = true }: OrderSummaryProps
           <div className="flex flex-col gap-1">
             <div className="flex justify-between text-sm">
               <span>Subtotal:</span>
-              <span>${order.subtotalAmount.toFixed(2)}</span>
+              <span>${(order.subtotalAmount || 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Shipping:</span>
-              <span>${order.shippingCost.toFixed(2)}</span>
+              <span>${(order.shippingCost || 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Tax:</span>
-              <span>${order.taxAmount.toFixed(2)}</span>
+              <span>${(order.taxAmount || 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-medium mt-2">
               <span>Total:</span>
-              <span>${order.totalAmount.toFixed(2)}</span>
+              <span>${(order.totalAmount || 0).toFixed(2)}</span>
             </div>
           </div>
 

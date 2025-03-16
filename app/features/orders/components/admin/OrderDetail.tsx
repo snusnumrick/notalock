@@ -213,8 +213,12 @@ export function OrderDetail({
                         <TableCell className="font-medium">{item.name}</TableCell>
                         <TableCell>{item.sku}</TableCell>
                         <TableCell className="text-center">{item.quantity}</TableCell>
-                        <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">${item.totalPrice.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                          ${(item.unitPrice || 0).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${(item.totalPrice || 0).toFixed(2)}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -231,19 +235,19 @@ export function OrderDetail({
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="font-medium">Subtotal:</span>
-                    <span>${order.subtotalAmount.toFixed(2)}</span>
+                    <span>${(order.subtotalAmount || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Shipping:</span>
-                    <span>${order.shippingCost.toFixed(2)}</span>
+                    <span>${(order.shippingCost || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Tax:</span>
-                    <span>${order.taxAmount.toFixed(2)}</span>
+                    <span>${(order.taxAmount || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total:</span>
-                    <span>${order.totalAmount.toFixed(2)}</span>
+                    <span>${(order.totalAmount || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -287,7 +291,7 @@ export function OrderDetail({
                 <div>
                   <h3 className="font-semibold mb-1">Shipping Method</h3>
                   <p className="text-sm">{order.shippingMethod}</p>
-                  <p className="text-sm">Cost: ${order.shippingCost.toFixed(2)}</p>
+                  <p className="text-sm">Cost: ${(order.shippingCost || 0).toFixed(2)}</p>
                 </div>
               )}
 

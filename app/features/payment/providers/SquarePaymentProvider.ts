@@ -1,7 +1,7 @@
 import type { PaymentAmount, PaymentInfo, PaymentOptions, PaymentResult } from '../types';
 import type { PaymentProviderInterface } from '~/features/payment';
 import { SquareClient as Client, SquareEnvironment as Environment } from 'square';
-import { randomUUID } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 
 // Define a type for Square currency
 type Currency = 'USD' | 'CAD' | 'GBP' | 'EUR' | 'JPY' | 'AUD';
@@ -95,7 +95,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
       const { currency, value, items } = amount;
 
       // Create a unique idempotency key for this request
-      const idempotencyKey = randomUUID();
+      const idempotencyKey = uuidv4();
 
       // Create the order - adjust the request format
       const orderCreateRequest = {

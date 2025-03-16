@@ -107,7 +107,7 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
                 <TableCell className="font-medium">{order.orderNumber}</TableCell>
                 <TableCell>{formatDate(order.createdAt)}</TableCell>
                 <TableCell>{order.email}</TableCell>
-                <TableCell>${order.totalAmount.toFixed(2)}</TableCell>
+                <TableCell>${(order.totalAmount || 0).toFixed(2)}</TableCell>
                 <TableCell>
                   {onStatusChange ? (
                     <Select
@@ -176,8 +176,8 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
                               <TableCell>{item.name}</TableCell>
                               <TableCell>{item.sku}</TableCell>
                               <TableCell>{item.quantity}</TableCell>
-                              <TableCell>${item.unitPrice.toFixed(2)}</TableCell>
-                              <TableCell>${item.totalPrice.toFixed(2)}</TableCell>
+                              <TableCell>${(item.unitPrice || 0).toFixed(2)}</TableCell>
+                              <TableCell>${(item.totalPrice || 0).toFixed(2)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -212,19 +212,19 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
                           <div className="text-sm">
                             <div className="flex justify-between">
                               <span>Subtotal:</span>
-                              <span>${order.subtotalAmount.toFixed(2)}</span>
+                              <span>${(order.subtotalAmount || 0).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Shipping:</span>
-                              <span>${order.shippingCost.toFixed(2)}</span>
+                              <span>${(order.shippingCost || 0).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Tax:</span>
-                              <span>${order.taxAmount.toFixed(2)}</span>
+                              <span>${(order.taxAmount || 0).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between font-semibold mt-2">
                               <span>Total:</span>
-                              <span>${order.totalAmount.toFixed(2)}</span>
+                              <span>${(order.totalAmount || 0).toFixed(2)}</span>
                             </div>
                           </div>
                         </div>

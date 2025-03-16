@@ -86,9 +86,9 @@ export function OrderDetail({ order }: OrderDetailProps) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium">${item.totalPrice.toFixed(2)}</div>
+                    <div className="font-medium">${(item.totalPrice || 0).toFixed(2)}</div>
                     <div className="text-sm text-gray-500">
-                      {item.quantity} × ${item.unitPrice.toFixed(2)}
+                      {item.quantity} × ${(item.unitPrice || 0).toFixed(2)}
                     </div>
                   </div>
                 </div>
@@ -98,19 +98,19 @@ export function OrderDetail({ order }: OrderDetailProps) {
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span>${order.subtotalAmount.toFixed(2)}</span>
+                  <span>${(order.subtotalAmount || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <span>${order.shippingCost.toFixed(2)}</span>
+                  <span>${(order.shippingCost || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tax</span>
-                  <span>${order.taxAmount.toFixed(2)}</span>
+                  <span>${(order.taxAmount || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold pt-2 border-t">
                   <span>Total</span>
-                  <span>${order.totalAmount.toFixed(2)}</span>
+                  <span>${(order.totalAmount || 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>

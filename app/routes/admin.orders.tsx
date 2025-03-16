@@ -68,7 +68,7 @@ export default function OrdersRoute() {
   const submit = useSubmit();
 
   const [search, setSearch] = useState(searchParams.get('search') || '');
-  const [status, setStatus] = useState(searchParams.get('status') || '');
+  const [status, setStatus] = useState(searchParams.get('status') || 'all');
   const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || '');
   const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || '');
 
@@ -90,7 +90,7 @@ export default function OrdersRoute() {
     if (search) newParams.set('search', search);
     else newParams.delete('search');
 
-    if (status) newParams.set('status', status);
+    if (status && status !== 'all') newParams.set('status', status);
     else newParams.delete('status');
 
     if (dateFrom) newParams.set('dateFrom', dateFrom);
@@ -161,7 +161,7 @@ export default function OrdersRoute() {
                   <SelectValue placeholder="Any status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any status</SelectItem>
+                  <SelectItem value="all">Any status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="processing">Processing</SelectItem>
                   <SelectItem value="paid">Paid</SelectItem>
