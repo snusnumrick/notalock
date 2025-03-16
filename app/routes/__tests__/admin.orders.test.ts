@@ -2,6 +2,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import type { LoaderFunctionArgs, ActionFunctionArgs } from '@remix-run/node';
 import { getOrders, getOrderById } from '~/features/orders/api/queries.server';
 import { updateOrderStatus, updatePaymentStatus } from '~/features/orders/api/actions.server';
+import { getOrderService } from '~/features/orders/api/orderService';
 
 // Mock the order API
 vi.mock('~/features/orders/api/queries.server', () => ({
@@ -14,8 +15,15 @@ vi.mock('~/features/orders/api/actions.server', () => ({
   updatePaymentStatus: vi.fn(),
 }));
 
+// Mock the OrderService
+vi.mock('~/features/orders/api/orderService', () => ({
+  getOrderService: vi.fn().mockResolvedValue({
+    getOrders: vi.fn(),
+  }),
+}));
+
 // Mock Authentication
-vi.mock('~/lib/auth.server', () => ({
+vi.mock('~/server/middleware/auth.server', () => ({
   requireAdmin: vi.fn().mockResolvedValue({
     id: 'admin-123',
     email: 'admin@example.com',
@@ -24,7 +32,7 @@ vi.mock('~/lib/auth.server', () => ({
 }));
 
 // Import the mocked modules
-import { requireAdmin } from '~/lib/auth.server';
+import { requireAdmin } from '~/server/middleware/auth.server';
 
 // Import the loader/action functions from the routes
 // Note: We need to use dynamic import since the route might not exist yet
@@ -34,9 +42,13 @@ let action: (args: ActionFunctionArgs) => Promise<Response>;
 
 const importRouteHandlers = async () => {
   try {
-    const module = await import('~/routes/admin.orders');
-    loader = module.loader;
-    action = module.action;
+    // Try to import the orders list loader
+    const listModule = await import('~/routes/admin.orders');
+    loader = listModule.loader;
+
+    // Try to import the order detail action
+    const detailModule = await import('~/routes/admin.orders.$id');
+    action = detailModule.action;
   } catch (error) {
     // If route doesn't exist yet, use dummy handlers for testing
     loader = async ({ request, params }) => {
@@ -285,6 +297,12 @@ describe('Admin Orders Route', () => {
       paymentStatus: 'paid',
       updatedAt: '2025-03-15T13:00:00Z',
     });
+
+    // Mock the OrderService.getOrders method
+    const mockOrderService = {
+      getOrders: vi.fn().mockResolvedValue(mockOrdersResult),
+    };
+    (getOrderService as jest.Mock).mockResolvedValue(mockOrderService);
 
     // Import the route handlers
     await importRouteHandlers();

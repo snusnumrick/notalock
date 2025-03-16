@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { type LoaderFunctionArgs, json } from '@remix-run/node';
-import { useLoaderData, useSubmit, useSearchParams } from '@remix-run/react';
+import { Link, useLoaderData, useSubmit, useSearchParams } from '@remix-run/react';
 import { requireAdmin } from '~/server/middleware/auth.server';
 import { getOrderService } from '~/features/orders/api/orderService';
 import { OrdersTable } from '~/features/orders/components/admin/OrdersTable';
@@ -123,9 +123,17 @@ export default function OrdersRoute() {
 
   return (
     <div className="container py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Orders</h1>
-        <p className="text-gray-500">Manage and track customer orders</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">Orders</h1>
+          <p className="text-gray-500">Manage and track customer orders</p>
+        </div>
+        <Link
+          to="/admin/orders/analytics"
+          className="bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600 transition-colors"
+        >
+          View Analytics
+        </Link>
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm mb-6">

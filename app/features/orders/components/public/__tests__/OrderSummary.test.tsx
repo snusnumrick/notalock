@@ -12,10 +12,11 @@ vi.mock('@remix-run/react', () => ({
   ),
 }));
 
-// Mock formatDate to ensure consistent tests
+// Mock utils with all required functions
 vi.mock('~/lib/utils', () => ({
   formatDate: vi.fn().mockImplementation((_date: string) => 'March 15, 2025'),
   formatCurrency: vi.fn().mockImplementation((amount: number) => `${amount.toFixed(2)}`),
+  cn: (...inputs: any[]) => inputs.filter(Boolean).join(' '), // Simple implementation of cn
 }));
 
 describe('OrderSummary', () => {
@@ -67,8 +68,8 @@ describe('OrderSummary', () => {
     render(<OrderSummary order={mockOrder} />);
 
     // Assert
-    expect(screen.getByText(mockOrder.orderNumber)).toBeInTheDocument();
-    expect(screen.getByText('March 15, 2025')).toBeInTheDocument();
+    expect(screen.getByTestId('order-number')).toHaveTextContent(mockOrder.orderNumber);
+    expect(screen.getByTestId('order-date')).toHaveTextContent('March 15, 2025');
   });
 
   it('displays order status with appropriate styling', () => {
@@ -170,12 +171,14 @@ describe('OrderSummary', () => {
 
   it('truncates long product names correctly', () => {
     // Arrange
+    const longProductName =
+      'This is an extremely long product name that should be truncated in the order summary view because it would take up too much space';
     const orderWithLongProductName = {
       ...mockOrder,
       items: [
         {
           ...mockOrder.items[0],
-          name: 'This is an extremely long product name that should be truncated in the order summary view because it would take up too much space',
+          name: longProductName,
         },
       ],
     };
@@ -183,12 +186,11 @@ describe('OrderSummary', () => {
     render(<OrderSummary order={orderWithLongProductName} />);
 
     // Assert
-    // Check that the name is truncated with ellipsis
-    const nameElement = screen.getByText(/This is an extremely long product/);
+    // The component truncates after 30 characters with an ellipsis
+    const expectedTruncatedText = longProductName.substring(0, 30) + '...';
+    const nameElement = screen.getByTitle(longProductName);
     expect(nameElement).toBeInTheDocument();
-    expect(nameElement.textContent?.length).toBeLessThan(
-      orderWithLongProductName.items[0].name.length
-    );
-    expect(nameElement.textContent?.endsWith('...')).toBe(true);
+    expect(nameElement).toHaveTextContent(expectedTruncatedText);
+    expect(nameElement.textContent?.length).toBeLessThan(longProductName.length);
   });
 });

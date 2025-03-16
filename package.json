@@ -71,12 +71,14 @@
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.3.5",
     "react-hook-form": "^7.54.2",
+    "recharts": "^2.12.0",
     "sharp": "^0.33.5",
     "square": "^41.0.0",
     "stripe": "^17.7.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0",
+    "vitest-mock-extended": "^3.0.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {

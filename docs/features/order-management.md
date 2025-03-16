@@ -88,14 +88,15 @@ Administrators can:
 The admin interface provides the following capabilities:
 
 1. **Order Dashboard** - Overview of recent orders and their statuses at `/admin/orders`
-2. **Order List** - Complete list of orders with filtering options
-3. **Order Detail** - Detailed view of a specific order with:
+2. **Order Analytics** - Detailed analytics dashboard for order performance at `/admin/orders/analytics`
+3. **Order List** - Complete list of orders with filtering options
+4. **Order Detail** - Detailed view of a specific order with:
    - Customer information
    - Order items
    - Payment details
    - Status history
    - Shipping information
-4. **Order Management** - Ability to update order status and add notes
+5. **Order Management** - Ability to update order status and add notes
 
 ## API Integration
 
@@ -192,11 +193,10 @@ The `OrderService` class provides methods for:
 
 Planned enhancements to the Order Management system include:
 
-1. Advanced filtering and reporting
-2. Order cancellation and refund processing
-3. Automated email notifications for order status changes
-4. Return and exchange processing
-5. Integration with inventory management
+1. Order cancellation and refund processing
+2. Automated email notifications for order status changes
+3. Return and exchange processing
+4. Integration with inventory management
 
 ## Related Documentation
 

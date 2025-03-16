@@ -9,8 +9,8 @@ vi.mock('~/features/orders/api/queries.server', () => ({
 }));
 
 // Mock Authentication
-vi.mock('~/lib/auth.server', () => ({
-  requireUser: vi.fn(),
+vi.mock('~/server/middleware/auth.server', () => ({
+  requireAuth: vi.fn(),
 }));
 
 // Import the mocked modules

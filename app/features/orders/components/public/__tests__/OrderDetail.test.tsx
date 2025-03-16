@@ -4,6 +4,40 @@ import { type Order, OrderStatus, PaymentStatus } from '../../../types';
 import { formatDate } from '~/lib/utils';
 import { vi } from 'vitest';
 
+// Mock cva from class-variance-authority
+vi.mock('class-variance-authority', () => ({
+  cva: () => {
+    // Return a function that returns className string when called
+    const fn = () => 'mock-cva-class';
+    // Add a base variant to the function
+    fn.variants = { variant: {} };
+    // Add a defaultVariants to the function
+    fn.defaultVariants = { variant: 'default' };
+    return fn;
+  },
+}));
+
+// Mock Badge component
+vi.mock('~/components/ui/badge', () => ({
+  Badge: ({ className, children }: any) => <div className={className}>{children}</div>,
+  badgeVariants: () => 'mock-badge-variants-class',
+}));
+
+// Mock Card components
+vi.mock('~/components/ui/card', () => ({
+  Card: ({ className, children }: any) => <div className={className}>{children}</div>,
+  CardHeader: ({ className, children }: any) => <div className={className}>{children}</div>,
+  CardTitle: ({ className, children }: any) => <div className={className}>{children}</div>,
+  CardContent: ({ className, children }: any) => <div className={className}>{children}</div>,
+}));
+
+// Mock Button component
+vi.mock('~/components/ui/button', () => ({
+  Button: ({ className, children, variant }: any) => (
+    <button className={`${className} ${variant || ''}`}>{children}</button>
+  ),
+}));
+
 // Mock the remix Link component
 vi.mock('@remix-run/react', () => ({
   Link: ({ to, children, ...props }: any) => (
@@ -13,9 +47,10 @@ vi.mock('@remix-run/react', () => ({
   ),
 }));
 
-// Mock formatDate to ensure consistent tests
+// Mock utils with all required functions
 vi.mock('~/lib/utils', () => ({
   formatDate: vi.fn().mockImplementation((_date: string) => 'March 15, 2025'),
+  cn: (...inputs: any[]) => inputs.filter(Boolean).join(' '), // Simple implementation of cn for className merging
 }));
 
 describe('OrderDetail', () => {

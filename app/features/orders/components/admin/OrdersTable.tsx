@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Order, OrderStatus, PaymentStatus } from '~/features/orders/types';
 import {
   Table,
@@ -102,8 +102,8 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
         </TableHeader>
         <TableBody>
           {orders.map(order => (
-            <>
-              <TableRow key={order.id}>
+            <React.Fragment key={order.id}>
+              <TableRow>
                 <TableCell className="font-medium">{order.orderNumber}</TableCell>
                 <TableCell>{formatDate(order.createdAt)}</TableCell>
                 <TableCell>{order.email}</TableCell>
@@ -128,13 +128,19 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
                       </SelectContent>
                     </Select>
                   ) : (
-                    <Badge className={getStatusBadgeColor(order.status)}>
+                    <Badge
+                      className={getStatusBadgeColor(order.status)}
+                      data-testid="order-status-badge"
+                    >
                       {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                     </Badge>
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge className={getPaymentStatusBadgeColor(order.paymentStatus)}>
+                  <Badge
+                    className={getPaymentStatusBadgeColor(order.paymentStatus)}
+                    data-testid="payment-status-badge"
+                  >
                     {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
                   </Badge>
                 </TableCell>
@@ -142,7 +148,7 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
                   <Button variant="ghost" size="sm" onClick={() => toggleOrderDetails(order.id)}>
                     {expandedOrder === order.id ? 'Hide' : 'View'}
                   </Button>
-                  <Link to={`/app/routes/todelete/admin/orders/${order.id}`}>
+                  <Link to={`/admin/orders/${order.id}`}>
                     <Button variant="outline" size="sm" className="ml-2">
                       Details
                     </Button>
@@ -234,7 +240,7 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
                   </TableCell>
                 </TableRow>
               )}
-            </>
+            </React.Fragment>
           ))}
         </TableBody>
       </Table>

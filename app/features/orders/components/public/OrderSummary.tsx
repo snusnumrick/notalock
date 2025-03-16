@@ -65,8 +65,12 @@ export function OrderSummary({ order, showDetailLink = true }: OrderSummaryProps
       <CardHeader className="bg-gray-50 border-b pb-3">
         <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center">
           <div>
-            <CardTitle className="text-base">Order #{order.orderNumber}</CardTitle>
-            <CardDescription>Placed on {formatDate(order.createdAt)}</CardDescription>
+            <CardTitle className="text-base">
+              Order #<span data-testid="order-number">{order.orderNumber}</span>
+            </CardTitle>
+            <CardDescription>
+              Placed on <span data-testid="order-date">{formatDate(order.createdAt)}</span>
+            </CardDescription>
           </div>
           <Badge className={getStatusBadgeColor(order.status)}>
             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
@@ -77,6 +81,11 @@ export function OrderSummary({ order, showDetailLink = true }: OrderSummaryProps
         <div className="space-y-4">
           <div className="text-sm">{getStatusMessage(order.status)}</div>
 
+          <div className="flex justify-between text-sm mb-2">
+            <span>{order.items.reduce((total, item) => total + item.quantity, 0)} items</span>
+            <span>Order total: ${order.totalAmount.toFixed(2)}</span>
+          </div>
+
           <div className="border-t border-b py-3">
             {order.items.slice(0, 3).map(item => (
               <div key={item.id} className="flex justify-between items-center py-2">
@@ -85,7 +94,7 @@ export function OrderSummary({ order, showDetailLink = true }: OrderSummaryProps
                     {item.imageUrl ? (
                       <img
                         src={item.imageUrl}
-                        alt={item.name}
+                        alt="Product thumbnail"
                         className="w-10 h-10 object-contain"
                       />
                     ) : (
@@ -93,7 +102,9 @@ export function OrderSummary({ order, showDetailLink = true }: OrderSummaryProps
                     )}
                   </div>
                   <div>
-                    <div className="font-medium">{item.name}</div>
+                    <div className="font-medium truncate max-w-[200px]" title={item.name}>
+                      {item.name.length > 30 ? `${item.name.substring(0, 30)}...` : item.name}
+                    </div>
                     <div className="text-sm text-gray-500">
                       Qty: {item.quantity} × ${item.unitPrice.toFixed(2)}
                     </div>
@@ -130,13 +141,24 @@ export function OrderSummary({ order, showDetailLink = true }: OrderSummaryProps
           </div>
 
           {showDetailLink && (
-            <div className="mt-4 text-center">
+            <div className="mt-4 flex justify-center gap-4">
               <a
                 href={`/account/orders/${order.id}`}
-                className="inline-block text-blue-600 hover:text-blue-800 hover:underline text-sm"
+                className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
               >
-                View Order Details
+                View Details
               </a>
+
+              {order.metadata?.tracking?.url && (
+                <a
+                  href={order.metadata.tracking.url}
+                  className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Track Order
+                </a>
+              )}
             </div>
           )}
         </div>

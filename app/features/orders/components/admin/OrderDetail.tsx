@@ -20,15 +20,27 @@ import {
 } from '~/components/ui/select';
 import { formatDate } from '~/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
+import { Label } from '~/components/ui/label';
+import { Textarea } from '~/components/ui/textarea';
 
 interface OrderDetailProps {
   order: Order;
   onStatusChange?: (orderId: string, status: OrderStatus) => Promise<void>;
+  onPaymentStatusChange?: (orderId: string, status: PaymentStatus) => Promise<void>;
+  onAddNote?: (note: string, orderId: string) => Promise<void>;
   isLoading?: boolean;
 }
 
-export function OrderDetail({ order, onStatusChange, isLoading = false }: OrderDetailProps) {
+export function OrderDetail({
+  order,
+  onStatusChange,
+  onPaymentStatusChange,
+  onAddNote,
+  isLoading = false,
+}: OrderDetailProps) {
   const [status, setStatus] = useState<OrderStatus>(order.status);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(order.paymentStatus);
+  const [noteText, setNoteText] = useState('');
 
   const getStatusBadgeColor = (status: OrderStatus) => {
     switch (status) {
@@ -66,10 +78,23 @@ export function OrderDetail({ order, onStatusChange, isLoading = false }: OrderD
     }
   };
 
-  const handleStatusChange = async (newStatus: string) => {
-    setStatus(newStatus as OrderStatus);
+  const handleStatusChange = async () => {
     if (onStatusChange) {
-      await onStatusChange(order.id, newStatus as OrderStatus);
+      await onStatusChange(order.id, status);
+    }
+  };
+
+  const handlePaymentStatusChange = async () => {
+    if (onPaymentStatusChange) {
+      await onPaymentStatusChange(order.id, paymentStatus);
+    }
+  };
+
+  const handleAddNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onAddNote && noteText.trim()) {
+      await onAddNote(noteText, order.id);
+      setNoteText('');
     }
   };
 
@@ -88,7 +113,7 @@ export function OrderDetail({ order, onStatusChange, isLoading = false }: OrderD
               <div className="flex items-center gap-2">
                 <Select
                   defaultValue={status}
-                  onValueChange={handleStatusChange}
+                  onValueChange={value => setStatus(value as OrderStatus)}
                   disabled={isLoading}
                 >
                   <SelectTrigger className="w-[180px]">
@@ -104,7 +129,13 @@ export function OrderDetail({ order, onStatusChange, isLoading = false }: OrderD
                     <SelectItem value="failed">Failed</SelectItem>
                   </SelectContent>
                 </Select>
-                {isLoading && <div className="animate-spin">⟳</div>}
+                {isLoading ? (
+                  <div className="animate-spin">⟳</div>
+                ) : (
+                  <Button onClick={handleStatusChange} size="sm">
+                    Update Status
+                  </Button>
+                )}
               </div>
             ) : (
               <Badge className={getStatusBadgeColor(order.status)}>
@@ -115,9 +146,36 @@ export function OrderDetail({ order, onStatusChange, isLoading = false }: OrderD
 
           <div className="flex flex-col gap-1 mt-2 sm:mt-0">
             <div className="text-sm font-medium">Payment Status</div>
-            <Badge className={getPaymentStatusBadgeColor(order.paymentStatus)}>
-              {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
-            </Badge>
+            {onPaymentStatusChange ? (
+              <div className="flex items-center gap-2">
+                <Select
+                  defaultValue={paymentStatus}
+                  onValueChange={value => setPaymentStatus(value as PaymentStatus)}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select payment status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                    <SelectItem value="refunded">Refunded</SelectItem>
+                  </SelectContent>
+                </Select>
+                {isLoading ? (
+                  <div className="animate-spin">⟳</div>
+                ) : (
+                  <Button onClick={handlePaymentStatusChange} size="sm">
+                    Update Payment Status
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Badge className={getPaymentStatusBadgeColor(order.paymentStatus)}>
+                {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+              </Badge>
+            )}
           </div>
         </div>
       </div>
@@ -132,58 +190,65 @@ export function OrderDetail({ order, onStatusChange, isLoading = false }: OrderD
         </TabsList>
 
         <TabsContent value="items" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Order Items</CardTitle>
-              <CardDescription>Items included in this order</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead className="text-center">Quantity</TableHead>
-                    <TableHead className="text-right">Unit Price</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {order.items.map(item => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell>{item.sku}</TableCell>
-                      <TableCell className="text-center">{item.quantity}</TableCell>
-                      <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">${item.totalPrice.toFixed(2)}</TableCell>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Items</CardTitle>
+                <CardDescription>Items included in this order</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead className="text-center">Quantity</TableHead>
+                      <TableHead className="text-right">Unit Price</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
                     </TableRow>
-                  ))}
-                  <TableRow>
-                    <TableCell colSpan={3} />
-                    <TableCell className="text-right font-medium">Subtotal</TableCell>
-                    <TableCell className="text-right">${order.subtotalAmount.toFixed(2)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={3} />
-                    <TableCell className="text-right font-medium">Shipping</TableCell>
-                    <TableCell className="text-right">${order.shippingCost.toFixed(2)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={3} />
-                    <TableCell className="text-right font-medium">Tax</TableCell>
-                    <TableCell className="text-right">${order.taxAmount.toFixed(2)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={3} />
-                    <TableCell className="text-right font-medium">Total</TableCell>
-                    <TableCell className="text-right font-bold">
-                      ${order.totalAmount.toFixed(2)}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {order.items.map(item => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell>{item.sku}</TableCell>
+                        <TableCell className="text-center">{item.quantity}</TableCell>
+                        <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">${item.totalPrice.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Summary</CardTitle>
+                <CardDescription>Order totals and payment information</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="font-medium">Subtotal:</span>
+                    <span>${order.subtotalAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Shipping:</span>
+                    <span>${order.shippingCost.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Tax:</span>
+                    <span>${order.taxAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Total:</span>
+                    <span>${order.totalAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="customer" className="mt-4">
@@ -294,8 +359,8 @@ export function OrderDetail({ order, onStatusChange, isLoading = false }: OrderD
               )}
 
               {order.notes && (
-                <div>
-                  <h3 className="font-semibold mb-1">Payment Notes</h3>
+                <div className="mt-6 border-t pt-4">
+                  <h3 className="font-semibold mb-2">Order Notes</h3>
                   <p className="text-sm">{order.notes}</p>
                 </div>
               )}
@@ -306,12 +371,13 @@ export function OrderDetail({ order, onStatusChange, isLoading = false }: OrderD
         <TabsContent value="history" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Order History</CardTitle>
+              <CardTitle>Status History</CardTitle>
               <CardDescription>Timeline of order status changes</CardDescription>
             </CardHeader>
             <CardContent>
               {order.statusHistory && order.statusHistory.length > 0 ? (
                 <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">Order History</h3>
                   {order.statusHistory.map(entry => (
                     <div key={entry.id} className="border-l-2 border-gray-200 pl-4">
                       <div className="flex items-center gap-2">
@@ -327,14 +393,39 @@ export function OrderDetail({ order, onStatusChange, isLoading = false }: OrderD
               ) : (
                 <p className="text-sm text-gray-500">No status history available</p>
               )}
+
+              {onAddNote && (
+                <div className="mt-6 border-t pt-4">
+                  <h3 className="font-semibold text-lg mb-3">Add New Note</h3>
+                  <form onSubmit={handleAddNote}>
+                    <div className="space-y-2">
+                      <Label htmlFor="add-note">Add a note</Label>
+                      <Textarea
+                        id="add-note"
+                        value={noteText}
+                        onChange={e => setNoteText(e.target.value)}
+                        placeholder="Enter a note about this order..."
+                        className="min-h-[100px]"
+                      />
+                    </div>
+                    <Button type="submit" className="mt-2">
+                      Add Note
+                    </Button>
+                  </form>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
       <div className="flex justify-end gap-2">
-        <Button variant="outline">Back to Orders</Button>
-        <Button variant="default">Print Order</Button>
+        <Button variant="outline" asChild>
+          <a href="/admin/orders">Back to Orders</a>
+        </Button>
+        <Button variant="default" asChild>
+          <a href={`/api/orders/${order.id}/invoice?print=true`}>Print Invoice</a>
+        </Button>
       </div>
     </div>
   );

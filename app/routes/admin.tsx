@@ -84,25 +84,22 @@ export default function AdminLayout() {
                 </Link>
               </div>
               <nav className="ml-6 flex space-x-8">
-                <Link to="/todelete/admin/products" className={getLinkClassName('/admin/products')}>
+                <Link to="/admin/products" className={getLinkClassName('/admin/products')}>
                   Products
                 </Link>
-                <Link to="/todelete/admin/orders" className={getLinkClassName('/admin/orders')}>
+                <Link to="/admin/orders" className={getLinkClassName('/admin/orders')}>
                   Orders
                 </Link>
-                <Link to="/todelete/admin/users" className={getLinkClassName('/admin/users')}>
-                  Users
-                </Link>
                 <Link
-                  to="/todelete/admin/categories"
-                  className={getLinkClassName('/admin/categories')}
+                  to="/admin/orders/analytics"
+                  className={getLinkClassName('/admin/orders/analytics')}
                 >
+                  Analytics
+                </Link>
+                <Link to="/admin/categories" className={getLinkClassName('/admin/categories')}>
                   Categories
                 </Link>
-                <Link
-                  to="/todelete/admin/hero-banners"
-                  className={getLinkClassName('/admin/hero-banners')}
-                >
+                <Link to="/admin/hero-banners" className={getLinkClassName('/admin/hero-banners')}>
                   Hero Banners
                 </Link>
               </nav>

@@ -44,6 +44,27 @@ Retrieves a list of orders for the current user or all orders for admin users.
 }
 ```
 
+### GET /api/orders/analytics
+
+Retrieves order analytics data for reporting purposes.
+
+**Authentication Required:** Yes (Admin only)
+
+**Query Parameters:**
+- `fromDate` (optional): Filter by orders created after this date
+- `toDate` (optional): Filter by orders created before this date
+
+**Response:**
+```json
+{
+  "orders": [
+    // Array of orders with complete data for analytics
+  ],
+  "dateFrom": "2023-01-01",
+  "dateTo": "2023-12-31"
+}
+```
+
 ### GET /api/orders/:id
 
 Retrieves a specific order by ID.

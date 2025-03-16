@@ -267,6 +267,29 @@ export default function OrdersPage() {
 }
 ```
 
+### Order Analytics Dashboard
+
+Located in `/src/app/(admin)/orders/analytics/page.tsx`:
+
+```typescript
+export default function OrderAnalyticsPage() {
+  // Fetch order data for analytics
+  // Apply date filters
+  // Render OrderAnalytics component
+  // Show summary metrics and charts
+}
+```
+
+The analytics visualization is implemented in the `OrderAnalytics` component in `/src/features/orders/components/admin/OrderAnalytics.tsx`:
+
+```typescript
+export const OrderAnalytics: React.FC<OrderAnalyticsProps> = ({ orders, loading, startDate, endDate }) => {
+  // Calculate metrics like total orders, revenue, average order value
+  // Generate data for various charts
+  // Render summary cards and visualization charts
+}
+```
+
 ### Order Detail View
 
 Located in `/src/app/(admin)/orders/[id]/page.tsx`:

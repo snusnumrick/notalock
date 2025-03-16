@@ -1,7 +1,15 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { OrdersTable } from '../OrdersTable';
 import { type Order, OrderStatus, PaymentStatus } from '../../../types';
-import { vi } from 'vitest';
+import { vi, beforeAll } from 'vitest';
+
+// Mock scrollIntoView which is missing from JSDOM
+beforeAll(() => {
+  // Add scrollIntoView mock to the Element prototype if it doesn't exist
+  if (!window.HTMLElement.prototype.scrollIntoView) {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  }
+});
 
 // Mock the remix Link component
 vi.mock('@remix-run/react', () => ({
@@ -12,9 +20,23 @@ vi.mock('@remix-run/react', () => ({
   ),
 }));
 
-// Mock formatDate to ensure consistent tests
+// Mock UI components that might cause issues in JSDOM
+vi.mock('~/components/ui/select', () => ({
+  Select: ({ children, onValueChange, defaultValue }) => (
+    <div data-testid="select-mock" onChange={e => onValueChange?.(e.target.value)}>
+      <select defaultValue={defaultValue}>{children}</select>
+    </div>
+  ),
+  SelectContent: ({ children }) => <div>{children}</div>,
+  SelectItem: ({ children, value }) => <option value={value}>{children}</option>,
+  SelectTrigger: ({ children }) => <div>{children}</div>,
+  SelectValue: ({ placeholder }) => <span>{placeholder}</span>,
+}));
+
+// Mock utils with all required functions
 vi.mock('~/lib/utils', () => ({
   formatDate: vi.fn().mockImplementation((_date: string) => 'March 15, 2025'),
+  cn: (...inputs: any[]) => inputs.filter(Boolean).join(' '), // Simple implementation of cn for className merging
 }));
 
 describe('OrdersTable', () => {
@@ -143,21 +165,29 @@ describe('OrdersTable', () => {
     // Arrange
     render(<OrdersTable orders={mockOrders} />);
 
-    // Assert
-    const pendingBadge = screen.getByText('Pending');
+    // Assert - Get all badges and filter for specific statuses
+    const orderStatusBadges = screen.getAllByTestId('order-status-badge');
+
+    // Find pending badge (should be the first one based on our mock data)
+    const pendingBadge = orderStatusBadges.find(badge => badge.textContent === 'Pending');
     expect(pendingBadge).toHaveClass('bg-yellow-100');
     expect(pendingBadge).toHaveClass('text-yellow-800');
 
-    const completedBadge = screen.getByText('Completed');
+    // Find completed badge (should be the second one based on our mock data)
+    const completedBadge = orderStatusBadges.find(badge => badge.textContent === 'Completed');
     expect(completedBadge).toHaveClass('bg-green-500');
     expect(completedBadge).toHaveClass('text-white');
 
-    const pendingPaymentBadge = screen.getByText('Pending', {
-      selector: '.bg-yellow-100.text-yellow-800',
-    });
-    expect(pendingPaymentBadge).toBeInTheDocument();
+    // Payment status badges
+    const paymentStatusBadges = screen.getAllByTestId('payment-status-badge');
 
-    const paidBadge = screen.getByText('Paid');
+    // Find pending payment badge
+    const pendingPaymentBadge = paymentStatusBadges.find(badge => badge.textContent === 'Pending');
+    expect(pendingPaymentBadge).toHaveClass('bg-yellow-100');
+    expect(pendingPaymentBadge).toHaveClass('text-yellow-800');
+
+    // Find paid payment badge
+    const paidBadge = paymentStatusBadges.find(badge => badge.textContent === 'Paid');
     expect(paidBadge).toHaveClass('bg-green-100');
     expect(paidBadge).toHaveClass('text-green-800');
   });
@@ -176,16 +206,14 @@ describe('OrdersTable', () => {
     const handleStatusChange = vi.fn();
     render(<OrdersTable orders={mockOrders} onStatusChange={handleStatusChange} />);
 
-    // Get the first select element
-    const selects = screen.getAllByRole('combobox');
-    const firstSelect = selects[0];
+    // Act - find our mocked select and trigger change
+    const selectMocks = screen.getAllByTestId('select-mock');
 
-    // Act
-    fireEvent.click(firstSelect);
-
-    // Wait for the select content to be visible
-    const completedOption = await screen.findByText('Completed', { selector: '[role="option"]' });
-    fireEvent.click(completedOption);
+    // Use Testing Library's within to find the select element in our mocked component
+    const selectElement = within(selectMocks[0]).getByRole('combobox');
+    fireEvent.change(selectElement, {
+      target: { value: 'completed' },
+    });
 
     // Assert
     expect(handleStatusChange).toHaveBeenCalledWith('order-123', 'completed');
