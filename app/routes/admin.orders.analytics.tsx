@@ -12,6 +12,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   // Verify the user is an admin
   await requireAdmin(request);
 
+  console.log('🔍 ANALYTICS LOADER RUNNING');
+
   // Get query parameters
   const url = new URL(request.url);
   const searchParams = url.searchParams;
@@ -41,6 +43,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export default function OrderAnalyticsRoute() {
   const { orders, dateFrom, dateTo } = useLoaderData<typeof loader>();
+
+  console.log('🔍 ANALYTICS COMPONENT RENDERING');
 
   const [startDate, setStartDate] = useState<Date | undefined>(
     dateFrom ? new Date(dateFrom) : undefined
@@ -83,9 +87,9 @@ export default function OrderAnalyticsRoute() {
   };
 
   return (
-    <div className="container py-8">
+    <div className="container py-8 bg-indigo-100 border-4 border-indigo-500 rounded-lg">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Order Analytics</h1>
+        <h1 className="text-3xl font-bold mb-2 text-indigo-700">ORDER ANALYTICS DASHBOARD</h1>
         <p className="text-gray-500">Track and analyze your store&apos;s order data</p>
       </div>
 

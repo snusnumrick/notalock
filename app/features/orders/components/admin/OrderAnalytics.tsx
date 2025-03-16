@@ -24,6 +24,15 @@ interface OrderAnalyticsProps {
   endDate?: Date;
 }
 
+/**
+ * Ensures a value is a number, defaulting to 0 for null/undefined/NaN
+ */
+const ensureNumber = (value: number | string | null | undefined): number => {
+  if (value === null || value === undefined) return 0;
+  const num = Number(value);
+  return isNaN(num) ? 0 : num;
+};
+
 export const OrderAnalytics: React.FC<OrderAnalyticsProps> = ({
   orders = [],
   loading = false,
@@ -44,7 +53,10 @@ export const OrderAnalytics: React.FC<OrderAnalyticsProps> = ({
 
   // Calculate metrics
   const totalOrders = filteredOrders.length;
-  const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+  const totalRevenue = filteredOrders.reduce(
+    (sum, order) => sum + ensureNumber(order.totalAmount),
+    0
+  );
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
   const completedOrders = filteredOrders.filter(
@@ -75,13 +87,13 @@ export const OrderAnalytics: React.FC<OrderAnalyticsProps> = ({
         const existing = productMap.get(item.productId);
         if (existing) {
           existing.quantity += item.quantity;
-          existing.revenue += item.totalPrice;
+          existing.revenue += ensureNumber(item.totalPrice);
         } else {
           productMap.set(item.productId, {
             id: item.productId,
             name: item.name,
             quantity: item.quantity,
-            revenue: item.totalPrice,
+            revenue: ensureNumber(item.totalPrice),
           });
         }
       });
@@ -98,7 +110,7 @@ export const OrderAnalytics: React.FC<OrderAnalyticsProps> = ({
 
     filteredOrders.forEach(order => {
       const date = formatDate(order.createdAt, 'yyyy-MM-dd');
-      dailyData[date] = (dailyData[date] || 0) + (order.totalAmount || 0);
+      dailyData[date] = (dailyData[date] || 0) + ensureNumber(order.totalAmount);
     });
 
     return Object.entries(dailyData)
