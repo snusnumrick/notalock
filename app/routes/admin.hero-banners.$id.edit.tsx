@@ -27,7 +27,7 @@ export default function AdminEditHeroBannerPage() {
           <p className="text-muted-foreground">Edit details for &quot;{banner.title}&quot;</p>
         </div>
         <Button variant="outline" asChild>
-          <Link to="/admin/hero-banners">Back to Hero Banners</Link>
+          <Link to="/todelete/admin/hero-banners">Back to Hero Banners</Link>
         </Button>
       </div>
 

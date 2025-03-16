@@ -90,7 +90,10 @@ export class PaymentService {
   /**
    * Set the active payment provider by ID
    */
-  async setActiveProvider(providerId: string, config?: Record<string, unknown>): Promise<boolean> {
+  async setActiveProvider(
+    providerId: string,
+    config?: Record<string, string | number | boolean | object>
+  ): Promise<boolean> {
     const provider = this.providers.get(providerId);
 
     if (!provider) {
@@ -258,6 +261,16 @@ export class PaymentService {
 let paymentServiceInstance: PaymentService | null = null;
 
 export function getPaymentService(): PaymentService {
+  // For tests, we'll rely on the mock implementation
+  if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+    if (!paymentServiceInstance) {
+      paymentServiceInstance = new PaymentService();
+      paymentServiceInstance.setDefaultProvider('mock');
+    }
+    return paymentServiceInstance;
+  }
+
+  // Normal environment initialization
   if (!paymentServiceInstance) {
     paymentServiceInstance = new PaymentService();
   }

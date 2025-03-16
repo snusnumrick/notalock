@@ -18,6 +18,7 @@ This directory contains detailed documentation for developers working on the Not
 - [Checkout Fixes](./checkout-fixes.md) - Recent fixes and improvements to the checkout system
 - [Anonymous Carts](./anonymous-carts.md) - Implementation of guest shopping carts
 - [Cart Item Removal](./cart-removal.md) - Robust cart item removal implementation
+- [Order Management Implementation](./order-management-implementation.md) - Complete order management system implementation
 
 ## Payment System
 

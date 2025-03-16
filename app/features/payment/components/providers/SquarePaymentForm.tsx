@@ -34,9 +34,32 @@ export function SquarePaymentForm({
   const [postalCode, setPostalCode] = useState('');
   const [cardElementLoaded, setCardElementLoaded] = useState(false);
   const [paymentFormInitialized, setPaymentFormInitialized] = useState(false);
-  const [paymentForm, setPaymentForm] = useState<unknown>(null);
-  const [card, setCard] = useState<unknown>(null);
+  interface SquareCard {
+    tokenize: () => Promise<{
+      status: string;
+      token?: string;
+      errors?: Array<{ message: string }>;
+    }>;
+    attach: (selector: string) => Promise<void>;
+  }
+
+  interface SquarePayments {
+    card: () => Promise<SquareCard>;
+  }
+
+  const [paymentForm, setPaymentForm] = useState<SquarePayments | null>(null);
+  const [card, setCard] = useState<SquareCard | null>(null);
   const [loadingError, setLoadingError] = useState<string | null>(null);
+
+  // Define Square object type
+  interface SquareType {
+    payments: (
+      applicationId: string,
+      locationId: string
+    ) => Promise<{
+      card: () => Promise<SquareCard>;
+    }>;
+  }
 
   // Initialize Square Web Payments SDK
   useEffect(() => {
@@ -48,7 +71,7 @@ export function SquarePaymentForm({
     async function initializeSquarePayments() {
       try {
         // Create and initialize a payments instance
-        const payments = await window.Square?.payments(applicationId, locationId);
+        const payments = await (window.Square as SquareType).payments(applicationId, locationId);
 
         // Create card payment method
         const card = await payments.card();
@@ -83,20 +106,16 @@ export function SquarePaymentForm({
     }
 
     try {
-      // Collect additional payment details
-      // Not using paymentDetails currently
-      const _paymentDetails = {
-        amount,
-        currency,
-        intent: 'CHARGE', // or 'STORE' to save the card for later use
-      };
-
       // Tokenize the card details
       const result = await card.tokenize();
 
       if (result.status === 'OK') {
         // Pass the payment token to the parent component
-        onPaymentMethodCreated(result.token);
+        if (result.token) {
+          onPaymentMethodCreated(result.token);
+        } else {
+          onError('Payment token was not generated');
+        }
       } else {
         onError(result.errors?.[0]?.message || 'Failed to process card information');
       }

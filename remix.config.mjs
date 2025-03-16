@@ -13,4 +13,5 @@ export default {
     v3_singleFetch: true,
   },
   sourcemap: process.env.NODE_ENV !== 'production',
+  browserNodeBuiltinsPolyfill: { modules: { crypto: true, events: true, buffer: true } },
 };

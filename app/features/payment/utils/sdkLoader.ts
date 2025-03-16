@@ -37,13 +37,21 @@ export function loadSquareSdk(): Promise<typeof window.Square> {
   });
 }
 
+// Add type declaration for payment globals
+declare global {
+  interface Window {
+    Square?: unknown;
+    Stripe?: (publishableKey: string) => unknown;
+  }
+}
+
 /**
  * Load Stripe.js SDK
  */
 export function loadStripeSdk(publishableKey: string): Promise<unknown> {
   // If SDK is already loaded, return it
   if (window.Stripe) {
-    return Promise.resolve(window.Stripe(publishableKey));
+    return Promise.resolve((window.Stripe as (key: string) => unknown)(publishableKey));
   }
 
   return new Promise((resolve, reject) => {
@@ -54,7 +62,7 @@ export function loadStripeSdk(publishableKey: string): Promise<unknown> {
     // Define onload handler
     script.onload = () => {
       if (window.Stripe) {
-        resolve(window.Stripe(publishableKey));
+        resolve((window.Stripe as (key: string) => unknown)(publishableKey));
       } else {
         reject(new Error('Stripe SDK loaded but global is not defined'));
       }

@@ -6,9 +6,17 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type CheckoutStep = 'information' | 'shipping' | 'payment' | 'review' | 'confirmation';
-export type OrderStatus = 'created' | 'processing' | 'completed' | 'cancelled' | 'refunded';
+export type OrderStatus =
+  | 'pending'
+  | 'processing'
+  | 'paid'
+  | 'completed'
+  | 'cancelled'
+  | 'refunded'
+  | 'failed'
+  | 'created';
 export type PaymentMethodType = 'credit_card' | 'paypal' | 'bank_transfer' | 'square';
-export type PaymentStatus = 'pending' | 'paid' | 'failed';
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 export type UserRole = 'customer' | 'business' | 'admin';
 export type CartStatus =
   | 'active'
@@ -104,7 +112,7 @@ export interface Database {
           user_id: string | null;
           guest_email: string | null;
           order_number: string;
-          status: string;
+          status: OrderStatus;
           shipping_address: Json;
           billing_address: Json;
           shipping_method: string;
@@ -113,8 +121,12 @@ export interface Database {
           tax: number;
           total: number;
           payment_method: string;
-          payment_status: string;
+          payment_status: PaymentStatus;
+          payment_intent_id: string | null;
+          payment_method_id: string | null;
+          payment_provider: string | null;
           notes: string | null;
+          metadata: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -125,7 +137,7 @@ export interface Database {
           user_id?: string | null;
           guest_email?: string | null;
           order_number: string;
-          status?: string;
+          status?: OrderStatus;
           shipping_address: Json;
           billing_address: Json;
           shipping_method: string;
@@ -134,8 +146,12 @@ export interface Database {
           tax?: number;
           total?: number;
           payment_method: string;
-          payment_status?: string;
+          payment_status?: PaymentStatus;
+          payment_intent_id?: string | null;
+          payment_method_id?: string | null;
+          payment_provider?: string | null;
           notes?: string | null;
+          metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -146,7 +162,7 @@ export interface Database {
           user_id?: string | null;
           guest_email?: string | null;
           order_number?: string;
-          status?: string;
+          status?: OrderStatus;
           shipping_address?: Json;
           billing_address?: Json;
           shipping_method?: string;
@@ -155,8 +171,12 @@ export interface Database {
           tax?: number;
           total?: number;
           payment_method?: string;
-          payment_status?: string;
+          payment_status?: PaymentStatus;
+          payment_intent_id?: string | null;
+          payment_method_id?: string | null;
+          payment_provider?: string | null;
           notes?: string | null;
+          metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -190,9 +210,11 @@ export interface Database {
           name: string;
           sku: string;
           quantity: number;
-          price: number;
+          unit_price: number;
+          total_price: number;
           image_url: string | null;
           options: Json | null;
+          metadata: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -204,9 +226,11 @@ export interface Database {
           name: string;
           sku: string;
           quantity: number;
-          price: number;
+          unit_price: number;
+          total_price: number;
           image_url?: string | null;
           options?: Json | null;
+          metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -218,9 +242,11 @@ export interface Database {
           name?: string;
           sku?: string;
           quantity?: number;
-          price?: number;
+          unit_price?: number;
+          total_price?: number;
           image_url?: string | null;
           options?: Json | null;
+          metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -241,6 +267,46 @@ export interface Database {
             foreignKeyName: 'order_items_variant_id_fkey';
             columns: ['variant_id'];
             referencedRelation: 'product_variants';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      order_status_history: {
+        Row: {
+          id: string;
+          order_id: string;
+          status: OrderStatus;
+          notes: string | null;
+          created_at: string;
+          created_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          status: OrderStatus;
+          notes?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          status?: OrderStatus;
+          notes?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'order_status_history_order_id_fkey';
+            columns: ['order_id'];
+            referencedRelation: 'orders';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'order_status_history_created_by_fkey';
+            columns: ['created_by'];
+            referencedRelation: 'users';
             referencedColumns: ['id'];
           },
         ];
@@ -955,6 +1021,18 @@ export interface Database {
           updated_at: string;
         }[];
       };
+      log_order_status_change: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
+      log_initial_order_status: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
+      update_updated_at_column: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
     };
     Enums: {
       checkout_step: CheckoutStep;
@@ -962,6 +1040,7 @@ export interface Database {
       payment_method_type: PaymentMethodType;
       payment_status: PaymentStatus;
       user_role: UserRole;
+      cart_status: CartStatus;
     };
   };
 }

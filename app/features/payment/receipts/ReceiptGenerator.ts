@@ -1,6 +1,15 @@
 import type { PaymentResult } from '../types';
 import type { Order } from '~/features/orders/types';
 
+// Extended type that adapts Order to what the receipt generator needs
+type OrderToReceiptAdapter = Order & {
+  customer?: {
+    name?: string;
+  };
+  currency?: string;
+  reference?: string;
+};
+
 /**
  * Payment receipt template data
  */
@@ -59,11 +68,19 @@ export class ReceiptGenerator {
    * Generate a receipt from payment and order data
    */
   static generateReceiptData(payment: PaymentResult, order: Order): ReceiptData {
+    // Adapt the order to our expected format
+    const adaptedOrder: OrderToReceiptAdapter = {
+      ...order,
+      customer: order.userId ? { name: order.email?.split('@')[0] } : undefined,
+      currency: 'USD', // Default currency if not specified
+      reference: order.orderNumber, // Use orderNumber as reference
+    };
+
     // Generate a receipt number based on payment ID
     const receiptNumber = `R-${payment.paymentId?.slice(-8).toUpperCase() || 'UNKNOWN'}`;
 
     // Extract payment provider from provider data
-    const paymentProvider = payment.providerData?.provider?.toUpperCase() || 'UNKNOWN';
+    const paymentProvider = (payment.providerData?.provider as string)?.toUpperCase() || 'UNKNOWN';
 
     // Format payment date
     const paymentDate = new Date().toLocaleDateString('en-US', {
@@ -84,20 +101,20 @@ export class ReceiptGenerator {
     };
 
     const paymentMethod =
-      paymentMethodMap[payment.providerData?.paymentMethodType || ''] || 'Credit Card';
+      paymentMethodMap[String(payment.providerData?.paymentMethodType || '')] || 'Credit Card';
 
     // Map order items
-    const items = order.items.map(item => ({
+    const items = adaptedOrder.items.map(item => ({
       name: item.name,
       quantity: item.quantity,
-      price: item.price,
-      total: item.quantity * item.price,
+      price: item.unitPrice,
+      total: item.quantity * item.unitPrice,
     }));
 
     // Calculate totals
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-    const shipping = order.shippingCost || 0;
-    const tax = order.taxAmount || 0;
+    const shipping = adaptedOrder.shippingCost || 0;
+    const tax = adaptedOrder.taxAmount || 0;
     const total = subtotal + shipping + tax;
 
     // Create receipt data
@@ -107,18 +124,18 @@ export class ReceiptGenerator {
       paymentDate,
       paymentMethod,
       paymentProvider,
-      customerName: order.customer?.name,
-      customerEmail: order.customer?.email,
-      billingAddress: order.billingAddress,
-      shippingAddress: order.shippingAddress,
+      customerName: adaptedOrder.customer?.name,
+      customerEmail: adaptedOrder.email,
+      billingAddress: adaptedOrder.billingAddress,
+      shippingAddress: adaptedOrder.shippingAddress,
       items,
       subtotal,
       shipping,
       tax,
       total,
-      currency: order.currency || 'USD',
-      orderReference: order.reference,
-      orderStatus: order.status,
+      currency: adaptedOrder.currency || 'USD',
+      orderReference: adaptedOrder.reference,
+      orderStatus: adaptedOrder.status,
       storeInfo: {
         name: 'Notalock - European Door Hardware',
         address: '123 Main Street, Amsterdam, Netherlands',

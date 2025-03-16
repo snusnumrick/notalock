@@ -33,7 +33,7 @@ export async function initializePaymentProviders(): Promise<void> {
       const initialized = await paymentService.setActiveProvider('stripe', {
         secretKey: config.stripe.secretKey,
         publishableKey: config.stripe.publishableKey,
-        webhookSecret: config.stripe.webhookSecret,
+        webhookSecret: config.stripe.webhookSecret || '',
       });
 
       console.log(`Stripe payment provider initialized: ${initialized ? 'Success' : 'Failed'}`);

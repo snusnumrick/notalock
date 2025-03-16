@@ -38,7 +38,7 @@ export default function NewHeroBannerPage() {
           <p className="text-muted-foreground">Add a new hero banner to display on your homepage</p>
         </div>
         <Button variant="outline" asChild>
-          <Link to="/admin/hero-banners">Back to Hero Banners</Link>
+          <Link to="/todelete/admin/hero-banners">Back to Hero Banners</Link>
         </Button>
       </div>
 

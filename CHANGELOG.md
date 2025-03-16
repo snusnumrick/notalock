@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Basic Order Management Module with database schema for orders, order items, and status history
+- Order creation process integrated with checkout flow
+- Order status management that updates based on payment status
+- API endpoints for order creation, retrieval, and updates
+- Integration with payment webhooks for order status updates
+- Basic admin UI for viewing and managing orders
+
+### Added
 - Product Search Implementation
   - Added search functionality on the /product page
   - Implemented real-time search results filtering

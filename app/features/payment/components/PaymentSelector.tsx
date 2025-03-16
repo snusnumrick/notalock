@@ -18,7 +18,7 @@ interface PaymentSelectorProps {
   onPaymentTypeChange: (type: string, provider: string) => void;
   onPaymentMethodCreated?: (paymentMethodId: string, provider: string) => void;
   clientSecret?: string;
-  paymentIntentId?: string;
+  // paymentIntentId removed as it's not currently used
   amount?: number;
   currency?: string;
   selectedProvider?: string;
@@ -35,8 +35,6 @@ export function PaymentSelector({
   onPaymentTypeChange,
   onPaymentMethodCreated,
   clientSecret,
-  // Not using paymentIntentId currently
-  _paymentIntentId,
   amount = 0,
   currency = 'USD',
   selectedProvider = 'mock',
@@ -131,30 +129,34 @@ export function PaymentSelector({
         </TabsList>
 
         <TabsContent value="credit_card">
-          {activeProvider === 'square' && providerConfig.applicationId && (
-            <SquarePaymentForm
-              applicationId={providerConfig.applicationId}
-              locationId={providerConfig.locationId}
-              clientSecret={clientSecret}
-              amount={amount}
-              currency={currency}
-              onPaymentMethodCreated={handlePaymentMethodCreated}
-              onError={handlePaymentError}
-              isProcessing={isProcessing}
-            />
-          )}
+          {activeProvider === 'square' &&
+            typeof providerConfig.applicationId === 'string' &&
+            typeof providerConfig.locationId === 'string' && (
+              <SquarePaymentForm
+                applicationId={providerConfig.applicationId as string}
+                locationId={providerConfig.locationId as string}
+                clientSecret={clientSecret}
+                amount={amount}
+                currency={currency}
+                onPaymentMethodCreated={handlePaymentMethodCreated}
+                onError={handlePaymentError}
+                isProcessing={isProcessing}
+              />
+            )}
 
-          {activeProvider === 'stripe' && providerConfig.publishableKey && clientSecret && (
-            <StripePaymentForm
-              publishableKey={providerConfig.publishableKey}
-              clientSecret={clientSecret}
-              amount={amount}
-              currency={currency}
-              onPaymentMethodCreated={handlePaymentMethodCreated}
-              onError={handlePaymentError}
-              isProcessing={isProcessing}
-            />
-          )}
+          {activeProvider === 'stripe' &&
+            typeof providerConfig.publishableKey === 'string' &&
+            clientSecret && (
+              <StripePaymentForm
+                publishableKey={providerConfig.publishableKey as string}
+                clientSecret={clientSecret}
+                amount={amount}
+                currency={currency}
+                onPaymentMethodCreated={handlePaymentMethodCreated}
+                onError={handlePaymentError}
+                isProcessing={isProcessing}
+              />
+            )}
 
           {activeProvider === 'mock' && (
             <Card>

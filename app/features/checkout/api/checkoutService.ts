@@ -745,9 +745,11 @@ export class CheckoutService {
         name: item.product?.name || `Product ID: ${item.product_id.substring(0, 8)}`,
         sku: item.product?.sku || `SKU: ${item.id.substring(0, 8)}`,
         quantity: item.quantity,
-        price: item.price,
+        unit_price: item.price,
+        total_price: item.price * item.quantity,
         image_url: item.product?.image_url ?? null,
         options: {},
+        metadata: {},
         created_at: now,
         updated_at: now,
       }));
@@ -1065,7 +1067,7 @@ export class CheckoutService {
         name: item.name,
         sku: item.sku,
         quantity: item.quantity,
-        price: item.price,
+        price: item.unit_price,
         imageUrl: item.image_url || undefined,
         options: this.transformOrderItemOptions(item.options),
       })),
@@ -1149,6 +1151,24 @@ export class CheckoutService {
     }
 
     return `NO-${datePart}-${randomPart}`;
+  }
+
+  /**
+   * Updates the checkout session step
+   */
+  async updateCheckoutSessionStep(sessionId: string, step: string): Promise<void> {
+    try {
+      await this.supabase
+        .from('checkout_sessions')
+        .update({
+          current_step: step,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sessionId);
+    } catch (error) {
+      console.error('Error updating checkout session step:', error);
+      throw error;
+    }
   }
 }
 

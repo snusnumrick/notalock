@@ -46,11 +46,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
       orderId,
       paymentStatus: paymentResult.status,
       orderStatus: order.status,
-      orderReference: order.reference,
+      orderReference: order.orderNumber,
       orderDate: order.createdAt,
-      customerEmail: order.customer?.email,
-      totalAmount: order.total,
-      currency: order.currency,
+      customerEmail: order.email,
+      totalAmount: order.totalAmount,
+      currency: 'USD', // Default currency or use environment variable
     });
   } catch (error) {
     console.error('Error loading confirmation page:', error);
@@ -63,12 +63,29 @@ export async function loader({ request }: LoaderFunctionArgs) {
       paymentStatus: 'unknown',
       orderStatus: 'unknown',
       error: 'Failed to load order or payment details',
+      totalAmount: null,
+      currency: null,
+      customerEmail: null,
+      orderReference: null,
+      orderDate: '',
     });
   }
 }
 
 export default function CheckoutConfirmationPage() {
-  const data = useLoaderData<typeof loader>();
+  const data = useLoaderData<typeof loader>() as {
+    orderId: string;
+    paymentId: string;
+    sessionId: string;
+    paymentStatus: string;
+    orderStatus: string;
+    totalAmount: number | string | null;
+    currency: string | null;
+    customerEmail: string | null;
+    orderReference: string | null;
+    orderDate: string;
+    error?: string;
+  };
   const [isVerifying, setIsVerifying] = useState(data.paymentStatus === 'pending');
   const [paymentStatus, setPaymentStatus] = useState(data.paymentStatus);
 
@@ -93,6 +110,9 @@ export default function CheckoutConfirmationPage() {
       // Clean up interval
       return () => clearInterval(intervalId);
     }
+
+    // Return empty function for non-pending status
+    return () => {};
   }, [data.paymentId, paymentStatus]);
 
   // Determine UI based on payment status
@@ -175,7 +195,7 @@ export default function CheckoutConfirmationPage() {
                           <span>{new Date(data.orderDate).toLocaleDateString()}</span>
                         </div>
                       )}
-                      {data.totalAmount && (
+                      {data.totalAmount != null && (
                         <div className="flex justify-between py-1">
                           <span className="font-medium">Total Amount:</span>
                           <span>

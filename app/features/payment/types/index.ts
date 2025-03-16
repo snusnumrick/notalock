@@ -1,4 +1,15 @@
 /**
+ * Payment method types supported by the application
+ */
+export type PaymentMethodType =
+  | 'credit_card'
+  | 'paypal'
+  | 'apple_pay'
+  | 'google_pay'
+  | 'bank_transfer'
+  | 'cash_on_delivery';
+
+/**
  * Payment amount details
  */
 export interface PaymentAmount {
@@ -65,6 +76,7 @@ export interface PaymentResult {
   refundAmount?: number;
   refundReason?: string;
   refundDate?: string;
+  orderReference?: string;
 }
 
 /**
@@ -73,6 +85,6 @@ export interface PaymentResult {
 declare global {
   interface Window {
     Square?: unknown;
-    Stripe?: unknown;
+    Stripe?: (publishableKey: string) => unknown;
   }
 }

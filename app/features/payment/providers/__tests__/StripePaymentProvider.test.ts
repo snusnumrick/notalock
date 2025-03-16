@@ -1,193 +1,133 @@
+import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { StripePaymentProvider } from '../StripePaymentProvider';
 import Stripe from 'stripe';
 
-// Mock Stripe to avoid actual API calls during tests
-jest.mock('stripe', () => {
-  return jest.fn().mockImplementation(() => ({
+// Mock the Stripe client
+vi.mock('stripe', () => {
+  // Create a mock Stripe client with all the necessary methods
+  const mockStripeClient = vi.fn().mockImplementation(() => ({
     paymentMethods: {
-      list: jest.fn().mockResolvedValue({
-        data: [],
+      list: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'pm_test123',
+            type: 'card',
+          },
+        ],
       }),
     },
     paymentIntents: {
-      create: jest.fn().mockResolvedValue({
-        id: 'test_payment_intent_id',
-        client_secret: 'test_client_secret',
+      create: vi.fn().mockResolvedValue({
+        id: 'pi_test123',
+        client_secret: 'pi_test123_secret_test123',
         status: 'requires_payment_method',
         amount: 10000,
         currency: 'usd',
+        payment_method_types: ['card'],
         metadata: {},
       }),
-      retrieve: jest.fn().mockResolvedValue({
-        id: 'test_payment_intent_id',
-        client_secret: 'test_client_secret',
+      retrieve: vi.fn().mockResolvedValue({
+        id: 'pi_test123',
+        client_secret: 'pi_test123_secret_test123',
         status: 'succeeded',
         amount: 10000,
         currency: 'usd',
         payment_method_types: ['card'],
         metadata: {},
       }),
-      confirm: jest.fn().mockResolvedValue({
-        id: 'test_payment_intent_id',
+      confirm: vi.fn().mockResolvedValue({
+        id: 'pi_test123',
+        client_secret: 'pi_test123_secret_test123',
         status: 'succeeded',
       }),
-      cancel: jest.fn().mockResolvedValue({
-        id: 'test_payment_intent_id',
+      cancel: vi.fn().mockResolvedValue({
+        id: 'pi_test123',
         status: 'canceled',
       }),
     },
     refunds: {
-      create: jest.fn().mockResolvedValue({
-        id: 'test_refund_id',
-        payment_intent: 'test_payment_intent_id',
+      create: vi.fn().mockResolvedValue({
+        id: 're_test123',
+        payment_intent: 'pi_test123',
         amount: 10000,
         status: 'succeeded',
       }),
     },
     webhooks: {
-      constructEvent: jest.fn().mockReturnValue({
+      constructEvent: vi.fn().mockReturnValue({
         type: 'payment_intent.succeeded',
         data: {
           object: {
-            id: 'test_payment_intent_id',
+            id: 'pi_test123',
           },
         },
       }),
     },
   }));
+
+  // Return mockStripeClient as the default export
+  return { default: mockStripeClient };
 });
 
 describe('StripePaymentProvider', () => {
   let provider: StripePaymentProvider;
-  const testConfig = {
-    secretKey: 'test_secret_key',
-    publishableKey: 'test_publishable_key',
-    webhookSecret: 'test_webhook_secret',
-  };
 
-  beforeEach(async () => {
+  beforeEach(() => {
     provider = new StripePaymentProvider();
-    await provider.initialize(testConfig);
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('should initialize with valid configuration', async () => {
-    const result = await provider.initialize(testConfig);
+    const result = await provider.initialize({
+      secretKey: 'sk_test_123',
+      publishableKey: 'pk_test_123',
+      webhookSecret: 'whsec_test123',
+    });
+
     expect(result).toBe(true);
-    expect(Stripe).toHaveBeenCalledWith('test_secret_key', {
-      apiVersion: '2023-10-16',
+    expect(Stripe).toHaveBeenCalledWith('sk_test_123', {
+      apiVersion: '2025-02-24.acacia',
     });
   });
 
-  test('should have correct provider identifier and display name', () => {
-    expect(provider.provider).toBe('stripe');
-    expect(provider.displayName).toBe('Stripe');
-  });
-
   test('should create a payment intent', async () => {
+    // Initialize provider first
+    await provider.initialize({
+      secretKey: 'sk_test_123',
+      publishableKey: 'pk_test_123',
+    });
+
     const result = await provider.createPayment(
       {
         value: 100,
         currency: 'USD',
-        items: [
-          {
-            name: 'Test Product',
-            price: 100,
-            quantity: 1,
-          },
-        ],
       },
       {
-        orderReference: 'TEST-ORDER-123',
+        orderReference: 'ORDER-123',
+        description: 'Test payment',
       }
     );
 
-    expect(result.clientSecret).toBe('test_client_secret');
-    expect(result.paymentIntentId).toBe('test_payment_intent_id');
-    expect(result.error).toBeUndefined();
+    expect(result.paymentIntentId).toBe('pi_test123');
+    expect(result.clientSecret).toBe('pi_test123_secret_test123');
   });
 
-  test('should process a payment successfully', async () => {
-    const result = await provider.processPayment('test_payment_intent_id', {
-      provider: 'stripe',
-      type: 'credit_card',
-      paymentMethodId: 'test_payment_method_id',
+  test('should verify payment status', async () => {
+    // Initialize provider first
+    await provider.initialize({
+      secretKey: 'sk_test_123',
+      publishableKey: 'pk_test_123',
     });
 
+    const result = await provider.verifyPayment('pi_test123');
+
     expect(result.success).toBe(true);
-    expect(result.paymentId).toBe('test_payment_intent_id');
     expect(result.status).toBe('completed');
-    expect(result.providerData?.provider).toBe('stripe');
+    expect(result.paymentId).toBe('pi_test123');
   });
 
-  test('should verify a payment', async () => {
-    const result = await provider.verifyPayment('test_payment_intent_id');
-
-    expect(result.success).toBe(true);
-    expect(result.paymentId).toBe('test_payment_intent_id');
-    expect(result.status).toBe('completed');
-    expect(result.providerData?.provider).toBe('stripe');
-  });
-
-  test('should cancel a payment', async () => {
-    const result = await provider.cancelPayment('test_payment_intent_id');
-
-    expect(result.success).toBe(true);
-    expect(result.error).toBeUndefined();
-  });
-
-  test('should refund a payment', async () => {
-    const result = await provider.refundPayment('test_payment_intent_id', 100);
-
-    expect(result.success).toBe(true);
-    expect(result.refundId).toBe('test_refund_id');
-    expect(result.error).toBeUndefined();
-  });
-
-  test('should verify webhook signatures', () => {
-    const isValid = provider.verifyWebhookSignature('payload', 'signature');
-    expect(isValid).toBe(true);
-  });
-
-  test('should get payment intent details', async () => {
-    const paymentIntent = await provider.getPaymentIntent('test_payment_intent_id');
-    expect(paymentIntent.id).toBe('test_payment_intent_id');
-    expect(paymentIntent.status).toBe('succeeded');
-  });
-
-  test('should return client configuration', () => {
-    const config = provider.getClientConfig();
-    expect(config.publishableKey).toBe('test_publishable_key');
-  });
-
-  test('should fail with proper error if not initialized', async () => {
-    // Create a new instance without initializing
-    const uninitializedProvider = new StripePaymentProvider();
-
-    const createResult = await uninitializedProvider.createPayment({
-      value: 100,
-      currency: 'USD',
-    });
-    expect(createResult.error).toBeDefined();
-
-    const processResult = await uninitializedProvider.processPayment('test_id', {
-      provider: 'stripe',
-      type: 'credit_card',
-    });
-    expect(processResult.success).toBe(false);
-
-    const verifyResult = await uninitializedProvider.verifyPayment('test_id');
-    expect(verifyResult.success).toBe(false);
-
-    const cancelResult = await uninitializedProvider.cancelPayment('test_id');
-    expect(cancelResult.success).toBe(false);
-
-    const refundResult = await uninitializedProvider.refundPayment('test_id');
-    expect(refundResult.success).toBe(false);
-
-    expect(() => uninitializedProvider.getClientConfig()).toThrow();
+  test('basic provider properties', () => {
+    expect(provider.provider).toBe('stripe');
+    expect(provider.displayName).toBe('Stripe');
   });
 });

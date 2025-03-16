@@ -24,14 +24,22 @@ docs/
 │   ├── README.md                      # API overview
 │   ├── cart-api.md                    # Cart API endpoints
 │   ├── category-management.md         # Category API endpoints
+│   ├── checkout-api.md                # Checkout API endpoints
+│   ├── currency-api.md                # Currency conversion API
 │   ├── image-optimization.md          # Image optimization API
-│   └── product-management.md          # Product management API
+│   ├── orders-api.md                  # Orders management API
+│   ├── payment-api.md                 # Payment processing API
+│   ├── payment-webhook-api.md         # Payment webhook handlers
+│   ├── product-management.md          # Product management API
+│   ├── shipping-api.md                # Shipping calculation API
+│   └── tax-api.md                    # Tax calculation API
 │
 ├── features/                          # Feature documentation
 │   ├── README.md                      # Features overview
 │   ├── category-management.md         # Category management feature
 │   ├── checkout.md                   # Checkout feature
 │   ├── image-management.md            # Image management feature
+│   ├── order-management.md            # Order management feature
 │   ├── payment-integration.md         # Payment provider integration
 │   ├── payment-integration.env.md    # Payment integration environment variables
 │   ├── payment-security.md           # Payment security and PCI compliance

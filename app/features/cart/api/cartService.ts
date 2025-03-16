@@ -891,9 +891,9 @@ export class CartService {
    * Gets the current cart contents
    * @returns Array of cart items with product information
    */
-  async getCartItems(): Promise<CartItem[]> {
+  async getCartItems(cartIdParam?: string): Promise<CartItem[]> {
     try {
-      const cartId = await this.getOrCreateCart();
+      const cartId = cartIdParam || (await this.getOrCreateCart());
       // console.log(`getCartItems: Using cart ID: ${cartId}`);
 
       // IMPORTANT: Always clear the client-side cache before querying
@@ -1211,6 +1211,34 @@ export class CartService {
     } catch (error) {
       console.error('Error merging anonymous cart:', error);
       return false;
+    }
+  }
+
+  /**
+   * Updates the cart status
+   * @param cartId The ID of the cart to update
+   * @param status The new status to set
+   * @returns True if successful
+   */
+  async updateCartStatus(cartId: string, status: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('carts')
+        .update({
+          status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', cartId);
+
+      if (error) {
+        console.error('Error updating cart status:', error);
+        throw new Error(`Failed to update cart status: ${error.message}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in updateCartStatus:', error);
+      throw error;
     }
   }
 }

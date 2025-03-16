@@ -9,6 +9,8 @@ This directory contains documentation for all the major features in the Notalock
 - [Category Management](./category-management.md) - Guide to category management functionality
 - [Image Management](./image-management.md) - Documentation for image handling features
 - [Checkout Feature](./checkout.md) - Comprehensive guide to the multi-step checkout process
+- [Order Management](./order-management.md) - Documentation for order creation, processing, and tracking
+- [Payment Integration](./payment-integration.md) - Guide to payment processing and provider integration
 
 ## Purpose
 

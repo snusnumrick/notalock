@@ -104,7 +104,7 @@ export class PaymentValidationError extends PaymentError {
   /**
    * Returns a JSON representation of the error
    */
-  toJSON() {
+  override toJSON() {
     return {
       ...super.toJSON(),
       validationErrors: this.validationErrors,
@@ -179,7 +179,7 @@ export class PaymentAuthorizationError extends PaymentError {
   /**
    * Returns a JSON representation of the error
    */
-  toJSON() {
+  override toJSON() {
     return {
       ...super.toJSON(),
       ...(this.redirectUrl ? { redirectUrl: this.redirectUrl } : {}),
@@ -214,7 +214,7 @@ export const PROVIDER_ERROR_MESSAGES: Record<string, string> = {
  * Create appropriate error from provider error
  */
 export function createPaymentErrorFromProvider(
-  provider: string,
+  _provider: string,
   errorCode: string,
   message: string
 ): PaymentError {

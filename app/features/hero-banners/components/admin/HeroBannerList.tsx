@@ -91,7 +91,7 @@ export function HeroBannerList({ banners }: HeroBannerListProps) {
         <div>{/* Empty div to push button to right */}</div>
         {banners.length > 0 && (
           <Button asChild>
-            <Link to="/admin/hero-banners/new">
+            <Link to="/todelete/admin/hero-banners/new">
               <Plus className="mr-2 h-4 w-4" />
               Add Banner
             </Link>
@@ -106,7 +106,7 @@ export function HeroBannerList({ banners }: HeroBannerListProps) {
             Create your first hero banner to display on your site.
           </p>
           <Button asChild>
-            <Link to="/admin/hero-banners/new">
+            <Link to="/todelete/admin/hero-banners/new">
               <Plus className="mr-2 h-4 w-4" />
               Create Hero Banner
             </Link>
@@ -154,7 +154,7 @@ export function HeroBannerList({ banners }: HeroBannerListProps) {
                         <ArrowDown className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" size="icon" asChild>
-                        <Link to={`/admin/hero-banners/${banner.id}/edit`}>
+                        <Link to={`/app/routes/todelete/admin/hero-banners/${banner.id}/edit`}>
                           <Pencil className="h-4 w-4" />
                         </Link>
                       </Button>

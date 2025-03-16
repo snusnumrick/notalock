@@ -1,7 +1,21 @@
 import type { PaymentAmount, PaymentInfo, PaymentOptions, PaymentResult } from '../types';
-import type { PaymentProviderInterface } from './PaymentProviderInterface';
-import { Client, Environment, ApiError } from 'square';
+import type { PaymentProviderInterface } from '~/features/payment';
+import { SquareClient as Client, SquareEnvironment as Environment } from 'square';
 import { randomUUID } from 'crypto';
+
+// Define a type for Square currency
+type Currency = 'USD' | 'CAD' | 'GBP' | 'EUR' | 'JPY' | 'AUD';
+
+// Type for Square errors to handle error messages
+interface ApiError extends Error {
+  result?: {
+    errors?: Array<{
+      detail?: string;
+    }>;
+  };
+}
+
+// Use the imported randomUUID function
 
 /**
  * Square payment provider implementation
@@ -38,8 +52,11 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
 
       // Initialize Square client
       this.squareClient = new Client({
-        accessToken,
+        // Square SDK expects access token as a bearer token
+        token: accessToken,
         environment: environment === 'production' ? Environment.Production : Environment.Sandbox,
+        // Specify Square API version
+        version: '2025-02-20',
       });
 
       this.locationId = locationId;
@@ -47,15 +64,17 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
       this.environment = environment;
 
       // Validate credentials by making a simple API call
-      const { result } = await this.squareClient.locationsApi.retrieveLocation(locationId);
+      const response = await this.squareClient.locations.get({
+        locationId: locationId,
+      });
 
-      if (!result || !result.location) {
+      if (!response || !response.location) {
         console.error('Failed to validate Square location ID');
         return false;
       }
 
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error initializing Square payment provider:', error);
       return false;
     }
@@ -78,9 +97,8 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
       // Create a unique idempotency key for this request
       const idempotencyKey = randomUUID();
 
-      // Create an order first (required for most Square integrations)
-      const orderRequest = {
-        idempotencyKey,
+      // Create the order - adjust the request format
+      const orderCreateRequest = {
         order: {
           locationId: this.locationId,
           referenceId: options?.orderReference || `order_${Date.now()}`,
@@ -89,7 +107,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
             quantity: item.quantity.toString(),
             basePriceMoney: {
               amount: BigInt(Math.round(item.price * 100)),
-              currency,
+              currency: currency as Currency,
             },
           })) || [
             {
@@ -97,15 +115,15 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
               quantity: '1',
               basePriceMoney: {
                 amount: BigInt(Math.round(value * 100)),
-                currency,
+                currency: currency as Currency,
               },
             },
           ],
         },
+        idempotencyKey: idempotencyKey,
       };
 
-      // Create the order
-      const { result: orderResult } = await this.squareClient.ordersApi.createOrder(orderRequest);
+      const orderResult = await this.squareClient.orders.create(orderCreateRequest);
 
       if (!orderResult || !orderResult.order || !orderResult.order.id) {
         return { error: 'Failed to create Square order' };
@@ -114,10 +132,13 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
       const orderId = orderResult.order.id;
 
       // Create a payment link/intent for this order
-      // Not using this variable currently, but keeping as documentation
-      const _createPaymentRequest = {
+      // Template for documentation purposes only
+      /*
+      // This is a hypothetical template of what a payment request might look like
+      // Not actually used in this implementation 
+      const paymentRequestTemplate = {
         idempotencyKey: randomUUID(),
-        sourceId: 'PLACEHOLDER', // This will be replaced by client-side card token
+        sourceId: 'PLACEHOLDER', // This would be replaced by client-side card token
         amountMoney: {
           amount: BigInt(Math.round(value * 100)),
           currency,
@@ -137,20 +158,26 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
             }
           : {}),
       };
+      */
 
       // Return the successful payment intent creation
       return {
         clientSecret: `${this.locationId}:${orderId}`,
         paymentIntentId: orderId,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error creating Square payment:', error);
-      const errorMessage =
-        error instanceof ApiError
-          ? error.result?.errors?.[0]?.detail || error.message
-          : error instanceof Error
-            ? error.message
-            : 'Unknown error creating Square payment';
+      let errorMessage = 'Unknown error creating Square payment';
+
+      if (error instanceof Error) {
+        // Check if error matches our ApiError interface using type guard
+        const apiError = error as ApiError;
+        if (apiError.result?.errors?.[0]?.detail) {
+          errorMessage = apiError.result.errors[0].detail;
+        } else {
+          errorMessage = error.message;
+        }
+      }
 
       return { error: errorMessage };
     }
@@ -180,27 +207,26 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
         };
       }
 
-      // Create the payment using the order ID and source token
-      const paymentRequest = {
-        idempotencyKey: randomUUID(),
+      // This is where the API structure of Square has changed
+      // Using the payments.create method with the proper request format
+      const createPaymentRequest = {
         sourceId: paymentInfo.paymentMethodId,
+        idempotencyKey: randomUUID(),
         orderId: paymentIntentId,
         locationId: this.locationId,
         // Include customer ID if available
         ...(paymentInfo.customerId ? { customerId: paymentInfo.customerId } : {}),
       };
 
-      const { result } = await this.squareClient.paymentsApi.createPayment(paymentRequest);
+      const { payment } = await this.squareClient.payments.create(createPaymentRequest);
 
-      if (!result || !result.payment) {
+      if (!payment) {
         return {
           success: false,
           status: 'failed',
           error: 'Failed to process Square payment',
         };
       }
-
-      const payment = result.payment;
 
       // Map Square status to our internal status
       let status: 'completed' | 'pending' | 'failed' = 'pending';
@@ -223,14 +249,19 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
           squareStatus: payment.status,
         },
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error processing Square payment:', error);
-      const errorMessage =
-        error instanceof ApiError
-          ? error.result?.errors?.[0]?.detail || error.message
-          : error instanceof Error
-            ? error.message
-            : 'Unknown error processing Square payment';
+      let errorMessage = 'Unknown error processing Square payment';
+
+      if (error instanceof Error) {
+        // Check if error matches our ApiError interface using type guard
+        const apiError = error as ApiError;
+        if (apiError.result?.errors?.[0]?.detail) {
+          errorMessage = apiError.result.errors[0].detail;
+        } else {
+          errorMessage = error.message;
+        }
+      }
 
       return {
         success: false,
@@ -253,9 +284,11 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
     }
 
     try {
-      const { result } = await this.squareClient.paymentsApi.getPayment(paymentId);
+      const { payment } = await this.squareClient.payments.get({
+        paymentId: paymentId,
+      });
 
-      if (!result || !result.payment) {
+      if (!payment) {
         return {
           success: false,
           status: 'failed',
@@ -263,7 +296,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
         };
       }
 
-      const payment = result.payment;
+      // Payment is already destructured above, no need to redeclare
 
       // Map Square status to our internal status
       let status: 'completed' | 'pending' | 'failed' = 'pending';
@@ -285,14 +318,19 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
           cardDetails: payment.cardDetails,
         },
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error verifying Square payment:', error);
-      const errorMessage =
-        error instanceof ApiError
-          ? error.result?.errors?.[0]?.detail || error.message
-          : error instanceof Error
-            ? error.message
-            : 'Unknown error verifying Square payment';
+      let errorMessage = 'Unknown error verifying Square payment';
+
+      if (error instanceof Error) {
+        // Check if error matches our ApiError interface using type guard
+        const apiError = error as ApiError;
+        if (apiError.result?.errors?.[0]?.detail) {
+          errorMessage = apiError.result.errors[0].detail;
+        } else {
+          errorMessage = error.message;
+        }
+      }
 
       return {
         success: false,
@@ -315,9 +353,11 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
 
     try {
       // Get the payment first to check if it's in a cancellable state
-      const { result: paymentResult } = await this.squareClient.paymentsApi.getPayment(paymentId);
+      const { payment: paymentResult } = await this.squareClient.payments.get({
+        paymentId: paymentId,
+      });
 
-      if (!paymentResult || !paymentResult.payment) {
+      if (!paymentResult) {
         return {
           success: false,
           error: 'Payment not found',
@@ -325,7 +365,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
       }
 
       // If payment is already completed, we need to issue a refund instead
-      if (paymentResult.payment.status === 'COMPLETED') {
+      if (paymentResult.status === 'COMPLETED') {
         return {
           success: false,
           error: 'Payment already completed. Use refund instead of cancel.',
@@ -333,19 +373,18 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
       }
 
       // If payment is still pending, we can cancel it
-      if (paymentResult.payment.status === 'PENDING') {
-        const { result } = await this.squareClient.paymentsApi.cancelPayment(paymentId);
+      if (paymentResult.status === 'PENDING') {
+        const { payment: cancelResult } = await this.squareClient.payments.cancel({
+          paymentId: paymentId,
+        });
 
         return {
-          success: !!result.payment,
+          success: !!cancelResult,
         };
       }
 
       // If payment is already failed or canceled
-      if (
-        paymentResult.payment.status === 'FAILED' ||
-        paymentResult.payment.status === 'CANCELED'
-      ) {
+      if (paymentResult.status === 'FAILED' || paymentResult.status === 'CANCELED') {
         return {
           success: true, // Consider it a success since it's already not going to be charged
         };
@@ -353,16 +392,21 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
 
       return {
         success: false,
-        error: `Cannot cancel payment with status: ${paymentResult.payment.status}`,
+        error: `Cannot cancel payment with status: ${paymentResult.status}`,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error canceling Square payment:', error);
-      const errorMessage =
-        error instanceof ApiError
-          ? error.result?.errors?.[0]?.detail || error.message
-          : error instanceof Error
-            ? error.message
-            : 'Unknown error canceling Square payment';
+      let errorMessage = 'Unknown error canceling Square payment';
+
+      if (error instanceof Error) {
+        // Check if error matches our ApiError interface using type guard
+        const apiError = error as ApiError;
+        if (apiError.result?.errors?.[0]?.detail) {
+          errorMessage = apiError.result.errors[0].detail;
+        } else {
+          errorMessage = error.message;
+        }
+      }
 
       return {
         success: false,
@@ -387,34 +431,34 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
 
     try {
       // Get the original payment to determine currency and full amount
-      const { result: paymentResult } = await this.squareClient.paymentsApi.getPayment(paymentId);
+      const { payment: paymentResult } = await this.squareClient.payments.get({
+        paymentId: paymentId,
+      });
 
-      if (!paymentResult || !paymentResult.payment) {
+      if (!paymentResult) {
         return {
           success: false,
           error: 'Payment not found',
         };
       }
 
-      const payment = paymentResult.payment;
-
       // Check if payment is in a refundable state
-      if (payment.status !== 'COMPLETED') {
+      if (paymentResult.status !== 'COMPLETED') {
         return {
           success: false,
-          error: `Cannot refund payment with status: ${payment.status}`,
+          error: `Cannot refund payment with status: ${paymentResult.status}`,
         };
       }
 
       // Determine refund amount
-      const currency = payment.amountMoney?.currency || 'USD';
-      const originalAmount = Number(payment.amountMoney?.amount || 0) / 100;
+      const currency = paymentResult.amountMoney?.currency || 'USD';
+      const originalAmount = Number(paymentResult.amountMoney?.amount || 0) / 100;
       const refundAmount = amount || originalAmount;
 
-      // Create refund request
-      const refundRequest = {
+      // Create refund request with the proper format for Square API
+      const refundPaymentRequest = {
         idempotencyKey: randomUUID(),
-        paymentId,
+        paymentId: paymentId,
         amountMoney: {
           amount: BigInt(Math.round(refundAmount * 100)),
           currency,
@@ -422,9 +466,9 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
         reason: 'Requested by customer',
       };
 
-      const { result } = await this.squareClient.refundsApi.refundPayment(refundRequest);
+      const { refund } = await this.squareClient.refunds.refundPayment(refundPaymentRequest);
 
-      if (!result || !result.refund) {
+      if (!refund) {
         return {
           success: false,
           error: 'Failed to create refund',
@@ -433,16 +477,21 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
 
       return {
         success: true,
-        refundId: result.refund.id,
+        refundId: refund.id,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error refunding Square payment:', error);
-      const errorMessage =
-        error instanceof ApiError
-          ? error.result?.errors?.[0]?.detail || error.message
-          : error instanceof Error
-            ? error.message
-            : 'Unknown error refunding Square payment';
+      let errorMessage = 'Unknown error refunding Square payment';
+
+      if (error instanceof Error) {
+        // Check if error matches our ApiError interface using type guard
+        const apiError = error as ApiError;
+        if (apiError.result?.errors?.[0]?.detail) {
+          errorMessage = apiError.result.errors[0].detail;
+        } else {
+          errorMessage = error.message;
+        }
+      }
 
       return {
         success: false,

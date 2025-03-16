@@ -14,6 +14,7 @@ This directory contains documentation for the various APIs used in the Notalock 
 - [Shipping API](./shipping-api.md) - API for calculating shipping rates and options
 - [Tax API](./tax-api.md) - API for tax calculation and compliance
 - [Currency API](./currency-api.md) - API for currency conversion and formatting
+- [Orders API](./orders-api.md) - API for managing customer orders
 
 ## Purpose
 

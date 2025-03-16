@@ -11,13 +11,13 @@ The Notalock e-commerce platform uses a Supabase PostgreSQL database. This docum
 CREATE TYPE checkout_step AS ENUM ('information', 'shipping', 'payment', 'review', 'confirmation');
 
 -- Order status type
-CREATE TYPE order_status AS ENUM ('created', 'processing', 'completed', 'cancelled', 'refunded');
+CREATE TYPE order_status AS ENUM ('created', 'processing', 'completed', 'cancelled', 'refunded', 'pending', 'paid', 'failed', 'shipped', 'delivered', 'payment_failed');
 
 -- Payment method type
 CREATE TYPE payment_method_type AS ENUM ('credit_card', 'paypal', 'bank_transfer', 'square');
 
 -- Payment status type
-CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed');
+CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded');
 
 -- Cart status type
 CREATE TYPE cart_status AS ENUM ('active', 'merged', 'checkout', 'completed', 'abandoned', 'duplicate', 'cleared', 'consolidated');
@@ -364,18 +364,23 @@ CREATE TABLE orders (
     cart_id UUID REFERENCES carts(id),
     user_id UUID REFERENCES auth.users(id),
     guest_email TEXT,
+    email TEXT NOT NULL,
     order_number TEXT NOT NULL UNIQUE,
-    status TEXT NOT NULL DEFAULT 'created',
+    status order_status NOT NULL DEFAULT 'pending',
     shipping_address JSONB NOT NULL,
     billing_address JSONB NOT NULL,
     shipping_method TEXT NOT NULL,
     shipping_cost NUMERIC(10,2) NOT NULL DEFAULT 0,
-    subtotal NUMERIC(10,2) NOT NULL DEFAULT 0,
-    tax NUMERIC(10,2) NOT NULL DEFAULT 0,
-    total NUMERIC(10,2) NOT NULL DEFAULT 0,
+    subtotal_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+    tax_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+    total_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
     payment_method TEXT NOT NULL,
     payment_status TEXT NOT NULL DEFAULT 'pending',
+    payment_intent_id TEXT,
+    payment_method_id TEXT,
+    payment_provider TEXT,
     notes TEXT,
+    metadata JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -386,6 +391,8 @@ CREATE INDEX idx_orders_cart_id ON orders(cart_id);
 CREATE INDEX idx_orders_user_id ON orders(user_id) WHERE user_id IS NOT NULL;
 CREATE INDEX idx_orders_order_number ON orders(order_number);
 CREATE INDEX idx_orders_status ON orders(status);
+CREATE INDEX idx_orders_payment_intent_id ON orders(payment_intent_id);
+CREATE INDEX idx_orders_email ON orders(email);
 ```
 
 ### order_items
@@ -398,9 +405,11 @@ CREATE TABLE order_items (
     name TEXT NOT NULL,
     sku TEXT NOT NULL,
     quantity INTEGER NOT NULL,
-    price NUMERIC(10,2) NOT NULL,
+    unit_price NUMERIC(10,2) NOT NULL,
+    total_price NUMERIC(10,2) NOT NULL,
     image_url TEXT,
     options JSONB,
+    metadata JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -408,6 +417,21 @@ CREATE TABLE order_items (
 -- Indexes
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX idx_order_items_product_id ON order_items(product_id);
+```
+
+### order_status_history
+```sql
+CREATE TABLE order_status_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    status order_status NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
+);
+
+-- Indexes
+CREATE INDEX idx_order_status_history_order_id ON order_status_history(order_id);
 ```
 
 ## Stored Procedures/Functions
@@ -460,6 +484,67 @@ $ LANGUAGE plpgsql;
 ```
 
 This trigger function ensures that only one active cart exists per anonymous ID. If a new active cart is created with an existing anonymous ID, any previous active carts with the same anonymous ID are marked as 'merged'.
+
+### update_updated_at_column
+```sql
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+```
+
+This function is used in triggers to automatically update the `updated_at` column whenever a record is modified.
+
+### log_order_status_change
+```sql
+CREATE OR REPLACE FUNCTION log_order_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.status IS NULL OR NEW.status <> OLD.status THEN
+        INSERT INTO order_status_history (
+            order_id,
+            status,
+            notes,
+            created_by
+        ) VALUES (
+            NEW.id,
+            NEW.status,
+            'Status changed from ' || COALESCE(OLD.status::TEXT, 'NULL') || ' to ' || NEW.status::TEXT,
+            auth.uid()
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+This function creates a status history entry whenever an order's status changes. It's triggered by updates to the `status` field in the `orders` table.
+
+### log_initial_order_status
+```sql
+CREATE OR REPLACE FUNCTION log_initial_order_status()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO order_status_history (
+        order_id,
+        status,
+        notes,
+        created_by
+    ) VALUES (
+        NEW.id,
+        NEW.status,
+        'Order created with status ' || NEW.status::TEXT,
+        auth.uid()
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+This function logs the initial status when an order is created. It's triggered by inserts into the `orders` table.
 
 ### Cart Management RPC Functions
 
@@ -992,6 +1077,7 @@ CREATE POLICY "Product variant options are editable by admins"
 ALTER TABLE checkout_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_status_history ENABLE ROW LEVEL SECURITY;
 
 -- Policies for checkout_sessions
 CREATE POLICY "Users can manage their checkout sessions" 
@@ -1029,6 +1115,17 @@ CREATE POLICY "Users can view their order items"
         )
     );
 
+-- Policies for order_status_history
+CREATE POLICY "Users can view their own order status history" 
+    ON order_status_history FOR SELECT 
+    USING (
+        EXISTS (
+            SELECT 1 FROM orders
+            WHERE orders.id = order_status_history.order_id
+            AND orders.user_id = auth.uid()
+        )
+    );
+
 -- Admin policies
 CREATE POLICY "Admins can manage all checkout sessions" 
     ON checkout_sessions FOR ALL 
@@ -1057,6 +1154,26 @@ CREATE POLICY "Admins can manage all order items"
             SELECT 1 FROM profiles
             WHERE profiles.id = auth.uid()
             AND profiles.role = 'admin'
+        )
+    );
+
+CREATE POLICY "Admins can view all order status history" 
+    ON order_status_history FOR SELECT 
+    USING (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE id = auth.uid()
+            AND role = 'admin'
+        )
+    );
+
+CREATE POLICY "Admins can insert order status history" 
+    ON order_status_history FOR INSERT 
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE id = auth.uid()
+            AND role = 'admin'
         )
     );
 ```

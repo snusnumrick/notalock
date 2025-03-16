@@ -1,5 +1,5 @@
 import type { PaymentAmount, PaymentInfo, PaymentOptions, PaymentResult } from '../types';
-import type { PaymentProviderInterface } from './PaymentProviderInterface';
+import type { PaymentProviderInterface } from '~/features/payment';
 import Stripe from 'stripe';
 
 /**
@@ -33,7 +33,7 @@ export class StripePaymentProvider implements PaymentProviderInterface {
 
       // Initialize Stripe client
       this.stripeClient = new Stripe(secretKey, {
-        apiVersion: '2023-10-16', // Use latest stable API version
+        apiVersion: '2025-02-24.acacia', // Use compatible API version
       });
 
       this.publishableKey = publishableKey;
