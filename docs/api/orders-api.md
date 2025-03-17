@@ -180,6 +180,46 @@ Updates an order's status or information.
 }
 ```
 
+### POST /api/orders/create
+
+Creates a new order from an existing checkout session.
+
+**Authentication Required:** Yes for user-owned checkout sessions, guest checkout allowed
+
+**Request Body:**
+```json
+{
+  "checkoutId": "checkout-123",
+  "paymentIntentId": "pi_123456789",
+  "paymentMethodId": "pm_123456789",
+  "paymentProvider": "stripe"
+}
+```
+
+**Required Parameters:**
+- `checkoutId`: ID of the checkout session
+
+**Optional Parameters:**
+- `paymentIntentId`: ID of the payment intent if payment was processed
+- `paymentMethodId`: ID of the payment method used
+- `paymentProvider`: Name of the payment provider
+
+**Response:**
+```json
+{
+  "success": true,
+  "orderId": "order-123",
+  "orderNumber": "NO-20250315-ABCD"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Missing checkout ID
+- `401 Unauthorized`: Authentication required
+- `403 Forbidden`: User does not have permission to access the checkout session
+- `404 Not Found`: Checkout session not found
+- `500 Internal Server Error`: Order creation failed
+
 ## Webhooks
 
 The Orders API integrates with payment provider webhooks to automatically update order status based on payment events.
