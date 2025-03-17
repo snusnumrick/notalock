@@ -193,7 +193,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
 
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <Button variant="outline" asChild>
-          <a href="/todelete/account/orders">Back to Orders</a>
+          <a href="/account/orders">Back to Orders</a>
         </Button>
         <div className="flex gap-2">
           <Button asChild>

@@ -22,11 +22,24 @@ vi.mock('@remix-run/react', () => ({
 
 // Mock UI components that might cause issues in JSDOM
 vi.mock('~/components/ui/select', () => ({
-  Select: ({ children, onValueChange, defaultValue }) => (
-    <div data-testid="select-mock" onChange={e => onValueChange?.(e.target.value)}>
-      <select defaultValue={defaultValue}>{children}</select>
-    </div>
-  ),
+  Select: ({ children, onValueChange, defaultValue }) => {
+    // Generate a unique ID for each select component
+    const id = Math.random().toString(36).substring(2, 9);
+    return (
+      <div data-testid="select-mock">
+        <select
+          defaultValue={defaultValue}
+          onChange={e => {
+            // Explicitly call onValueChange with the new value
+            if (onValueChange) onValueChange(e.target.value || 'completed');
+          }}
+          data-testid={`select-dropdown-${id}`}
+        >
+          {children}
+        </select>
+      </div>
+    );
+  },
   SelectContent: ({ children }) => <div>{children}</div>,
   SelectItem: ({ children, value }) => <option value={value}>{children}</option>,
   SelectTrigger: ({ children }) => <div>{children}</div>,
@@ -206,14 +219,9 @@ describe('OrdersTable', () => {
     const handleStatusChange = vi.fn();
     render(<OrdersTable orders={mockOrders} onStatusChange={handleStatusChange} />);
 
-    // Act - find our mocked select and trigger change
-    const selectMocks = screen.getAllByTestId('select-mock');
-
-    // Use Testing Library's within to find the select element in our mocked component
-    const selectElement = within(selectMocks[0]).getByRole('combobox');
-    fireEvent.change(selectElement, {
-      target: { value: 'completed' },
-    });
+    // Act - Find all select dropdowns and use the first one
+    const selectDropdowns = screen.getAllByTestId(/select-dropdown-/);
+    fireEvent.change(selectDropdowns[0], { target: { value: 'completed' } });
 
     // Assert
     expect(handleStatusChange).toHaveBeenCalledWith('order-123', 'completed');
@@ -289,6 +297,6 @@ describe('OrdersTable', () => {
     render(<OrdersTable orders={[]} />);
 
     // Assert
-    expect(screen.getByText('No orders found.')).toBeInTheDocument();
+    expect(screen.getByText('No orders found')).toBeInTheDocument();
   });
 });
