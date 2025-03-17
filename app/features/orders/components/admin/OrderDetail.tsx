@@ -25,8 +25,8 @@ import { Textarea } from '~/components/ui/textarea';
 
 interface OrderDetailProps {
   order: Order;
-  onStatusChange?: (orderId: string, status: OrderStatus) => Promise<void>;
-  onPaymentStatusChange?: (orderId: string, status: PaymentStatus) => Promise<void>;
+  onStatusChange?: (status: OrderStatus, orderId: string) => Promise<void>;
+  onPaymentStatusChange?: (status: PaymentStatus, orderId: string) => Promise<void>;
   onAddNote?: (note: string, orderId: string) => Promise<void>;
   isLoading?: boolean;
 }
@@ -80,13 +80,13 @@ export function OrderDetail({
 
   const handleStatusChange = async () => {
     if (onStatusChange) {
-      await onStatusChange(order.id, status);
+      await onStatusChange(status, order.id);
     }
   };
 
   const handlePaymentStatusChange = async () => {
     if (onPaymentStatusChange) {
-      await onPaymentStatusChange(order.id, paymentStatus);
+      await onPaymentStatusChange(paymentStatus, order.id);
     }
   };
 
@@ -110,7 +110,7 @@ export function OrderDetail({
           <div className="flex flex-col gap-1">
             <div className="text-sm font-medium">Order Status</div>
             {onStatusChange ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" data-testid="order-status-container">
                 <Select
                   defaultValue={status}
                   onValueChange={value => setStatus(value as OrderStatus)}
@@ -147,7 +147,7 @@ export function OrderDetail({
           <div className="flex flex-col gap-1 mt-2 sm:mt-0">
             <div className="text-sm font-medium">Payment Status</div>
             {onPaymentStatusChange ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" data-testid="payment-status-container">
                 <Select
                   defaultValue={paymentStatus}
                   onValueChange={value => setPaymentStatus(value as PaymentStatus)}

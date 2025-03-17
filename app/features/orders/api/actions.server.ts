@@ -4,8 +4,9 @@
  */
 
 import type { PaymentResult } from '~/features/payment/types';
-import { type Order } from '../types';
+import { type Order, OrderStatus } from '../types';
 import { getOrderService } from './orderService';
+import { type PaymentStatus } from '~/features/payment';
 
 /**
  * Update order status based on payment result
@@ -131,5 +132,40 @@ export async function getOrdersByEmail(email: string): Promise<Order[]> {
   } catch (error) {
     console.error('Error getting orders by email:', error);
     return [];
+  }
+}
+
+/**
+ * Update order status
+ */
+export async function updateOrderStatus(
+  orderId: string,
+  status: OrderStatus,
+  notes?: string
+): Promise<Order> {
+  try {
+    const orderService = await getOrderService();
+    return await orderService.updateOrderStatus(orderId, status, notes);
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update payment status
+ */
+export async function updatePaymentStatus(
+  orderId: string,
+  paymentStatus: PaymentStatus,
+  paymentIntentId?: string,
+  notes?: string
+): Promise<Order> {
+  try {
+    const orderService = await getOrderService();
+    return await orderService.updatePaymentStatus(orderId, paymentStatus, paymentIntentId, notes);
+  } catch (error) {
+    console.error('Error updating payment status:', error);
+    throw error;
   }
 }

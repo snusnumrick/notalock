@@ -3,8 +3,9 @@ import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-r
 import { useLoaderData, useActionData, useSubmit, useNavigation } from '@remix-run/react';
 import { requireAdmin } from '~/server/middleware/auth.server';
 import { OrderDetail } from '~/features/orders/components/admin/OrderDetail';
-import { getOrderService } from '~/features/orders/api/orderService';
-import type { Order, OrderStatus } from '~/features/orders/types';
+import { getOrderById } from '~/features/orders/api/queries.server';
+import { updateOrderStatus, updatePaymentStatus } from '~/features/orders/api/actions.server';
+import type { Order, OrderStatus, PaymentStatus } from '~/features/orders/types';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -17,11 +18,12 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   }
 
   try {
-    // Get the order service
-    const orderService = await getOrderService();
+    // Get the order with all details using the query function
+    const order = await getOrderById(orderId);
 
-    // Get the order with all details
-    const order = await orderService.getOrderById(orderId);
+    if (!order) {
+      throw new Response('Order not found', { status: 404 });
+    }
 
     return json({ order });
   } catch (error) {
@@ -34,21 +36,42 @@ export async function action({ request, params }: ActionFunctionArgs) {
   // Verify the user is an admin
   await requireAdmin(request);
 
+  // Only process POST/PUT requests
+  if (request.method !== 'POST' && request.method !== 'PUT') {
+    return json({ error: 'Method not allowed' }, { status: 405 });
+  }
+
   const orderId = params.id;
   if (!orderId) {
     return json({ error: 'Order ID is required' }, { status: 400 });
   }
 
   try {
-    // Parse the request body
-    const formData = await request.formData();
-    const action = formData.get('_action');
+    // Handle both JSON and FormData requests
+    let intentValue;
+    let statusValue;
+    let paymentStatusValue;
+    let notesValue;
 
-    if (action === 'updateStatus') {
-      const status = formData.get('status');
-      const notes = formData.get('notes');
+    // Check if the request is JSON
+    if (request.headers.get('Content-Type')?.includes('application/json')) {
+      // Parse the JSON body
+      const data = await request.json();
+      intentValue = data.intent;
+      statusValue = data.status;
+      paymentStatusValue = data.paymentStatus;
+      notesValue = data.notes;
+    } else {
+      // Parse the form data
+      const formData = await request.formData();
+      intentValue = formData.get('intent');
+      statusValue = formData.get('status')?.toString();
+      paymentStatusValue = formData.get('paymentStatus')?.toString();
+      notesValue = formData.get('notes')?.toString();
+    }
 
-      if (!status) {
+    if (intentValue === 'updateStatus') {
+      if (!statusValue) {
         return json({ error: 'Status is required' }, { status: 400 });
       }
 
@@ -63,28 +86,38 @@ export async function action({ request, params }: ActionFunctionArgs) {
         'failed',
       ];
 
-      if (!validStatuses.includes(status as OrderStatus)) {
+      if (!validStatuses.includes(statusValue as OrderStatus)) {
         return json({ error: 'Invalid status value' }, { status: 400 });
       }
 
-      // Get the order service
-      const orderService = await getOrderService();
+      // Update order status
+      const order = await updateOrderStatus(orderId, statusValue as OrderStatus, notesValue);
 
-      // Update the order status
-      const updatedOrder = await orderService.updateOrderStatus(
+      return json({ order, success: true });
+    } else if (intentValue === 'updatePaymentStatus') {
+      if (!paymentStatusValue) {
+        return json({ error: 'Payment status is required' }, { status: 400 });
+      }
+
+      // Validate the payment status
+      const validPaymentStatuses: PaymentStatus[] = ['pending', 'paid', 'failed', 'refunded'];
+
+      if (!validPaymentStatuses.includes(paymentStatusValue as PaymentStatus)) {
+        return json({ error: 'Invalid payment status value' }, { status: 400 });
+      }
+
+      // Update payment status
+      const order = await updatePaymentStatus(
         orderId,
-        status as OrderStatus,
-        notes ? String(notes) : undefined
+        paymentStatusValue as PaymentStatus,
+        undefined,
+        notesValue
       );
 
-      return json({
-        success: true,
-        message: `Order status updated to ${status}`,
-        order: updatedOrder,
-      });
+      return json({ order, success: true });
     }
 
-    return json({ error: 'Invalid action' }, { status: 400 });
+    return json({ error: 'Invalid action intent' }, { status: 400 });
   } catch (error) {
     console.error('Error updating order:', error);
     return json({ error: `Failed to update order: ${(error as Error).message}` }, { status: 500 });
@@ -102,12 +135,33 @@ export default function OrderDetailRoute() {
   const [currentOrder, setCurrentOrder] = useState<Order>(order as Order);
 
   // Handle status change
-  const handleStatusChange = async (_orderId: string, status: OrderStatus) => {
-    const formData = new FormData();
-    formData.append('_action', 'updateStatus');
-    formData.append('status', status);
+  const handleStatusChange = async (status: OrderStatus) => {
+    // Use JSON for submission to avoid TextDecoder issues
+    const data = {
+      intent: 'updateStatus',
+      status,
+      notes: 'Order completed',
+    };
 
-    submit(formData, { method: 'post' });
+    submit(data, {
+      method: 'post',
+      encType: 'application/json',
+    });
+  };
+
+  // Handle payment status change
+  const handlePaymentStatusChange = async (status: PaymentStatus) => {
+    // Use JSON for submission to avoid TextDecoder issues
+    const data = {
+      intent: 'updatePaymentStatus',
+      paymentStatus: status,
+      notes: 'Payment confirmed',
+    };
+
+    submit(data, {
+      method: 'post',
+      encType: 'application/json',
+    });
   };
 
   // Update local order state when the server responds with a new order
@@ -133,11 +187,16 @@ export default function OrderDetailRoute() {
       {actionData && 'success' in actionData && actionData.success && (
         <Alert className="mb-6 bg-green-50 border-green-200">
           <AlertTitle>Success</AlertTitle>
-          <AlertDescription>{actionData.message}</AlertDescription>
+          <AlertDescription>Order updated successfully</AlertDescription>
         </Alert>
       )}
 
-      <OrderDetail order={currentOrder} onStatusChange={handleStatusChange} isLoading={isLoading} />
+      <OrderDetail
+        order={currentOrder}
+        onStatusChange={handleStatusChange}
+        onPaymentStatusChange={handlePaymentStatusChange}
+        isLoading={isLoading}
+      />
     </div>
   );
 }

@@ -1,7 +1,30 @@
 import '@testing-library/jest-dom';
-import { TextEncoder, TextDecoder } from 'util';
 import { vi } from 'vitest';
 import { createRemixStub } from '~/__mocks__/remix';
+
+// Ensure TextEncoder is properly polyfilled
+if (typeof global.TextEncoder !== 'function') {
+  global.TextEncoder = class TextEncoder {
+    encoding: string = 'utf-8';
+
+    encode(input: string): Uint8Array {
+      const bytes = new Uint8Array(input.length);
+      for (let i = 0; i < input.length; i++) {
+        bytes[i] = input.charCodeAt(i);
+      }
+      return bytes;
+    }
+
+    encodeInto(input: string, dest: Uint8Array): { read: number; written: number } {
+      const bytes = this.encode(input);
+      const length = Math.min(dest.length, bytes.length);
+      for (let i = 0; i < length; i++) {
+        dest[i] = bytes[i];
+      }
+      return { read: input.length, written: length };
+    }
+  };
+}
 
 declare global {
   interface Window {
@@ -14,9 +37,41 @@ declare global {
   }
 }
 
-// Polyfill globals
-global.TextEncoder = TextEncoder as typeof global.TextEncoder;
-global.TextDecoder = TextDecoder as typeof global.TextDecoder;
+// Ensure TextDecoder is properly polyfilled
+if (typeof global.TextDecoder !== 'function') {
+  global.TextDecoder = class TextDecoder {
+    encoding: string;
+    fatal: boolean;
+    ignoreBOM: boolean;
+
+    constructor(
+      encoding: string = 'utf-8',
+      options: { fatal?: boolean; ignoreBOM?: boolean } = {}
+    ) {
+      this.encoding = encoding;
+      this.fatal = options.fatal || false;
+      this.ignoreBOM = options.ignoreBOM || false;
+    }
+
+    decode(input?: AllowSharedBufferSource): string {
+      if (!input) return '';
+
+      // Simple UTF-8 decoder for tests
+      const bytes = new Uint8Array(
+        input instanceof ArrayBuffer
+          ? input
+          : ArrayBuffer.isView(input)
+            ? input.buffer
+            : new ArrayBuffer(0)
+      );
+      let result = '';
+      for (let i = 0; i < bytes.length; i++) {
+        result += String.fromCharCode(bytes[i]);
+      }
+      return result;
+    }
+  };
+}
 
 // Mock window.fs.readFile
 global.window = global.window || {};

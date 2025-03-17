@@ -31,29 +31,29 @@ interface HeroBannerListProps {
 export function HeroBannerList({ banners }: HeroBannerListProps) {
   const fetcher = useFetcher();
   const { toast } = useToast();
-  const [bannerToDelete, setBannerToDelete] = useState<HeroBanner | null>(null);
+  const [banner, setBanner] = useState<HeroBanner | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const isReordering = fetcher.state !== 'idle' && fetcher.formData?.get('_action') === 'reorder';
 
   const handleDelete = () => {
-    if (!bannerToDelete) return;
+    if (!banner) return;
 
     setIsDeleting(true);
 
     const formData = new FormData();
     formData.append('_action', 'delete');
-    formData.append('id', bannerToDelete.id);
+    formData.append('id', banner.id);
 
     fetcher.submit(formData, { method: 'post' });
 
     // Clean up
     setIsDeleting(false);
-    setBannerToDelete(null);
+    setBanner(null);
 
     toast({
       title: 'Banner Deleted',
-      description: `"${bannerToDelete.title}" has been deleted.`,
+      description: `"${banner.title}" has been deleted.`,
     });
   };
 
@@ -91,7 +91,7 @@ export function HeroBannerList({ banners }: HeroBannerListProps) {
         <div>{/* Empty div to push button to right */}</div>
         {banners.length > 0 && (
           <Button asChild>
-            <Link to="/todelete/admin/hero-banners/new">
+            <Link to="/admin/hero-banners/new">
               <Plus className="mr-2 h-4 w-4" />
               Add Banner
             </Link>
@@ -106,7 +106,7 @@ export function HeroBannerList({ banners }: HeroBannerListProps) {
             Create your first hero banner to display on your site.
           </p>
           <Button asChild>
-            <Link to="/todelete/admin/hero-banners/new">
+            <Link to="/admin/hero-banners/new">
               <Plus className="mr-2 h-4 w-4" />
               Create Hero Banner
             </Link>
@@ -154,15 +154,11 @@ export function HeroBannerList({ banners }: HeroBannerListProps) {
                         <ArrowDown className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" size="icon" asChild>
-                        <Link to={`/app/routes/todelete/admin/hero-banners/${banner.id}/edit`}>
+                        <Link to={`/admin/hero-banners/${banner.id}/edit`}>
                           <Pencil className="h-4 w-4" />
                         </Link>
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setBannerToDelete(banner)}
-                      >
+                      <Button variant="outline" size="icon" onClick={() => setBanner(banner)}>
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
                     </div>
@@ -174,13 +170,13 @@ export function HeroBannerList({ banners }: HeroBannerListProps) {
         </div>
       )}
 
-      <AlertDialog open={!!bannerToDelete} onOpenChange={open => !open && setBannerToDelete(null)}>
+      <AlertDialog open={!!banner} onOpenChange={open => !open && setBanner(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Hero Banner</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{bannerToDelete?.title}&quot;? This action
-              cannot be undone.
+              Are you sure you want to delete &quot;{banner?.title}&quot;? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

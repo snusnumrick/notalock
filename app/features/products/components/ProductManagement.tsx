@@ -29,7 +29,7 @@ export function ProductManagement({
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({});
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [product, setProduct] = useState<Product | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
   // Initialize Supabase client with browser-safe cookie handling and session
@@ -124,12 +124,12 @@ export function ProductManagement({
   };
 
   const handleDeleteProduct = async () => {
-    if (!productToDelete) return;
+    if (!product) return;
 
     try {
-      await productService.deleteProduct(productToDelete.id);
-      setProducts(products.filter(p => p.id !== productToDelete.id));
-      setProductToDelete(null);
+      await productService.deleteProduct(product.id);
+      setProducts(products.filter(p => p.id !== product.id));
+      setProduct(null);
     } catch (err) {
       console.error('Failed to delete product:', err);
       setError(
@@ -288,7 +288,7 @@ export function ProductManagement({
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => setProductToDelete(product)}
+                          onClick={() => setProduct(product)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                           aria-label={`Delete ${product.name}`}
                         >
@@ -330,16 +330,16 @@ export function ProductManagement({
         />
       )}
 
-      <AlertDialog open={productToDelete !== null} onOpenChange={() => setProductToDelete(null)}>
+      <AlertDialog open={product !== null} onOpenChange={() => setProduct(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Product</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {productToDelete?.name}? This action cannot be undone.
+              Are you sure you want to delete {product?.name}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setProductToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setProduct(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteProduct}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import type { LoaderFunctionArgs } from '@remix-run/node';
-import { getUserOrders, getOrderById } from '~/features/orders/api/queries.server';
+import { getUserOrders, getOrderById } from '../../features/orders/api/queries.server';
 
 // Mock the order API
 vi.mock('~/features/orders/api/queries.server', () => ({
@@ -14,7 +14,7 @@ vi.mock('~/server/middleware/auth.server', () => ({
 }));
 
 // Import the mocked modules
-import { requireAuth } from '~/server/middleware/auth.server';
+import { requireAuth } from '../../server/middleware';
 
 // Import the loader function from the route
 // Note: We need to use dynamic import since the route hasn't been created yet
@@ -22,7 +22,7 @@ import { requireAuth } from '~/server/middleware/auth.server';
 let loader: (args: LoaderFunctionArgs) => Promise<Response>;
 const importLoader = async () => {
   try {
-    const module = await import('~/routes/api.orders.get');
+    const module = await import('../api.orders.get');
     loader = module.loader;
   } catch (error) {
     // If route doesn't exist yet, use a dummy loader for testing
@@ -42,7 +42,7 @@ const importLoader = async () => {
           });
         }
 
-        const user = await requireAuth(request);
+        const { user } = await requireAuth(request);
 
         // Ensure the user has access to this order
         if (order.userId && order.userId !== user?.id) {
@@ -59,7 +59,7 @@ const importLoader = async () => {
       }
 
       // Otherwise, return all orders for the user
-      const user = await requireAuth(request);
+      const { user } = await requireAuth(request);
       const orders = await getUserOrders(user.id);
 
       return new Response(JSON.stringify({ orders }), {
@@ -104,7 +104,7 @@ describe('Order Get API', () => {
     // Setup mock implementations
     (getOrderById as jest.Mock).mockResolvedValue(mockOrder);
     (getUserOrders as jest.Mock).mockResolvedValue(mockOrders);
-    (requireUser as jest.Mock).mockResolvedValue(mockUser);
+    (requireAuth as jest.Mock).mockResolvedValue(mockUser);
 
     // Import the loader function
     await importLoader();
@@ -120,7 +120,7 @@ describe('Order Get API', () => {
       const data = await response.json();
 
       // Assert
-      expect(requireUser).toHaveBeenCalledWith(request);
+      expect(requireAuth).toHaveBeenCalledWith(request);
       expect(getUserOrders).toHaveBeenCalledWith(mockUser.id);
       expect(response.status).toBe(200);
       expect(data).toEqual({ orders: mockOrders });
@@ -178,7 +178,7 @@ describe('Order Get API', () => {
         email: 'different@example.com',
       };
 
-      (requireUser as jest.Mock).mockResolvedValue(differentUser);
+      (requireAuth as jest.Mock).mockResolvedValue(differentUser);
 
       const request = new Request('http://localhost/api/orders/order-123');
 

@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import type { ActionFunctionArgs } from '@remix-run/node';
-import { updateOrderStatusFromPayment } from '~/features/orders/api/actions.server';
+import { updateOrderStatusFromPayment } from '../../features/orders';
 
 // Mock dependencies
 vi.mock('~/features/orders/api/actions.server', () => ({
@@ -13,7 +13,7 @@ vi.mock('~/features/payment/providers/stripe', () => ({
 }));
 
 // Import mocked modules
-import { verifyStripeWebhook, processStripeEvent } from '~/features/payment/providers/stripe';
+import { verifyStripeWebhook, processStripeEvent } from '../../features/payment/providers/stripe';
 
 // Import the action function from the route
 // Note: We need to use dynamic import since the route hasn't been created yet
@@ -21,7 +21,7 @@ import { verifyStripeWebhook, processStripeEvent } from '~/features/payment/prov
 let action: (args: ActionFunctionArgs) => Promise<Response>;
 const importAction = async () => {
   try {
-    const module = await import('~/routes/api.payment.webhook');
+    const module = await import('../api.payment.webhook');
     action = module.action;
   } catch (error) {
     // If route doesn't exist yet, use a dummy action for testing

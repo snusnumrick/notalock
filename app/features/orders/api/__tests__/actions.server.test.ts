@@ -34,6 +34,7 @@ describe('Order API - Actions', () => {
   const mockOrder: Order = {
     id: 'order-123',
     orderNumber: 'NO-20250315-ABCD',
+    userId: undefined, // Adding the missing required property
     email: 'test@example.com',
     status: 'pending' as OrderStatus,
     paymentStatus: 'pending' as PaymentStatus,
@@ -51,6 +52,7 @@ describe('Order API - Actions', () => {
         quantity: 2,
         unitPrice: 25,
         totalPrice: 50,
+        price: 25,
         createdAt: '2025-03-15T12:00:00Z',
         updatedAt: '2025-03-15T12:00:00Z',
       },

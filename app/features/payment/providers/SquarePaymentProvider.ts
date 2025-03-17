@@ -15,8 +15,6 @@ interface ApiError extends Error {
   };
 }
 
-// Use the imported randomUUID function
-
 /**
  * Square payment provider implementation
  * Integrates with Square API for payment processing
@@ -64,12 +62,11 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
       this.environment = environment;
 
       // Validate credentials by making a simple API call
-      const response = await this.squareClient.locations.get({
-        locationId: locationId,
-      });
-
-      if (!response || !response.location) {
-        console.error('Failed to validate Square location ID');
+      try {
+        const response = await this.squareClient.locations.get({ locationId });
+        return !!(response && response.location);
+      } catch (error) {
+        console.error('Error validating Square location:', error);
         return false;
       }
 
@@ -97,8 +94,8 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
       // Create a unique idempotency key for this request
       const idempotencyKey = uuidv4();
 
-      // Create the order - adjust the request format
-      const orderCreateRequest = {
+      // Create the order
+      const orderResult = await this.squareClient.orders.create({
         order: {
           locationId: this.locationId,
           referenceId: options?.orderReference || `order_${Date.now()}`,
@@ -121,11 +118,9 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
           ],
         },
         idempotencyKey: idempotencyKey,
-      };
+      });
 
-      const orderResult = await this.squareClient.orders.create(orderCreateRequest);
-
-      if (!orderResult || !orderResult.order || !orderResult.order.id) {
+      if (!orderResult || !orderResult.order || !orderResult.order?.id) {
         return { error: 'Failed to create Square order' };
       }
 
@@ -284,9 +279,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
     }
 
     try {
-      const { payment } = await this.squareClient.payments.get({
-        paymentId: paymentId,
-      });
+      const { payment } = await this.squareClient.payments.get({ paymentId });
 
       if (!payment) {
         return {
@@ -353,9 +346,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
 
     try {
       // Get the payment first to check if it's in a cancellable state
-      const { payment: paymentResult } = await this.squareClient.payments.get({
-        paymentId: paymentId,
-      });
+      const { payment: paymentResult } = await this.squareClient.payments.get({ paymentId });
 
       if (!paymentResult) {
         return {
@@ -374,9 +365,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
 
       // If payment is still pending, we can cancel it
       if (paymentResult.status === 'PENDING') {
-        const { payment: cancelResult } = await this.squareClient.payments.cancel({
-          paymentId: paymentId,
-        });
+        const { payment: cancelResult } = await this.squareClient.payments.cancel({ paymentId });
 
         return {
           success: !!cancelResult,
@@ -431,9 +420,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
 
     try {
       // Get the original payment to determine currency and full amount
-      const { payment: paymentResult } = await this.squareClient.payments.get({
-        paymentId: paymentId,
-      });
+      const { payment: paymentResult } = await this.squareClient.payments.get({ paymentId });
 
       if (!paymentResult) {
         return {

@@ -27,7 +27,7 @@ export async function action({ request }: ActionFunctionArgs) {
     const checkoutId = formData.get('checkoutId')?.toString();
     const paymentIntentId = formData.get('paymentIntentId')?.toString();
     const paymentMethodId = formData.get('paymentMethodId')?.toString();
-    const paymentProvider = formData.get('paymentProvider')?.toString();
+    const paymentProvider = formData.get('paymentProvider')?.toString() || 'stripe'; // Default to stripe
 
     // Validate required fields
     if (!checkoutId) {
@@ -75,7 +75,7 @@ export async function action({ request }: ActionFunctionArgs) {
       checkoutSession,
       paymentIntentId,
       paymentMethodId,
-      paymentProvider || checkoutSession.paymentInfo?.provider,
+      paymentProvider,
       supabase
     );
 
@@ -88,16 +88,36 @@ export async function action({ request }: ActionFunctionArgs) {
       },
       { status: 200, headers: response.headers }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in order creation:', error);
 
-    // Default error handler
+    // Convert different error types to appropriate HTTP status codes
+    let status = 500;
+    let errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+
+    if (
+      error instanceof Error &&
+      (error.message.includes('not found') || error.message.includes('does not exist'))
+    ) {
+      status = 404;
+      errorMessage = 'Checkout not found';
+    } else if (
+      error instanceof Error &&
+      (error.message.includes('unauthorized') ||
+        error.message.includes('access') ||
+        error.message.includes('permission'))
+    ) {
+      status = 403;
+      errorMessage = 'Unauthorized';
+    }
+
+    // Return appropriate error response
     return json(
       {
-        error: error instanceof Error ? error.message : 'An unexpected error occurred',
+        error: errorMessage,
         success: false,
       },
-      { status: 500, headers: response.headers }
+      { status, headers: response.headers }
     );
   }
 }

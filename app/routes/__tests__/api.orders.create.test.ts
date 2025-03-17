@@ -1,83 +1,39 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { createOrderFromCheckout } from '~/features/orders/api/integrations/checkoutIntegration';
-import type { ActionFunctionArgs } from '@remix-run/node';
 
-// Mock the order creation function
+// Create the mocks
+const mockCreateOrderFromCheckout = vi.fn().mockImplementation(() => {
+  return {
+    id: 'order-123',
+    orderNumber: 'NO-20250315-ABCD',
+  };
+});
+
+const mockGetCheckoutSession = vi.fn();
+
+const mockRequireAuth = vi.fn().mockImplementation(() => {
+  return {
+    user: { id: 'user-123', email: 'test@example.com' },
+    response: new Response(),
+  };
+});
+
+// Mock the modules directly
 vi.mock('~/features/orders/api/integrations/checkoutIntegration', () => ({
-  createOrderFromCheckout: vi.fn(),
+  createOrderFromCheckout: mockCreateOrderFromCheckout,
 }));
 
-// Mock the checkout session retrieval
 vi.mock('~/features/checkout/api/checkoutService', () => ({
-  getCheckoutById: vi.fn(),
+  CheckoutService: vi.fn().mockImplementation(() => ({
+    getCheckoutSession: mockGetCheckoutSession,
+  })),
 }));
 
-// Mock Authentication
 vi.mock('~/server/middleware/auth.server', () => ({
-  requireAuth: vi.fn(),
+  requireAuth: mockRequireAuth,
 }));
 
-// Import the mocked modules
-import { getCheckoutById } from '~/features/checkout/api/checkoutService';
-import { requireAuth } from '~/server/middleware/auth.server';
-
-// Import the action function from the route
-// Note: We need to use dynamic import since the route hasn't been created yet
-// This is a placeholder for the actual import once the route is created
-let action: (args: ActionFunctionArgs) => Promise<Response>;
-const importAction = async () => {
-  try {
-    const module = await import('~/routes/api.orders.create');
-    action = module.action;
-  } catch (error) {
-    // If route doesn't exist yet, use a dummy action for testing
-    action = async ({ request }) => {
-      // This simulates what the action would do
-      const formData = await request.formData();
-      const checkoutId = formData.get('checkoutId')?.toString();
-      const paymentIntentId = formData.get('paymentIntentId')?.toString();
-
-      if (!checkoutId) {
-        return new Response(JSON.stringify({ error: 'Missing checkout ID' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
-      const { user } = await requireAuth(request);
-      const checkout = await getCheckoutById(checkoutId);
-
-      if (!checkout) {
-        return new Response(JSON.stringify({ error: 'Checkout not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
-      // Verify user has access to this checkout
-      if (checkout.userId && checkout.userId !== user?.id) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
-      const order = await createOrderFromCheckout(
-        checkout,
-        paymentIntentId,
-        undefined,
-        checkout.paymentInfo?.provider
-      );
-
-      return new Response(JSON.stringify({ success: true, orderId: order.id }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    };
-  }
-
-  return action;
-};
+// Import the action to test
+import { action } from '../api.orders.create';
 
 describe('Order Create API', () => {
   const mockCheckout = {
@@ -95,26 +51,11 @@ describe('Order Create API', () => {
     },
   };
 
-  const mockOrder = {
-    id: 'order-123',
-    orderNumber: 'NO-20250315-ABCD',
-  };
-
-  const mockUser = {
-    id: 'user-123',
-    email: 'test@example.com',
-  };
-
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
 
-    // Setup mock implementations
-    (getCheckoutById as jest.Mock).mockResolvedValue(mockCheckout);
-    (requireUser as jest.Mock).mockResolvedValue(mockUser);
-    (createOrderFromCheckout as jest.Mock).mockResolvedValue(mockOrder);
-
-    // Import the action function
-    await importAction();
+    // Default implementation returns the mock checkout
+    mockGetCheckoutSession.mockResolvedValue(mockCheckout);
   });
 
   it('should create an order from a checkout session', async () => {
@@ -133,17 +74,19 @@ describe('Order Create API', () => {
     const data = await response.json();
 
     // Assert
-    expect(getCheckoutById).toHaveBeenCalledWith('checkout-123');
-    expect(createOrderFromCheckout).toHaveBeenCalledWith(
+    expect(mockGetCheckoutSession).toHaveBeenCalledWith('checkout-123');
+    expect(mockCreateOrderFromCheckout).toHaveBeenCalledWith(
       mockCheckout,
       'pi-123',
       undefined,
-      'stripe'
+      'stripe',
+      expect.anything() // supabase client
     );
     expect(response.status).toBe(200);
     expect(data).toEqual({
       success: true,
       orderId: 'order-123',
+      orderNumber: 'NO-20250315-ABCD',
     });
   });
 
@@ -169,8 +112,8 @@ describe('Order Create API', () => {
   });
 
   it('should return 404 if checkout is not found', async () => {
-    // Arrange
-    (getCheckoutById as jest.Mock).mockResolvedValue(null);
+    // Arrange - checkout session is null
+    mockGetCheckoutSession.mockResolvedValue(null);
 
     const formData = new FormData();
     formData.append('checkoutId', 'non-existent');
@@ -192,13 +135,11 @@ describe('Order Create API', () => {
   });
 
   it('should return 403 if user does not have access to the checkout', async () => {
-    // Arrange
-    const differentUser = {
-      id: 'different-user',
-      email: 'different@example.com',
-    };
-
-    (requireUser as jest.Mock).mockResolvedValue(differentUser);
+    // Arrange - different user
+    mockRequireAuth.mockImplementationOnce(() => ({
+      user: { id: 'different-user', email: 'different@example.com' },
+      response: new Response(),
+    }));
 
     const formData = new FormData();
     formData.append('checkoutId', 'checkout-123');
@@ -220,13 +161,11 @@ describe('Order Create API', () => {
   });
 
   it('should allow access for guest checkout (no user ID)', async () => {
-    // Arrange
-    const guestCheckout = {
+    // Arrange - checkout has null userId
+    mockGetCheckoutSession.mockResolvedValue({
       ...mockCheckout,
       userId: null,
-    };
-
-    (getCheckoutById as jest.Mock).mockResolvedValue(guestCheckout);
+    });
 
     const formData = new FormData();
     formData.append('checkoutId', 'checkout-123');
@@ -238,9 +177,10 @@ describe('Order Create API', () => {
 
     // Act
     const response = await action({ request, params: {}, context: {} });
+    await response.json();
 
     // Assert
     expect(response.status).toBe(200);
-    expect(createOrderFromCheckout).toHaveBeenCalled();
+    expect(mockCreateOrderFromCheckout).toHaveBeenCalled();
   });
 });

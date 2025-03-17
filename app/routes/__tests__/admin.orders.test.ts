@@ -1,38 +1,66 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import type { LoaderFunctionArgs, ActionFunctionArgs } from '@remix-run/node';
-import { getOrders, getOrderById } from '~/features/orders/api/queries.server';
-import { updateOrderStatus, updatePaymentStatus } from '~/features/orders/api/actions.server';
-import { getOrderService } from '~/features/orders/api/orderService';
 
-// Mock the order API
+// Create the mock functions
+const mockGetOrders = vi.fn();
+const mockGetOrderById = vi.fn();
+const mockUpdateOrderStatus = vi.fn();
+const mockUpdatePaymentStatus = vi.fn();
+const mockRequireAdmin = vi.fn().mockResolvedValue({
+  id: 'admin-123',
+  email: 'admin@example.com',
+  role: 'admin',
+});
+const mockOrderServiceGetOrders = vi.fn();
+const mockGetOrderService = vi.fn().mockResolvedValue({
+  getOrders: mockOrderServiceGetOrders,
+});
+
+// Now mock the modules
 vi.mock('~/features/orders/api/queries.server', () => ({
-  getOrders: vi.fn(),
-  getOrderById: vi.fn(),
+  getOrders: mockGetOrders,
+  getOrderById: mockGetOrderById,
 }));
 
 vi.mock('~/features/orders/api/actions.server', () => ({
-  updateOrderStatus: vi.fn(),
-  updatePaymentStatus: vi.fn(),
+  updateOrderStatus: mockUpdateOrderStatus,
+  updatePaymentStatus: mockUpdatePaymentStatus,
 }));
 
-// Mock the OrderService
 vi.mock('~/features/orders/api/orderService', () => ({
-  getOrderService: vi.fn().mockResolvedValue({
-    getOrders: vi.fn(),
-  }),
+  getOrderService: mockGetOrderService,
 }));
 
-// Mock Authentication
 vi.mock('~/server/middleware/auth.server', () => ({
-  requireAdmin: vi.fn().mockResolvedValue({
-    id: 'admin-123',
-    email: 'admin@example.com',
-    role: 'admin',
-  }),
+  requireAdmin: mockRequireAdmin,
 }));
 
-// Import the mocked modules
-import { requireAdmin } from '~/server/middleware/auth.server';
+// Ensure TextDecoder is available
+if (typeof global.TextDecoder !== 'function') {
+  global.TextDecoder = class TextDecoder {
+    encoding: string;
+    fatal: boolean;
+    ignoreBOM: boolean;
+
+    constructor(label: string = 'utf-8', options: TextDecoderOptions = {}) {
+      this.encoding = label;
+      this.fatal = options.fatal || false;
+      this.ignoreBOM = options.ignoreBOM || false;
+    }
+
+    decode(input?: Uint8Array | ArrayBuffer | null): string {
+      if (!input) return '';
+
+      // Simple decoder for tests
+      const bytes = new Uint8Array(input instanceof ArrayBuffer ? input : input.buffer);
+      let result = '';
+      for (let i = 0; i < bytes.length; i++) {
+        result += String.fromCharCode(bytes[i]);
+      }
+      return result;
+    }
+  };
+}
 
 // Import the loader/action functions from the routes
 // Note: We need to use dynamic import since the route might not exist yet
@@ -43,17 +71,17 @@ let action: (args: ActionFunctionArgs) => Promise<Response>;
 const importRouteHandlers = async () => {
   try {
     // Try to import the orders list loader
-    const listModule = await import('~/routes/admin.orders');
+    const listModule = await import('../admin.orders');
     loader = listModule.loader;
 
     // Try to import the order detail action
-    const detailModule = await import('~/routes/admin.orders.$id');
+    const detailModule = await import('../admin.orders.$id');
     action = detailModule.action;
   } catch (error) {
     // If route doesn't exist yet, use dummy handlers for testing
     loader = async ({ request, params }) => {
       // Check admin authentication
-      await requireAdmin(request);
+      await mockRequireAdmin(request);
 
       // Get URL search params
       const url = new URL(request.url);
@@ -65,7 +93,7 @@ const importRouteHandlers = async () => {
       const searchQuery = url.searchParams.get('search') || undefined;
 
       // Get orders with filters
-      const ordersResult = await getOrders({
+      const ordersResult = await mockGetOrders({
         status: status as any,
         paymentStatus: paymentStatus as any,
         searchQuery,
@@ -78,7 +106,7 @@ const importRouteHandlers = async () => {
       // Get a specific order if requested
       let order = null;
       if (params.orderId) {
-        order = await getOrderById(params.orderId);
+        order = await mockGetOrderById(params.orderId);
 
         if (!order) {
           return new Response(JSON.stringify({ error: 'Order not found' }), {
@@ -107,7 +135,7 @@ const importRouteHandlers = async () => {
 
     action = async ({ request, params }) => {
       // Check admin authentication
-      await requireAdmin(request);
+      await mockRequireAdmin(request);
 
       // Only process POST/PUT requests
       if (request.method !== 'POST' && request.method !== 'PUT') {
@@ -140,7 +168,7 @@ const importRouteHandlers = async () => {
           });
         }
 
-        const order = await updateOrderStatus(params.orderId, status as any, notes);
+        const order = await mockUpdateOrderStatus(params.orderId, status as any, notes);
 
         return new Response(JSON.stringify({ order, success: true }), {
           status: 200,
@@ -157,7 +185,7 @@ const importRouteHandlers = async () => {
           });
         }
 
-        const order = await updatePaymentStatus(
+        const order = await mockUpdatePaymentStatus(
           params.orderId,
           paymentStatus as any,
           undefined,
@@ -289,20 +317,17 @@ describe('Admin Orders Route', () => {
     vi.clearAllMocks();
 
     // Reset mock implementations
-    (getOrders as jest.Mock).mockResolvedValue(mockOrdersResult);
-    (getOrderById as jest.Mock).mockResolvedValue(mockOrder);
-    (updateOrderStatus as jest.Mock).mockResolvedValue(mockUpdatedOrder);
-    (updatePaymentStatus as jest.Mock).mockResolvedValue({
+    mockGetOrders.mockResolvedValue(mockOrdersResult);
+    mockGetOrderById.mockResolvedValue(mockOrder);
+    mockUpdateOrderStatus.mockResolvedValue(mockUpdatedOrder);
+    mockUpdatePaymentStatus.mockResolvedValue({
       ...mockOrder,
       paymentStatus: 'paid',
       updatedAt: '2025-03-15T13:00:00Z',
     });
 
     // Mock the OrderService.getOrders method
-    const mockOrderService = {
-      getOrders: vi.fn().mockResolvedValue(mockOrdersResult),
-    };
-    (getOrderService as jest.Mock).mockResolvedValue(mockOrderService);
+    mockOrderServiceGetOrders.mockResolvedValue(mockOrdersResult);
 
     // Import the route handlers
     await importRouteHandlers();
@@ -317,7 +342,7 @@ describe('Admin Orders Route', () => {
       await loader({ request, params: {}, context: {} });
 
       // Assert
-      expect(requireAdmin).toHaveBeenCalledWith(request);
+      expect(mockRequireAdmin).toHaveBeenCalledWith(request);
     });
 
     it('loads a paginated list of orders', async () => {
@@ -329,7 +354,7 @@ describe('Admin Orders Route', () => {
       const data = await response.json();
 
       // Assert
-      expect(getOrders).toHaveBeenCalledWith(
+      expect(mockGetOrders).toHaveBeenCalledWith(
         expect.objectContaining({
           limit: 10,
           offset: 10, // page 2 with limit 10
@@ -355,7 +380,7 @@ describe('Admin Orders Route', () => {
       await loader({ request, params: {}, context: {} });
 
       // Assert
-      expect(getOrders).toHaveBeenCalledWith(
+      expect(mockGetOrders).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'processing',
           paymentStatus: 'pending',
@@ -373,13 +398,13 @@ describe('Admin Orders Route', () => {
       const data = await response.json();
 
       // Assert
-      expect(getOrderById).toHaveBeenCalledWith('order-123');
+      expect(mockGetOrderById).toHaveBeenCalledWith('order-123');
       expect(data).toEqual({ order: mockOrder });
     });
 
     it('returns 404 when order is not found', async () => {
       // Arrange
-      (getOrderById as jest.Mock).mockResolvedValue(null);
+      mockGetOrderById.mockResolvedValue(null);
 
       const request = new Request('http://localhost/admin/orders/non-existent');
 
@@ -396,14 +421,20 @@ describe('Admin Orders Route', () => {
       // Arrange
       const request = new Request('http://localhost/admin/orders/order-123', {
         method: 'POST',
-        body: new FormData(),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      // Mock formData to avoid TextDecoder issues
+      request.formData = vi.fn().mockResolvedValue({
+        get: () => undefined,
       });
 
       // Act
       await action({ request, params: { orderId: 'order-123' }, context: {} });
 
       // Assert
-      expect(requireAdmin).toHaveBeenCalledWith(request);
+      expect(mockRequireAdmin).toHaveBeenCalledWith(request);
     });
 
     it('rejects non-POST/PUT methods', async () => {
@@ -435,14 +466,30 @@ describe('Admin Orders Route', () => {
 
     it('updates order status', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('intent', 'updateStatus');
-      formData.append('status', 'completed');
-      formData.append('notes', 'Order completed');
+      const body = JSON.stringify({
+        intent: 'updateStatus',
+        status: 'completed',
+        notes: 'Order completed',
+      });
 
       const request = new Request('http://localhost/admin/orders/order-123', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body,
+      });
+
+      // Override formData to avoid TextDecoder issues
+      request.formData = vi.fn().mockResolvedValue({
+        get: (key: string) => {
+          const data = {
+            intent: 'updateStatus',
+            status: 'completed',
+            notes: 'Order completed',
+          };
+          return data[key as keyof typeof data];
+        },
       });
 
       // Act
@@ -450,7 +497,11 @@ describe('Admin Orders Route', () => {
       const data = await response.json();
 
       // Assert
-      expect(updateOrderStatus).toHaveBeenCalledWith('order-123', 'completed', 'Order completed');
+      expect(mockUpdateOrderStatus).toHaveBeenCalledWith(
+        'order-123',
+        'completed',
+        'Order completed'
+      );
       expect(response.status).toBe(200);
       expect(data).toEqual({
         order: mockUpdatedOrder,
@@ -460,13 +511,28 @@ describe('Admin Orders Route', () => {
 
     it('requires status for status update', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('intent', 'updateStatus');
-      // Missing status
+      const body = JSON.stringify({
+        intent: 'updateStatus',
+        // Missing status
+      });
 
       const request = new Request('http://localhost/admin/orders/order-123', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body,
+      });
+
+      // Override formData to avoid TextDecoder issues
+      request.formData = vi.fn().mockResolvedValue({
+        get: (key: string) => {
+          const data = {
+            intent: 'updateStatus',
+            // Missing status
+          };
+          return data[key as keyof typeof data];
+        },
       });
 
       // Act
@@ -478,14 +544,30 @@ describe('Admin Orders Route', () => {
 
     it('updates payment status', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('intent', 'updatePaymentStatus');
-      formData.append('paymentStatus', 'paid');
-      formData.append('notes', 'Payment confirmed');
+      const body = JSON.stringify({
+        intent: 'updatePaymentStatus',
+        paymentStatus: 'paid',
+        notes: 'Payment confirmed',
+      });
 
       const request = new Request('http://localhost/admin/orders/order-123', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body,
+      });
+
+      // Override formData to avoid TextDecoder issues
+      request.formData = vi.fn().mockResolvedValue({
+        get: (key: string) => {
+          const data = {
+            intent: 'updatePaymentStatus',
+            paymentStatus: 'paid',
+            notes: 'Payment confirmed',
+          };
+          return data[key as keyof typeof data];
+        },
       });
 
       // Act
@@ -493,7 +575,7 @@ describe('Admin Orders Route', () => {
       const data = await response.json();
 
       // Assert
-      expect(updatePaymentStatus).toHaveBeenCalledWith(
+      expect(mockUpdatePaymentStatus).toHaveBeenCalledWith(
         'order-123',
         'paid',
         undefined,
@@ -505,13 +587,28 @@ describe('Admin Orders Route', () => {
 
     it('requires payment status for payment update', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('intent', 'updatePaymentStatus');
-      // Missing paymentStatus
+      const body = JSON.stringify({
+        intent: 'updatePaymentStatus',
+        // Missing paymentStatus
+      });
 
       const request = new Request('http://localhost/admin/orders/order-123', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body,
+      });
+
+      // Override formData to avoid TextDecoder issues
+      request.formData = vi.fn().mockResolvedValue({
+        get: (key: string) => {
+          const data = {
+            intent: 'updatePaymentStatus',
+            // Missing paymentStatus
+          };
+          return data[key as keyof typeof data];
+        },
       });
 
       // Act
@@ -523,12 +620,26 @@ describe('Admin Orders Route', () => {
 
     it('rejects invalid action intent', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('intent', 'invalidAction');
+      const body = JSON.stringify({
+        intent: 'invalidAction',
+      });
 
       const request = new Request('http://localhost/admin/orders/order-123', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body,
+      });
+
+      // Override formData to avoid TextDecoder issues
+      request.formData = vi.fn().mockResolvedValue({
+        get: (key: string) => {
+          const data = {
+            intent: 'invalidAction',
+          };
+          return data[key as keyof typeof data];
+        },
       });
 
       // Act

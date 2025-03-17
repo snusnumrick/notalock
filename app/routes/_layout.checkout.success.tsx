@@ -87,9 +87,7 @@ export default function CheckoutSuccessPage() {
 
                 <div className="flex justify-between pt-4 border-t">
                   <Button variant="outline" asChild>
-                    <Link
-                      to={`/app/routes/todelete/orders/lookup?orderNumber=${order.orderNumber}`}
-                    >
+                    <Link to={`/app/routes/orders/lookup?orderNumber=${order.orderNumber}`}>
                       Track Order
                     </Link>
                   </Button>
