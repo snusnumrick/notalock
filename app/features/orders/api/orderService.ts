@@ -309,6 +309,7 @@ export class OrderService {
    */
   async getOrders(options: OrderFilterOptions): Promise<OrderListResult> {
     try {
+      console.log('Getting orders with options:', options);
       let query = this.supabase.from('orders').select('*', { count: 'exact' });
 
       // Apply filters
@@ -317,7 +318,7 @@ export class OrderService {
       }
 
       if (options.email) {
-        query = query.eq('email', options.email);
+        query = query.eq('guest_email', options.email);
       }
 
       if (options.status) {
@@ -352,10 +353,10 @@ export class OrderService {
         query = query.lte('total_amount', options.maxAmount);
       }
 
-      // Add search query logic for order_number or email
+      // Add search query logic for order_number or guest_email
       if (options.searchQuery) {
         query = query.or(
-          `order_number.ilike.%${options.searchQuery}%,email.ilike.%${options.searchQuery}%`
+          `order_number.ilike.%${options.searchQuery}%,guest_email.ilike.%${options.searchQuery}%`
         );
       }
 
@@ -374,8 +375,11 @@ export class OrderService {
       const { data: orders, error, count } = await query;
 
       if (error) {
+        console.error('Error fetching orders:', error);
         throw new Error(`Failed to get orders: ${error.message}`);
       }
+
+      console.log('Orders fetched successfully:', { count: orders?.length, total: count });
 
       // Get full order details for each order
       const orderPromises = orders.map(order => this.getOrderById(order.id));
@@ -679,7 +683,8 @@ export class OrderService {
       id: order.id,
       orderNumber: order.order_number,
       userId: order.user_id || undefined,
-      email: order.email || order.guest_email || '',
+      email: order.guest_email || '',
+      // guest_email is the correct field per the database schema
       status: this.mapOrderStatus(order.status),
       paymentStatus: order.payment_status as PaymentStatus,
       paymentIntentId: order.payment_intent_id || undefined,

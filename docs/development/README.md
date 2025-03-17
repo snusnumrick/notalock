@@ -11,6 +11,10 @@ This directory contains detailed documentation for developers working on the Not
 - [Middleware](./middleware.md) - Server middleware implementation details
 - [Fixing Failing Tests Guide](./fixing-failing-tests-guide.md) - How to address failing tests
 
+## Frontend Architecture
+
+- [Remix v2 Routing Patterns](./remix-v2-routing.md) - Best practices for Remix v2 route handling
+
 ## Checkout System
 
 - [Checkout Flow](./checkout-flow.md) - Complete checkout flow implementation details

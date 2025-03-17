@@ -21,55 +21,74 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   console.log('🔍 ORDERS LIST LOADER RUNNING (INDEX)');
 
-  // Get query parameters
-  const url = new URL(request.url);
-  const searchParams = url.searchParams;
+  try {
+    // Get query parameters
+    const url = new URL(request.url);
+    const searchParams = url.searchParams;
 
-  // Extract filter parameters
-  const search = searchParams.get('search') || '';
-  const status = searchParams.get('status') || undefined;
-  const dateFrom = searchParams.get('dateFrom') || undefined;
-  const dateTo = searchParams.get('dateTo') || undefined;
-  const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '10');
-  const offset = (page - 1) * limit;
+    // Extract filter parameters
+    const search = searchParams.get('search') || '';
+    const status = searchParams.get('status') || undefined;
+    const dateFrom = searchParams.get('dateFrom') || undefined;
+    const dateTo = searchParams.get('dateTo') || undefined;
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const offset = (page - 1) * limit;
 
-  // Get the order service
-  const orderService = await getOrderService();
+    // Get the order service
+    const orderService = await getOrderService();
 
-  // Prepare filter options
-  const filterOptions = {
-    searchQuery: search || undefined,
-    status: status as OrderStatus | undefined,
-    dateFrom,
-    dateTo,
-    limit,
-    offset,
-    sortBy: 'createdAt' as const,
-    sortDirection: 'desc' as const,
-  };
+    // Prepare filter options
+    const filterOptions = {
+      searchQuery: search || undefined,
+      status: status as OrderStatus | undefined,
+      dateFrom,
+      dateTo,
+      limit,
+      offset,
+      sortBy: 'createdAt' as const,
+      sortDirection: 'desc' as const,
+    };
 
-  // Get orders with filters
-  const { orders, total } = await orderService.getOrders(filterOptions);
+    console.log('Filter options:', filterOptions);
 
-  console.log('Orders fetched:', { count: orders.length, total });
+    // Get orders with filters
+    const { orders, total } = await orderService.getOrders(filterOptions);
 
-  // Calculate pagination information
-  const totalPages = Math.ceil(total / limit);
+    console.log('Orders fetched successfully:', { count: orders?.length || 0, total });
 
-  return json({
-    orders,
-    total,
-    currentPage: page,
-    totalPages,
-    limit,
-  });
+    // Calculate pagination information
+    const totalPages = Math.ceil(total / limit);
+
+    return json({
+      orders: orders || [],
+      total,
+      currentPage: page,
+      totalPages,
+      limit,
+      error: null,
+    });
+  } catch (error) {
+    console.error('Error loading orders:', error);
+    return json({
+      orders: [],
+      total: 0,
+      currentPage: 1,
+      totalPages: 0,
+      limit: 10,
+      error: error instanceof Error ? error.message : 'An unknown error occurred',
+    });
+  }
 }
 
 export default function OrdersRoute() {
-  const { orders, total, currentPage, totalPages, limit } = useLoaderData<typeof loader>();
+  const { orders, total, currentPage, totalPages, limit, error } = useLoaderData<typeof loader>();
 
-  console.log('🔍 ORDERS LIST COMPONENT RENDERING (INDEX)', { ordersCount: orders?.length, total });
+  console.log('🔍 ORDERS LIST COMPONENT RENDERING (INDEX)', {
+    ordersCount: orders?.length,
+    total,
+    error,
+  });
 
   const [searchParams, setSearchParams] = useSearchParams();
   const submit = useSubmit();
@@ -222,7 +241,14 @@ export default function OrdersRoute() {
           </div>
         </div>
 
-        <OrdersTable orders={orders as Order[]} onStatusChange={handleStatusChange} />
+        {error ? (
+          <div className="p-8 text-center">
+            <p className="text-lg text-red-500 mb-2">Error loading orders</p>
+            <p className="text-sm text-gray-700">{error}</p>
+          </div>
+        ) : (
+          <OrdersTable orders={orders as Order[]} onStatusChange={handleStatusChange} />
+        )}
 
         {/* Pagination controls */}
         {totalPages > 1 && (

@@ -6,6 +6,8 @@
 
 In Remix, parent routes must include an `<Outlet />` component to render their child routes. Without this, child routes won't render even though their loaders may execute.
 
+> **Important**: For details on Remix v2 specific routing patterns, especially regarding parent and index routes, refer to [Remix v2 Routing Patterns](./remix-v2-routing.md).
+
 ```tsx
 // Parent route: app/routes/admin.products.tsx
 import { Outlet, useLoaderData, useLocation } from '@remix-run/react';

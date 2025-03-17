@@ -1,6 +1,6 @@
 import { Outlet } from '@remix-run/react';
 import { requireAdmin } from '~/server/middleware/auth.server';
-import { type LoaderFunctionArgs, type MetaFunction } from '@remix-run/node';
+import { type LoaderFunctionArgs, type MetaFunction, redirect } from '@remix-run/node';
 
 export const meta: MetaFunction = () => {
   return [
@@ -14,6 +14,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
   await requireAdmin(request);
 
   console.log('🔍 ORDERS LAYOUT LOADER RUNNING');
+
+  // Check if we're directly on /admin/orders without a child route
+  const url = new URL(request.url);
+  if (url.pathname === '/admin/orders') {
+    // Redirect to the index route
+    console.log('Redirecting to /admin/orders/index');
+    return redirect('/admin/orders/index');
+  }
 
   return null;
 }

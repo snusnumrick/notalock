@@ -32,6 +32,8 @@ interface OrdersTableProps {
 export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersTableProps) {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
 
+  console.log('OrdersTable rendering with:', { orderCount: orders?.length, loading });
+
   const toggleOrderDetails = (orderId: string) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
   };
@@ -82,8 +84,15 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
     return <p className="text-center py-4">Loading orders...</p>;
   }
 
-  if (!orders || orders.length === 0) {
-    return <p className="text-center py-4">No orders found.</p>;
+  if (!orders || !Array.isArray(orders) || orders.length === 0) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-lg text-gray-500 mb-2">No orders found</p>
+        <p className="text-sm text-gray-400">
+          Orders will appear here once customers make purchases
+        </p>
+      </div>
+    );
   }
 
   return (

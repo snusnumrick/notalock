@@ -6,6 +6,7 @@
 ## Development
 - [Development Guidelines](./development/guidelines.md)
 - [Code Organization](./development/code-organization.md)
+- [Remix v2 Routing Patterns](./development/remix-v2-routing.md)
 - [Claude Instructions](./development/claude-instructions.md)
 - [Error Handling](development/error-handling.md)
 - [Middleware](development/middleware.md)

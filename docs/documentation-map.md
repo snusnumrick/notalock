@@ -12,6 +12,7 @@ docs/
 │   ├── guidelines.md                  # General development guidelines
 │   ├── middleware.md                  # Middleware documentation
 │   ├── testing.md                     # Testing guidelines and practices
+│   ├── remix-v2-routing.md            # Remix v2 routing patterns and solutions
 │   ├── checkout-flow.md               # Checkout flow implementation details
 │   ├── checkout-routing.md            # Checkout routing structure
 │   ├── checkout-fixes.md              # Checkout fixes and improvements
