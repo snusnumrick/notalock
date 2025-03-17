@@ -82,7 +82,7 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
     return <p className="text-center py-4">Loading orders...</p>;
   }
 
-  if (orders.length === 0) {
+  if (!orders || orders.length === 0) {
     return <p className="text-center py-4">No orders found.</p>;
   }
 

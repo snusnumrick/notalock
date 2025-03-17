@@ -1,6 +1,13 @@
 import { Outlet } from '@remix-run/react';
 import { requireAdmin } from '~/server/middleware/auth.server';
-import { type LoaderFunctionArgs } from '@remix-run/node';
+import { type LoaderFunctionArgs, type MetaFunction } from '@remix-run/node';
+
+export const meta: MetaFunction = () => {
+  return [
+    { title: 'Admin Orders | Notalock' },
+    { name: 'description', content: 'Notalock Admin Orders Management' },
+  ];
+};
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Verify the user is an admin
@@ -14,5 +21,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export default function OrdersLayout() {
   console.log('🔍 ORDERS LAYOUT COMPONENT RENDERING');
 
-  return <Outlet />;
+  return (
+    <div className="min-h-screen">
+      <Outlet />
+    </div>
+  );
 }

@@ -162,6 +162,8 @@ export class OrderService {
    */
   async getOrderById(orderId: string): Promise<Order> {
     try {
+      console.log('Getting order by ID:', orderId);
+
       // Get the order
       const { data: order, error: orderError } = await this.supabase
         .from('orders')
@@ -677,7 +679,7 @@ export class OrderService {
       id: order.id,
       orderNumber: order.order_number,
       userId: order.user_id || undefined,
-      email: order.guest_email || '',
+      email: order.email || order.guest_email || '',
       status: this.mapOrderStatus(order.status),
       paymentStatus: order.payment_status as PaymentStatus,
       paymentIntentId: order.payment_intent_id || undefined,

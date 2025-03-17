@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select';
-import type { Order, OrderStatus } from '~/features/orders/types';
+import { Order, type OrderStatus } from '~/features/orders/types';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Verify the user is an admin
@@ -52,6 +52,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   // Get orders with filters
   const { orders, total } = await orderService.getOrders(filterOptions);
 
+  console.log('Orders fetched:', { count: orders.length, total });
+
   // Calculate pagination information
   const totalPages = Math.ceil(total / limit);
 
@@ -67,7 +69,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export default function OrdersRoute() {
   const { orders, total, currentPage, totalPages, limit } = useLoaderData<typeof loader>();
 
-  console.log('🔍 ORDERS LIST COMPONENT RENDERING (INDEX)');
+  console.log('🔍 ORDERS LIST COMPONENT RENDERING (INDEX)', { ordersCount: orders?.length, total });
 
   const [searchParams, setSearchParams] = useSearchParams();
   const submit = useSubmit();
