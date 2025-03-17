@@ -54,7 +54,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   // Get or create anonymous cart ID from cookie
   const anonymousCartId = await getAnonymousCartId(request);
-  console.log('Root loader: Using anonymous cart ID from cookie:', anonymousCartId);
+  // console.log('Root loader: Using anonymous cart ID from cookie:', anonymousCartId);
 
   // Set cookie for future requests
   await setAnonymousCartId(response, anonymousCartId);
@@ -63,9 +63,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const cartService = new CartServiceRPC(supabase, anonymousCartId);
   const cartItems = await cartService.getCartItems();
 
-  console.log(
-    `Root loader: Loaded ${cartItems.length} cart items for anonymous ID ${anonymousCartId}`
-  );
+  // console.log(
+  //   `Root loader: Loaded ${cartItems.length} cart items for anonymous ID ${anonymousCartId}`
+  // );
 
   return build.json(
     {
@@ -154,18 +154,18 @@ export default function App() {
       try {
         // Server-side cart data should be the source of truth
         if (cartItems && cartItems.length > 0) {
-          console.log(
-            'Root - Server provided',
-            cartItems.length,
-            'cart items, using as source of truth'
-          );
+          // console.log(
+          //   'Root - Server provided',
+          //   cartItems.length,
+          //   'cart items, using as source of truth'
+          // );
           // Save server data to localStorage
           localStorage.setItem(CART_DATA_STORAGE_KEY, JSON.stringify(cartItems));
           // Calculate total items
           const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
-          console.log('count event 1', totalItems);
+          // console.log('count event 1', totalItems);
           // Dispatch count event
-          console.log('count event 20', totalItems);
+          // console.log('count event 20', totalItems);
 
           window.dispatchEvent(
             new CustomEvent(CART_COUNT_EVENT_NAME, {
@@ -185,7 +185,7 @@ export default function App() {
               // Calculate total items
               const totalItems = parsedItems.reduce((total, item) => total + item.quantity, 0);
               // Dispatch count event
-              console.log('count event 21', totalItems);
+              // console.log('count event 21', totalItems);
 
               window.dispatchEvent(
                 new CustomEvent(CART_COUNT_EVENT_NAME, {

@@ -272,7 +272,7 @@ export class CartServiceRPC {
 
     const userId = sessionData.session?.user.id;
 
-    console.log('getOrCreateCart - ', 'sessionData: ', sessionData, 'userId: ', userId);
+    // console.log('getOrCreateCart - ', 'sessionData: ', sessionData, 'userId: ', userId);
 
     // For authenticated users
     if (userId) {

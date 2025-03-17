@@ -18,7 +18,7 @@ export async function getAnonymousCartId(request: Request): Promise<string> {
   try {
     // Safely handle the case where request or headers might be undefined (in tests)
     const cookieHeader = request?.headers?.get('Cookie') || null;
-    console.log('Request cookie header:', cookieHeader);
+    // console.log('Request cookie header:', cookieHeader);
 
     // For test consistency, use a fixed ID in test environments
     if (
@@ -30,14 +30,14 @@ export async function getAnonymousCartId(request: Request): Promise<string> {
     }
 
     const cartId = await anonymousCartCookie.parse(cookieHeader);
-    console.log(cookieHeader, '=>', cartId);
+    // console.log(cookieHeader, '=>', cartId);
 
     if (cartId) {
       // Validate that we have a proper UUID
       const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
       if (typeof cartId === 'string' && uuidPattern.test(cartId)) {
-        console.log('Found valid anonymous cart ID in cookie:', cartId);
+        // console.log('Found valid anonymous cart ID in cookie:', cartId);
         return cartId;
       } else {
         console.warn('Found invalid cart ID format in cookie:', cartId);

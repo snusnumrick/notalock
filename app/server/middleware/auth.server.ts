@@ -19,7 +19,7 @@ interface AuthResult {
  * Throws redirect to login if user is not authenticated
  */
 export async function requireAuth(request: Request): Promise<AuthResult> {
-  console.log('app/server/middleware/auth.server.ts - Starting requireAuth check');
+  // console.log('app/server/middleware/auth.server.ts - Starting requireAuth check');
   const response = new Response();
   const supabase = createSupabaseClient(request, response);
 
