@@ -1,3 +1,5 @@
+import { type PaymentStatus as DbPaymentStatus } from '~/features/supabase/types/Database.types';
+
 /**
  * Payment method types supported by the application
  */
@@ -60,7 +62,8 @@ export interface PaymentInfo {
 /**
  * Payment status types
  */
-export type PaymentStatus = 'completed' | 'pending' | 'failed' | 'refunded' | 'canceled';
+export type PaymentStatus = DbPaymentStatus;
+// export type PaymentStatus = 'completed' | 'pending' | 'failed' | 'refunded' | 'canceled';
 
 /**
  * Payment result from providers
@@ -71,12 +74,14 @@ export interface PaymentResult {
   paymentIntentId?: string;
   paymentMethodId?: string;
   status: PaymentStatus;
+  amount?: PaymentAmount;
   error?: string;
   providerData?: Record<string, unknown>;
   refundAmount?: number;
   refundReason?: string;
   refundDate?: string;
   orderReference?: string;
+  metadata?: Record<string, unknown>;
 }
 
 /**

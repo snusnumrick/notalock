@@ -53,12 +53,12 @@ function handlePaymentIntentSucceeded(event: Stripe.Event): PaymentResult {
   const orderReference = paymentIntent.metadata?.orderReference;
 
   // Create payment result
-  const paymentResult: PaymentResult = {
+  return {
     success: true,
     paymentId: paymentIntent.latest_charge as string,
     paymentIntentId: paymentIntent.id,
     paymentMethodId: paymentIntent.payment_method as string,
-    status: 'completed',
+    status: 'paid',
     orderReference,
     providerData: {
       amount: paymentIntent.amount,
@@ -66,8 +66,6 @@ function handlePaymentIntentSucceeded(event: Stripe.Event): PaymentResult {
       paymentMethodTypes: paymentIntent.payment_method_types,
     },
   };
-
-  return paymentResult;
 }
 
 /**
@@ -113,7 +111,7 @@ function handlePaymentIntentCanceled(event: Stripe.Event): PaymentResult {
   const paymentResult: PaymentResult = {
     success: false,
     paymentIntentId: paymentIntent.id,
-    status: 'canceled',
+    status: 'cancelled',
     error: 'Payment was canceled',
     orderReference,
     providerData: {

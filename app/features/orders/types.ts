@@ -1,3 +1,5 @@
+import { type PaymentStatus as DbPaymentStatus } from '~/features/supabase/types/Database.types';
+
 // Order item option type
 export interface OrderItemOption {
   name: string;
@@ -49,7 +51,14 @@ export type OrderStatus =
   | 'failed';
 
 // Payment status types
-export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'refunded' | 'paid';
+export type PaymentStatus = DbPaymentStatus;
+/*  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'cancelled'
+  | 'failed'
+  | 'refunded'
+  | 'paid';*/
 
 // Order item type
 export interface OrderItem {

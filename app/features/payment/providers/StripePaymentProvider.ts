@@ -131,10 +131,10 @@ export class StripePaymentProvider implements PaymentProviderInterface {
         const updatedIntent = await this.stripeClient.paymentIntents.retrieve(paymentIntentId);
 
         // Map Stripe status to our internal status
-        let status: 'completed' | 'pending' | 'failed' = 'pending';
+        let status: 'paid' | 'pending' | 'failed' = 'pending';
 
         if (updatedIntent.status === 'succeeded') {
-          status = 'completed';
+          status = 'paid';
         } else if (
           [
             'requires_payment_method',
@@ -169,7 +169,7 @@ export class StripePaymentProvider implements PaymentProviderInterface {
           paymentId: paymentIntent.id,
           paymentIntentId,
           paymentMethodId: paymentInfo.paymentMethodId,
-          status: 'completed',
+          status: 'paid',
           providerData: {
             provider: 'stripe',
             stripeStatus: paymentIntent.status,
@@ -235,10 +235,10 @@ export class StripePaymentProvider implements PaymentProviderInterface {
       const paymentIntent = await this.stripeClient.paymentIntents.retrieve(paymentId);
 
       // Map Stripe status to our internal status
-      let status: 'completed' | 'pending' | 'failed' = 'pending';
+      let status: 'paid' | 'pending' | 'failed' = 'pending';
 
       if (paymentIntent.status === 'succeeded') {
-        status = 'completed';
+        status = 'paid';
       } else if (
         [
           'requires_payment_method',

@@ -19,7 +19,7 @@ import { type PaymentResult } from '~/features/payment/types';
 import { type Address } from '~/features/checkout/types/checkout.types';
 import { type Json } from '~/features/supabase/types/Database.types';
 
-// singleto instance of OrderService
+// singleton instance of OrderService
 let orderServiceInstance: OrderService | null = null;
 
 /**
@@ -473,7 +473,7 @@ export class OrderService {
 
     // Override with specific payment status if provided
     switch (paymentResult.status) {
-      case 'completed':
+      case 'paid':
         orderStatus = 'paid';
         paymentStatus = 'paid';
         break;
@@ -489,7 +489,7 @@ export class OrderService {
         orderStatus = 'refunded';
         paymentStatus = 'refunded';
         break;
-      case 'canceled':
+      case 'cancelled':
         orderStatus = 'cancelled';
         paymentStatus = 'failed';
         break;

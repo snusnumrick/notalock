@@ -1,6 +1,7 @@
 import { type CartItem } from '~/features/cart/types/cart.types';
 import { type Address } from '~/features/checkout/types/checkout.types';
 import { type Database } from '~/features/supabase/types/Database.types';
+import { type PaymentStatus } from '~/features/payment';
 
 /**
  * Order status type
@@ -17,7 +18,7 @@ export type OrderStatus =
 /**
  * Payment status type
  */
-export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+// export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 
 /**
  * Order item interface

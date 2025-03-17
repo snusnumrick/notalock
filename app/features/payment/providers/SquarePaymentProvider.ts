@@ -229,9 +229,9 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
       }
 
       // Map Square status to our internal status
-      let status: 'completed' | 'pending' | 'failed' = 'pending';
+      let status: 'paid' | 'pending' | 'failed' = 'pending';
       if (payment.status === 'COMPLETED') {
-        status = 'completed';
+        status = 'paid';
       } else if (payment.status === 'FAILED') {
         status = 'failed';
       }
@@ -299,9 +299,9 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
       // Payment is already destructured above, no need to redeclare
 
       // Map Square status to our internal status
-      let status: 'completed' | 'pending' | 'failed' = 'pending';
+      let status: 'paid' | 'pending' | 'failed' = 'pending';
       if (payment.status === 'COMPLETED') {
-        status = 'completed';
+        status = 'paid';
       } else if (payment.status === 'FAILED') {
         status = 'failed';
       }

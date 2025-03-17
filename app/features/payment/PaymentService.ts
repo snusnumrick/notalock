@@ -53,14 +53,14 @@ export class PaymentService {
         success: true,
         paymentId: `mock_payment_${Date.now()}`,
         paymentIntentId,
-        status: 'completed',
+        status: 'paid',
         providerData: { provider: 'mock' },
       }),
 
       verifyPayment: async (paymentId: string) => ({
         success: true,
         paymentId,
-        status: 'completed',
+        status: 'paid',
         providerData: { provider: 'mock' },
       }),
 
