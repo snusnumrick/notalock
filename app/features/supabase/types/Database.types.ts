@@ -16,7 +16,7 @@ export type OrderStatus =
   | 'failed'
   | 'created';
 export type PaymentMethodType = 'credit_card' | 'paypal' | 'bank_transfer' | 'square';
-export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled';
 export type UserRole = 'customer' | 'business' | 'admin';
 export type CartStatus =
   | 'active'

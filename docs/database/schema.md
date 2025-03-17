@@ -17,7 +17,7 @@ CREATE TYPE order_status AS ENUM ('created', 'processing', 'completed', 'cancell
 CREATE TYPE payment_method_type AS ENUM ('credit_card', 'paypal', 'bank_transfer', 'square');
 
 -- Payment status type
-CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded');
+CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded', 'cancelled');
 
 -- Cart status type
 CREATE TYPE cart_status AS ENUM ('active', 'merged', 'checkout', 'completed', 'abandoned', 'duplicate', 'cleared', 'consolidated');
