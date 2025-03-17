@@ -4,7 +4,7 @@ import { useLoaderData, useActionData, useSubmit, useNavigation } from '@remix-r
 import { requireAdmin } from '~/server/middleware/auth.server';
 import { OrderDetail } from '~/features/orders/components/admin/OrderDetail';
 import { getOrderService } from '~/features/orders/api/orderService';
-import type { OrderStatus } from '~/features/orders/types';
+import type { Order, OrderStatus } from '~/features/orders/types';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -99,7 +99,7 @@ export default function OrderDetailRoute() {
   const isLoading = navigation.state === 'submitting';
 
   // Maintain a local order state to reflect updates immediately
-  const [currentOrder, setCurrentOrder] = useState(order);
+  const [currentOrder, setCurrentOrder] = useState<Order>(order as Order);
 
   // Handle status change
   const handleStatusChange = async (_orderId: string, status: OrderStatus) => {
@@ -118,7 +118,7 @@ export default function OrderDetailRoute() {
     actionData.order &&
     actionData.order.id === currentOrder.id
   ) {
-    setCurrentOrder(actionData.order);
+    setCurrentOrder(actionData.order as Order);
   }
 
   return (

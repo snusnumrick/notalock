@@ -72,6 +72,8 @@ export async function getOrders(options: OrderFilterOptions): Promise<OrderListR
     return {
       orders: [],
       total: 0,
+      page: 1,
+      pageSize: options.limit || 10,
       limit: options.limit || 10,
       offset: options.offset || 0,
     };

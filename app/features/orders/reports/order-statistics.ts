@@ -206,7 +206,9 @@ export function calculateProductSales(orders: Order[]): ProductSales[] {
       if (existing) {
         // Update existing product stats
         existing.quantity += item.quantity;
-        existing.revenue += item.totalPrice;
+        if (item.totalPrice) {
+          existing.revenue += item.totalPrice;
+        }
         // Recalculate average unit price
         existing.averageUnitPrice = existing.revenue / existing.quantity;
       } else {
@@ -214,10 +216,10 @@ export function calculateProductSales(orders: Order[]): ProductSales[] {
         productMap.set(item.productId, {
           productId: item.productId,
           name: item.name,
-          sku: item.sku,
+          sku: item.sku || 'SKU-UNKNOWN',
           quantity: item.quantity,
-          revenue: item.totalPrice,
-          averageUnitPrice: item.unitPrice,
+          revenue: item.totalPrice || 0,
+          averageUnitPrice: item.unitPrice || 0,
         });
       }
     });

@@ -13,6 +13,7 @@ import {
   type DbOrder,
   type DbOrderItem,
   type DbOrderStatusHistory,
+  type OrderMetadata,
 } from '../types';
 import { type PaymentResult } from '~/features/payment/types';
 import { type Address } from '~/features/checkout/types/checkout.types';
@@ -75,7 +76,9 @@ export class OrderService {
         product_id: item.product_id,
         variant_id: item.variant_id || null,
         name: item.product?.name || `Product ${item.product_id}`,
-        sku: item.product?.sku || `SKU-${item.product_id.substring(0, 8)}`,
+        sku:
+          item.product?.sku ||
+          (item.product_id ? `SKU-${item.product_id.substring(0, 8)}` : 'SKU-UNKNOWN'),
         quantity: item.quantity,
         unit_price: item.price,
         total_price: totalPrice,
@@ -379,6 +382,8 @@ export class OrderService {
       return {
         orders: detailedOrders,
         total: count || 0,
+        page: Math.floor(offset / limit) + 1,
+        pageSize: limit,
         limit,
         offset,
       };
@@ -503,15 +508,22 @@ export class OrderService {
       paymentIntentId: paymentResult.paymentIntentId,
       notes: notes + refundInfo,
       metadata: {
-        paymentResult: {
+        // Store payment result as a JSON string
+        paymentResultData: JSON.stringify({
           success: paymentResult.success,
           status: paymentResult.status,
           paymentId: paymentResult.paymentId,
-          paymentMethodId: paymentResult.paymentMethodId,
           error: paymentResult.error,
           refundAmount: paymentResult.refundAmount,
           refundReason: paymentResult.refundReason,
           refundDate: paymentResult.refundDate,
+        }),
+        // Add payment details as tracking info
+        tracking: {
+          carrier: 'payment',
+          trackingNumber: paymentResult.paymentId || 'unknown',
+          paymentId: paymentResult.paymentId,
+          status: paymentResult.status,
         },
       },
     };
@@ -522,7 +534,9 @@ export class OrderService {
   /**
    * Helper function to safely parse JSON or handle primitive values
    */
-  private safelyParseMetadata(metadata: Json | null): Record<string, unknown> | undefined {
+  private safelyParseMetadata(
+    metadata: Json | string | null | undefined
+  ): Record<string, unknown> | undefined {
     if (!metadata) return undefined;
 
     if (typeof metadata === 'object' && metadata !== null) {
@@ -608,9 +622,7 @@ export class OrderService {
   /**
    * Map Supabase OrderStatus to application OrderStatus
    */
-  private mapOrderStatus(
-    status: import('~/features/supabase/types/Database.types').OrderStatus
-  ): OrderStatus {
+  private mapOrderStatus(status: string): OrderStatus {
     // Map from Supabase OrderStatus to application OrderStatus
     // Handle the 'created' status which is in Supabase but not in application OrderStatus
     if (status === 'created') {
@@ -636,11 +648,12 @@ export class OrderService {
       name: item.name,
       sku: item.sku,
       quantity: item.quantity,
-      unitPrice: Number(item.unit_price),
-      totalPrice: Number(item.total_price),
+      price: Number(item.price || 0), // Ensure price is always present
+      unitPrice: Number(item.unit_price || 0),
+      totalPrice: Number(item.total_price || 0),
       imageUrl: item.image_url || undefined,
       options: item.options ? this.formatOrderItemOptions(item.options) : undefined,
-      metadata: this.safelyParseMetadata(item.metadata),
+      metadata: this.safelyParseMetadata(item.metadata as Json),
       createdAt: item.created_at,
       updatedAt: item.updated_at,
     }));
@@ -651,6 +664,8 @@ export class OrderService {
           id: entry.id,
           orderId: entry.order_id,
           status: this.mapOrderStatus(entry.status),
+          date: entry.date || entry.created_at || new Date().toISOString(), // Ensure date is always present
+          note: entry.note,
           notes: entry.notes || undefined,
           createdAt: entry.created_at,
           createdBy: entry.created_by || undefined,
@@ -668,8 +683,8 @@ export class OrderService {
       paymentIntentId: order.payment_intent_id || undefined,
       paymentMethodId: order.payment_method_id || undefined,
       paymentProvider: order.payment_provider || undefined,
-      shippingAddress: this.safelyParseAddress(order.shipping_address),
-      billingAddress: this.safelyParseAddress(order.billing_address),
+      shippingAddress: this.safelyParseAddress(order.shipping_address as Json),
+      billingAddress: this.safelyParseAddress(order.billing_address as Json),
       shippingMethod: order.shipping_method || undefined,
       shippingCost: Number(order.shipping_cost || 0),
       taxAmount: Number(order.tax || 0),
@@ -678,7 +693,7 @@ export class OrderService {
       items,
       statusHistory: formattedHistory,
       notes: order.notes || undefined,
-      metadata: this.safelyParseMetadata(order.metadata),
+      metadata: this.safelyParseMetadata(order.metadata as Json) as unknown as OrderMetadata,
       checkoutSessionId: order.checkout_session_id || undefined,
       cartId: order.cart_id || undefined,
       createdAt: order.created_at,

@@ -7,6 +7,7 @@ import { OrderAnalytics } from '~/features/orders/components/admin/OrderAnalytic
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
+import type { Order } from '~/features/orders/types';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Verify the user is an admin
@@ -135,7 +136,11 @@ export default function OrderAnalyticsRoute() {
         </CardContent>
       </Card>
 
-      <OrderAnalytics orders={orders} startDate={startDate} endDate={endDate} />
+      <OrderAnalytics
+        orders={orders as unknown as Order[]}
+        startDate={startDate}
+        endDate={endDate}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { requireAuth } from '~/server/middleware/auth.server';
 
 import { getOrderById } from '~/features/orders/api/actions.server';
 import { OrderDetail } from '~/features/orders/components';
+import type { Order } from '~/features/orders/types';
 
 /**
  * Loader function to get a specific order
@@ -38,7 +39,7 @@ export default function OrderDetailPage() {
 
   return (
     <div className="container py-8">
-      <OrderDetail order={order} />
+      <OrderDetail order={order as Order} />
     </div>
   );
 }

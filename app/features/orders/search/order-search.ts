@@ -148,8 +148,12 @@ export function searchOrders(orders: Order[], options: OrderSearchOptions = {}):
       // Search in product names
       const productMatch = order.items.some(item => {
         const itemName = options.exactMatch ? item.name : item.name.toLowerCase();
-        const itemSku = options.exactMatch ? item.sku : item.sku.toLowerCase();
-        return itemName.includes(query) || itemSku.includes(query);
+        // Only use SKU if it exists
+        if (item.sku) {
+          const itemSku = options.exactMatch ? item.sku : item.sku.toLowerCase();
+          return itemName.includes(query) || itemSku.includes(query);
+        }
+        return itemName.includes(query);
       });
 
       // Search in notes if requested
@@ -251,9 +255,14 @@ export function quickSearchOrders(orders: Order[], searchQuery: string): Order[]
     }
 
     // Check product names and SKUs
-    return order.items.some(
-      item => item.name.toLowerCase().includes(query) || item.sku.toLowerCase().includes(query)
-    );
+    return order.items.some(item => {
+      const nameMatch = item.name.toLowerCase().includes(query);
+      // Only check SKU if it exists
+      if (item.sku) {
+        return nameMatch || item.sku.toLowerCase().includes(query);
+      }
+      return nameMatch;
+    });
   });
 }
 
@@ -324,7 +333,8 @@ export function fuzzySearchOrders(orders: Order[], query: string): Order[] {
       // Check products (use highest score of any product)
       let maxProductScore = 0;
       for (const item of order.items) {
-        const itemScore = calculateScore(item.name, term) * 3 + calculateScore(item.sku, term) * 4;
+        const itemScore =
+          calculateScore(item.name, term) * 3 + (item.sku ? calculateScore(item.sku, term) * 4 : 0);
         if (itemScore > maxProductScore) {
           maxProductScore = itemScore;
         }

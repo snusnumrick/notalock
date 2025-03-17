@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { type LoaderFunctionArgs, json } from '@remix-run/node';
 import { Link, useLoaderData, useSubmit, useSearchParams } from '@remix-run/react';
 import { requireAdmin } from '~/server/middleware/auth.server';
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select';
-import type { OrderStatus } from '~/features/orders/types';
+import type { Order, OrderStatus } from '~/features/orders/types';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Verify the user is an admin
@@ -220,7 +220,7 @@ export default function OrdersRoute() {
           </div>
         </div>
 
-        <OrdersTable orders={orders} onStatusChange={handleStatusChange} />
+        <OrdersTable orders={orders as Order[]} onStatusChange={handleStatusChange} />
 
         {/* Pagination controls */}
         {totalPages > 1 && (

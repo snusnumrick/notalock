@@ -75,12 +75,18 @@ export function OrderDetail({ order }: OrderDetailProps) {
                       <div className="text-sm text-gray-500">SKU: {item.sku}</div>
                       {item.options && item.options.length > 0 && (
                         <div className="text-sm text-gray-500">
-                          {item.options.map(option => (
-                            <span key={option.name}>
-                              {option.name}: {option.value}
-                              {option !== item.options![item.options!.length - 1] && ', '}
-                            </span>
-                          ))}
+                          {item.options.map((option, index) => {
+                            // Handle both string[] and OrderItemOption[]
+                            const optionName =
+                              typeof option === 'string' ? `Option ${index + 1}` : option.name;
+                            const optionValue = typeof option === 'string' ? option : option.value;
+                            return (
+                              <span key={index}>
+                                {optionName}: {optionValue}
+                                {index < item.options!.length - 1 && ', '}
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

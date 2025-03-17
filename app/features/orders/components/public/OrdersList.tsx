@@ -16,7 +16,6 @@ interface OrdersListProps {
 export function OrdersList({
   orders,
   loading = false,
-  emptyMessage = 'No orders found.',
   title = 'Your Orders',
   limit,
 }: OrdersListProps) {

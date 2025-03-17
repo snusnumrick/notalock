@@ -229,7 +229,7 @@ export const OrderAnalytics: React.FC<OrderAnalyticsProps> = ({
                     dataKey="value"
                     label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                   >
-                    {statusDistribution.map((entry, index) => (
+                    {statusDistribution.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -266,7 +266,7 @@ export const OrderAnalytics: React.FC<OrderAnalyticsProps> = ({
                   fill="#8884d8"
                   label={{
                     position: 'top',
-                    formatter: val => `${val} ${val === 1 ? 'unit' : 'units'}`,
+                    formatter: (val: number) => `${val} ${val === 1 ? 'unit' : 'units'}`,
                   }}
                 />
               </BarChart>

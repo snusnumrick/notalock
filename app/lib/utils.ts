@@ -24,7 +24,7 @@ export function formatCurrency(amount: number | null | undefined): string {
   }).format(amount);
 }
 
-export function formatDate(date: string | Date, formatStr: string = 'PPP'): string {
+export function formatDate(date: string | Date | undefined, formatStr: string = 'PPP'): string {
   if (!date) return '';
 
   const dateObj = typeof date === 'string' ? parseISO(date) : date;

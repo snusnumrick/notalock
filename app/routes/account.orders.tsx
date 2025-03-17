@@ -4,6 +4,7 @@ import { requireAuth } from '~/server/middleware/auth.server';
 
 import { OrdersList } from '~/features/orders/components';
 import { getUserOrders } from '~/features/orders/api/actions.server';
+import type { Order } from '~/features/orders/types';
 
 /**
  * Loader function to get user orders
@@ -25,7 +26,7 @@ export default function AccountOrdersPage() {
     <div className="container py-8">
       <h1 className="text-2xl font-bold mb-6">Your Orders</h1>
 
-      <OrdersList orders={orders} emptyMessage="You haven't placed any orders yet." />
+      <OrdersList orders={orders as Order[]} emptyMessage="You haven't placed any orders yet." />
     </div>
   );
 }

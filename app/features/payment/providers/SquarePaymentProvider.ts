@@ -137,7 +137,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
       // This is a hypothetical template of what a payment request might look like
       // Not actually used in this implementation 
       const paymentRequestTemplate = {
-        idempotencyKey: randomUUID(),
+        idempotencyKey: uuidv4(),
         sourceId: 'PLACEHOLDER', // This would be replaced by client-side card token
         amountMoney: {
           amount: BigInt(Math.round(value * 100)),
@@ -211,7 +211,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
       // Using the payments.create method with the proper request format
       const createPaymentRequest = {
         sourceId: paymentInfo.paymentMethodId,
-        idempotencyKey: randomUUID(),
+        idempotencyKey: uuidv4(),
         orderId: paymentIntentId,
         locationId: this.locationId,
         // Include customer ID if available
@@ -457,7 +457,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
 
       // Create refund request with the proper format for Square API
       const refundPaymentRequest = {
-        idempotencyKey: randomUUID(),
+        idempotencyKey: uuidv4(),
         paymentId: paymentId,
         amountMoney: {
           amount: BigInt(Math.round(refundAmount * 100)),

@@ -9,6 +9,7 @@ import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
+import type { Order } from '~/features/orders/types';
 
 /**
  * Loader function for the order lookup page
@@ -176,7 +177,7 @@ export default function OrderLookupPage() {
         {/* Display order details if found by order number */}
         {order && (
           <div className="max-w-4xl mx-auto">
-            <OrderDetail order={order} />
+            <OrderDetail order={order as Order} />
           </div>
         )}
 
@@ -184,7 +185,7 @@ export default function OrderLookupPage() {
         {orders && orders.length > 0 && (
           <div className="max-w-3xl mx-auto">
             <h2 className="text-xl font-semibold mb-4">Orders for {initialEmail}</h2>
-            <OrdersList orders={orders} />
+            <OrdersList orders={orders as Order[]} />
           </div>
         )}
       </div>

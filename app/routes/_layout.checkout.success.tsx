@@ -1,5 +1,6 @@
 import { json, redirect, type LoaderFunctionArgs } from '@remix-run/node';
 import { useLoaderData, Link } from '@remix-run/react';
+import { ensureOrderType } from '~/features/orders/utils/type-helpers';
 import { PageLayout } from '~/components/common/PageLayout';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
@@ -34,7 +35,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export default function CheckoutSuccessPage() {
-  const { order } = useLoaderData<typeof loader>();
+  const { order: rawOrder } = useLoaderData<typeof loader>();
+  const order = ensureOrderType(rawOrder);
 
   return (
     <PageLayout>

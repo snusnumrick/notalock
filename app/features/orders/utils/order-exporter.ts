@@ -173,7 +173,10 @@ function exportOrderToCsv(order: Order, options: OrderExportOptions): string {
     csv += 'Date,Status,Notes\n';
 
     order.statusHistory.forEach(history => {
-      csv += `${formatDate(history.createdAt, options.dateFormat)},${history.status},${history.notes || ''}\n`;
+      // Use date or createdAt (or fallback to current date)
+      const dateToUse = history.date || history.createdAt || new Date().toISOString();
+      const notesToUse = history.notes || history.note || '';
+      csv += `${formatDate(dateToUse, options.dateFormat)},${history.status},${notesToUse}\n`;
     });
   }
 

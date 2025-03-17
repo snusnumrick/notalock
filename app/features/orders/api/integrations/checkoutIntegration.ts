@@ -36,12 +36,26 @@ export async function createOrderFromCheckout(
     // Get the order service
     const orderService = await getOrderService();
 
+    // Map cart items to order items
+    const mappedItems = cartItems.map(item => ({
+      productId: item.product_id,
+      variantId: item.variant_id,
+      name: item.product?.name || item.product_id,
+      price: item.price,
+      quantity: item.quantity,
+      imageUrl: item.product?.image_url || undefined,
+      // product and backward compatibility fields
+      product: item.product,
+      product_id: item.product_id,
+      variant_id: item.variant_id,
+    }));
+
     // Prepare the order creation input
     const orderInput: OrderCreateInput = {
       userId: checkoutSession.userId,
       email: checkoutSession.guestEmail || checkoutSession.shippingAddress?.email || '',
       cartId: checkoutSession.cartId,
-      items: cartItems,
+      items: mappedItems,
       shippingAddress: checkoutSession.shippingAddress,
       billingAddress: checkoutSession.billingAddress || checkoutSession.shippingAddress,
       shippingMethod: checkoutSession.shippingMethod,
@@ -54,10 +68,18 @@ export async function createOrderFromCheckout(
       paymentProvider,
       checkoutSessionId: checkoutSession.id,
       metadata: {
-        checkoutData: {
-          shippingOption: checkoutSession.shippingOption,
-          paymentInfo: checkoutSession.paymentInfo,
-        },
+        // Store checkout shipping option as a string (JSON stringified)
+        checkoutShippingOption: checkoutSession.shippingOption
+          ? JSON.stringify(checkoutSession.shippingOption)
+          : undefined,
+        // Add payment info to the tracking field
+        tracking: checkoutSession.paymentInfo
+          ? {
+              carrier: 'default',
+              trackingNumber: 'default',
+              paymentId: checkoutSession.paymentInfo?.paymentMethodId || '',
+            }
+          : undefined,
       },
     };
 

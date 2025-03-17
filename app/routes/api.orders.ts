@@ -19,9 +19,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
     const filterOptions: OrderFilterOptions = {
       limit: searchParams.has('limit') ? parseInt(searchParams.get('limit')!) : 10,
       offset: searchParams.has('offset') ? parseInt(searchParams.get('offset')!) : 0,
-      sortBy:
-        (searchParams.get('sortBy') as 'createdAt' | 'updatedAt' | 'totalAmount' | 'orderNumber') ||
-        'createdAt',
+      sortBy: searchParams.get('sortBy') as
+        | 'createdAt'
+        | 'updatedAt'
+        | 'orderNumber'
+        | 'totalAmount'
+        | undefined,
       sortDirection: (searchParams.get('sortDirection') as 'asc' | 'desc') || 'desc',
     };
 

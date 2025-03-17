@@ -107,8 +107,8 @@ export class ReceiptGenerator {
     const items = adaptedOrder.items.map(item => ({
       name: item.name,
       quantity: item.quantity,
-      price: item.unitPrice,
-      total: item.quantity * item.unitPrice,
+      price: item.unitPrice || item.price || 0, // Use unitPrice or fall back to price
+      total: item.quantity * (item.unitPrice || item.price || 0),
     }));
 
     // Calculate totals
