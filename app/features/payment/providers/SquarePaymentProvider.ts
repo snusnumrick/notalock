@@ -1,6 +1,6 @@
 import type { PaymentAmount, PaymentInfo, PaymentOptions, PaymentResult } from '../types';
 import type { PaymentProviderInterface } from '~/features/payment';
-import { SquareClient as Client, SquareEnvironment as Environment } from 'square';
+import { Square, SquareClient as Client, SquareEnvironment as Environment } from 'square';
 import { v4 as uuidv4 } from 'uuid';
 
 // Define a type for Square currency
@@ -69,8 +69,6 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
         console.error('Error validating Square location:', error);
         return false;
       }
-
-      return true;
     } catch (error: unknown) {
       console.error('Error initializing Square payment provider:', error);
       return false;
@@ -204,7 +202,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
 
       // This is where the API structure of Square has changed
       // Using the payments.create method with the proper request format
-      const createPaymentRequest = {
+      const createPaymentRequest: Square.CreatePaymentRequest = {
         sourceId: paymentInfo.paymentMethodId,
         idempotencyKey: uuidv4(),
         orderId: paymentIntentId,
@@ -365,7 +363,9 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
 
       // If payment is still pending, we can cancel it
       if (paymentResult.status === 'PENDING') {
-        const { payment: cancelResult } = await this.squareClient.payments.cancel({ paymentId });
+        const { payment: cancelResult } = await this.squareClient.payments.cancel({
+          paymentId,
+        });
 
         return {
           success: !!cancelResult,
@@ -420,9 +420,9 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
 
     try {
       // Get the original payment to determine currency and full amount
-      const { payment: paymentResult } = await this.squareClient.payments.get({ paymentId });
+      const { payment } = await this.squareClient.payments.get({ paymentId });
 
-      if (!paymentResult) {
+      if (!payment) {
         return {
           success: false,
           error: 'Payment not found',
@@ -430,16 +430,16 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
       }
 
       // Check if payment is in a refundable state
-      if (paymentResult.status !== 'COMPLETED') {
+      if (payment.status !== 'COMPLETED') {
         return {
           success: false,
-          error: `Cannot refund payment with status: ${paymentResult.status}`,
+          error: `Cannot refund payment with status: ${payment.status}`,
         };
       }
 
       // Determine refund amount
-      const currency = paymentResult.amountMoney?.currency || 'USD';
-      const originalAmount = Number(paymentResult.amountMoney?.amount || 0) / 100;
+      const currency = payment.amountMoney?.currency || 'USD';
+      const originalAmount = Number(payment.amountMoney?.amount || 0) / 100;
       const refundAmount = amount || originalAmount;
 
       // Create refund request with the proper format for Square API

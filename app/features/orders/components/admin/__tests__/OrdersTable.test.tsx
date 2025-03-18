@@ -87,6 +87,7 @@ describe('OrdersTable', () => {
           quantity: 2,
           unitPrice: 25.0,
           totalPrice: 50.0,
+          price: 25.0, // Added missing required price property
           createdAt: '2025-03-15T12:00:00Z',
           updatedAt: '2025-03-15T12:00:00Z',
         },
@@ -99,6 +100,7 @@ describe('OrdersTable', () => {
           quantity: 1,
           unitPrice: 50.0,
           totalPrice: 50.0,
+          price: 50.0, // Added missing required price property
           createdAt: '2025-03-15T12:00:00Z',
           updatedAt: '2025-03-15T12:00:00Z',
         },
@@ -138,6 +140,7 @@ describe('OrdersTable', () => {
           quantity: 4,
           unitPrice: 50.0,
           totalPrice: 200.0,
+          price: 50.0, // Added missing required price property
           createdAt: '2025-03-15T12:00:00Z',
           updatedAt: '2025-03-15T12:00:00Z',
         },

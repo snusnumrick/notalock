@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processStripeWebhookEvent, handleStripeWebhookForOrder } from '../stripe-webhook-handler';
-import { updateOrderStatusFromPayment } from '~/features/orders/api/actions.server';
+import { updateOrderStatusFromPayment } from '../../../orders';
 
 // Mock dependencies
 vi.mock('~/features/orders/api/actions.server', () => ({
@@ -42,7 +42,7 @@ describe('Stripe Webhook Handler', () => {
         paymentId: 'ch_123456',
         paymentIntentId: 'pi_123456',
         paymentMethodId: 'pm_123456',
-        status: 'completed',
+        status: 'paid',
         orderReference: 'NO-20250315-ABCD',
         providerData: {
           amount: 11850,
@@ -122,7 +122,7 @@ describe('Stripe Webhook Handler', () => {
       expect(result).toEqual({
         success: false,
         paymentIntentId: 'pi_123456',
-        status: 'canceled',
+        status: 'cancelled',
         error: 'Payment was canceled',
         orderReference: 'NO-20250315-ABCD',
         providerData: {

@@ -36,25 +36,21 @@ export async function createOrderFromCheckout(
     // Get the order service
     const orderService = await getOrderService();
 
-    // Map cart items to order items
-    const mappedItems = cartItems.map(item => {
-      // Preserve original cart item structure but augment with extra fields
-      return {
-        ...item,
-        // Add the expected fields in the test
-        productId: item.product_id,
-        variantId: item.variant_id,
-        name: item.product?.name || '',
-        imageUrl: item.product?.image_url || undefined,
-      };
-    });
+    // The test expects the original cart items to be passed directly
+    // No mapping is needed here as the orderService will handle the transformation
 
     // Prepare the order creation input
     const orderInput: OrderCreateInput = {
       userId: checkoutSession.userId,
       email: checkoutSession.guestEmail || checkoutSession.shippingAddress?.email || '',
       cartId: checkoutSession.cartId,
-      items: mappedItems,
+      items: cartItems.map(item => ({
+        productId: item.product_id,
+        name: item.product?.name || '',
+        quantity: item.quantity,
+        price: item.price,
+        variantId: item.variant_id || undefined,
+      })),
       shippingAddress: checkoutSession.shippingAddress,
       billingAddress: checkoutSession.billingAddress || checkoutSession.shippingAddress,
       shippingMethod: checkoutSession.shippingMethod,

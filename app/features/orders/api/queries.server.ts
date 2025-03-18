@@ -69,13 +69,15 @@ export async function getOrders(options: OrderFilterOptions): Promise<OrderListR
     return await orderService.getOrders(options);
   } catch (error) {
     console.error('Error in getOrders:', error);
+    const limit = options.limit || 10;
+    const offset = options.offset || 0;
     return {
       orders: [],
       total: 0,
-      page: 1,
-      pageSize: options.limit || 10,
-      limit: options.limit || 10,
-      offset: options.offset || 0,
+      limit,
+      offset,
+      page: Math.floor(offset / limit) + 1,
+      pageSize: limit,
     };
   }
 }

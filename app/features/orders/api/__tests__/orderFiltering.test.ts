@@ -4,8 +4,13 @@ import { type OrderFilterOptions } from '../../types';
 import { mockDeep } from 'vitest-mock-extended';
 import { SupabaseClient } from '@supabase/supabase-js';
 
+// Extend SupabaseClient type to include our custom flag
+type ExtendedSupabaseClient = SupabaseClient & {
+  _isDetailedQuery?: boolean;
+};
+
 // Mock Supabase client
-const mockSupabaseClient = mockDeep<SupabaseClient>();
+const mockSupabaseClient = mockDeep<ExtendedSupabaseClient>();
 
 describe('Order Filtering and Search', () => {
   let orderService: OrderService;
@@ -16,6 +21,9 @@ describe('Order Filtering and Search', () => {
 
     // Reset the mock implementation
     mockSupabaseClient.from.mockClear();
+
+    // Initialize our flag for detailed query tracking
+    mockSupabaseClient._isDetailedQuery = false;
   });
 
   describe('getOrders with filtering', () => {
@@ -216,6 +224,7 @@ describe('Order Filtering and Search', () => {
           total_amount: 100,
           created_at: '2025-03-15T12:00:00Z',
           updated_at: '2025-03-15T12:00:00Z',
+          guest_email: 'customer@example.com', // Note: Using guest_email here to match the implementation
         },
       ];
 
@@ -234,18 +243,38 @@ describe('Order Filtering and Search', () => {
         },
       ];
 
+      // Set up our mock with complete query chains
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            count: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            range: vi.fn().mockResolvedValue({
-              data: mockOrders,
-              count: 1,
-              error: null,
-            }),
-          } as any;
+          if (mockSupabaseClient._isDetailedQuery) {
+            // For individual order query (getOrderById)
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: mockOrders[0],
+                error: null,
+              }),
+            } as any;
+          } else {
+            // For the main order list query
+            mockSupabaseClient._isDetailedQuery = true; // Set flag to handle the next query as detailed
+            return {
+              select: vi.fn().mockReturnThis(),
+              count: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              in: vi.fn().mockReturnThis(),
+              gte: vi.fn().mockReturnThis(),
+              lte: vi.fn().mockReturnThis(),
+              or: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              range: vi.fn().mockResolvedValue({
+                data: mockOrders,
+                count: 1,
+                error: null,
+              }),
+            } as any;
+          }
         } else if (table === 'order_items') {
           return {
             select: vi.fn().mockReturnThis(),
@@ -266,6 +295,9 @@ describe('Order Filtering and Search', () => {
         }
         return mockSupabaseClient;
       });
+
+      // Reset the flag before the test
+      mockSupabaseClient._isDetailedQuery = false;
 
       // Act
       const result = await orderService.getOrders({ limit: 10, offset: 0 });
@@ -293,6 +325,12 @@ describe('Order Filtering and Search', () => {
         return {
           select: vi.fn().mockReturnThis(),
           count: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          in: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockReturnThis(),
+          lte: vi.fn().mockReturnThis(),
+          or: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
           range: vi.fn().mockResolvedValue({
             data: null,
             error: { message: 'Database error', code: 'PGRST116' },
@@ -309,27 +347,27 @@ describe('Order Filtering and Search', () => {
 
   // Helper function to set up a standard mock response
   function setupMockResponse() {
-    mockSupabaseClient.from.mockImplementation(() => {
-      return {
-        select: vi.fn().mockReturnThis(),
-        count: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
-        lte: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        or: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        range: vi.fn().mockResolvedValue({
-          data: [],
-          count: 0,
-          error: null,
-        }),
-      } as any;
-    });
+    const mockQueryChain = {
+      select: vi.fn().mockReturnThis(),
+      count: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      or: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockResolvedValue({
+        data: [],
+        count: 0,
+        error: null,
+      }),
+    };
+
+    mockSupabaseClient.from.mockReturnValue(mockQueryChain as any);
   }
 
   // Helper function to get the mock Supabase "from" chain
   function mockSupabaseFrom() {
-    return mockSupabaseClient.from('orders') as any;
+    return mockSupabaseClient.from('orders');
   }
 });

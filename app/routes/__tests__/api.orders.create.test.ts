@@ -1,61 +1,78 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-// Create the mocks
-const mockCreateOrderFromCheckout = vi.fn().mockImplementation(() => {
-  return {
-    id: 'order-123',
-    orderNumber: 'NO-20250315-ABCD',
-  };
-});
+// Mock the modules with auto mocks (no implementation)
+vi.mock('~/features/orders/api/integrations/checkoutIntegration');
+vi.mock('~/features/checkout/api/checkoutService');
+vi.mock('~/server/middleware/auth.server');
+vi.mock('~/server/services/supabase.server');
 
-const mockGetCheckoutSession = vi.fn();
+// Now import the mocked modules
+import { createOrderFromCheckout } from '~/features/orders/api/integrations/checkoutIntegration';
+import { CheckoutService } from '~/features/checkout/api/checkoutService';
+import { requireAuth } from '~/server/middleware/auth.server';
+import { createSupabaseClient } from '~/server/services/supabase.server';
 
-const mockRequireAuth = vi.fn().mockImplementation(() => {
-  return {
-    user: { id: 'user-123', email: 'test@example.com' },
-    response: new Response(),
-  };
-});
-
-// Mock the modules directly
-vi.mock('~/features/orders/api/integrations/checkoutIntegration', () => ({
-  createOrderFromCheckout: mockCreateOrderFromCheckout,
-}));
-
-vi.mock('~/features/checkout/api/checkoutService', () => ({
-  CheckoutService: vi.fn().mockImplementation(() => ({
-    getCheckoutSession: mockGetCheckoutSession,
-  })),
-}));
-
-vi.mock('~/server/middleware/auth.server', () => ({
-  requireAuth: mockRequireAuth,
-}));
-
-// Import the action to test
+// Import the action after mocks are set up
 import { action } from '../api.orders.create';
 
-describe('Order Create API', () => {
-  const mockCheckout = {
-    id: 'checkout-123',
-    cartId: 'cart-123',
-    userId: 'user-123',
-    status: 'pending',
-    shippingAddress: {
-      name: 'Test User',
-      email: 'test@example.com',
-    },
-    paymentInfo: {
-      provider: 'stripe',
-      type: 'card',
-    },
-  };
+// Create mock implementations to be used in tests
+const mockOrder = {
+  id: 'order-123',
+  orderNumber: 'NO-20250315-ABCD',
+};
 
+const mockCheckout = {
+  id: 'checkout-123',
+  cartId: 'cart-123',
+  userId: 'user-123',
+  status: 'pending',
+  shippingAddress: {
+    name: 'Test User',
+    email: 'test@example.com',
+  },
+  paymentInfo: {
+    provider: 'stripe',
+    type: 'card',
+  },
+};
+
+// Mock getCheckoutSession method
+const mockGetCheckoutSession = vi.fn().mockResolvedValue(mockCheckout);
+
+// Mock Supabase client
+const mockSupabaseClient = {
+  // Add any methods that would be used in the action function
+  // This is a minimal implementation
+  from: vi.fn().mockReturnThis(),
+  select: vi.fn().mockReturnThis(),
+  auth: {
+    getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+  },
+};
+
+describe('Order Create API', () => {
+  // Set up our mock implementations before each test
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Default implementation returns the mock checkout
-    mockGetCheckoutSession.mockResolvedValue(mockCheckout);
+    // Set the implementations after the mocks are established
+    vi.mocked(createOrderFromCheckout).mockResolvedValue(mockOrder);
+
+    // Mock CheckoutService implementation
+    vi.mocked(CheckoutService).mockImplementation(() => ({
+      getCheckoutSession: mockGetCheckoutSession,
+    }));
+
+    // Mock requireAuth implementation
+    vi.mocked(requireAuth).mockImplementation(() => {
+      return {
+        user: { id: 'user-123', email: 'test@example.com' },
+        response: new Response(),
+      };
+    });
+
+    // Mock createSupabaseClient implementation
+    vi.mocked(createSupabaseClient).mockReturnValue(mockSupabaseClient);
   });
 
   it('should create an order from a checkout session', async () => {
@@ -75,13 +92,14 @@ describe('Order Create API', () => {
 
     // Assert
     expect(mockGetCheckoutSession).toHaveBeenCalledWith('checkout-123');
-    expect(mockCreateOrderFromCheckout).toHaveBeenCalledWith(
+    expect(createOrderFromCheckout).toHaveBeenCalledWith(
       mockCheckout,
       'pi-123',
       undefined,
       'stripe',
-      expect.anything() // supabase client
+      mockSupabaseClient // Mock supabase client
     );
+
     expect(response.status).toBe(200);
     expect(data).toEqual({
       success: true,
@@ -113,7 +131,7 @@ describe('Order Create API', () => {
 
   it('should return 404 if checkout is not found', async () => {
     // Arrange - checkout session is null
-    mockGetCheckoutSession.mockResolvedValue(null);
+    mockGetCheckoutSession.mockResolvedValueOnce(null);
 
     const formData = new FormData();
     formData.append('checkoutId', 'non-existent');
@@ -136,7 +154,7 @@ describe('Order Create API', () => {
 
   it('should return 403 if user does not have access to the checkout', async () => {
     // Arrange - different user
-    mockRequireAuth.mockImplementationOnce(() => ({
+    vi.mocked(requireAuth).mockImplementationOnce(() => ({
       user: { id: 'different-user', email: 'different@example.com' },
       response: new Response(),
     }));
@@ -161,11 +179,17 @@ describe('Order Create API', () => {
   });
 
   it('should allow access for guest checkout (no user ID)', async () => {
-    // Arrange - checkout has null userId
-    mockGetCheckoutSession.mockResolvedValue({
+    // Create a guest checkout session (no userId)
+    const guestCheckout = {
       ...mockCheckout,
       userId: null,
-    });
+    };
+
+    // Mock the getCheckoutSession to return a guest checkout
+    mockGetCheckoutSession.mockResolvedValueOnce(guestCheckout);
+
+    // Ensure createOrderFromCheckout returns a valid order
+    vi.mocked(createOrderFromCheckout).mockResolvedValueOnce(mockOrder);
 
     const formData = new FormData();
     formData.append('checkoutId', 'checkout-123');
@@ -175,12 +199,22 @@ describe('Order Create API', () => {
       body: formData,
     });
 
-    // Act
-    const response = await action({ request, params: {}, context: {} });
-    await response.json();
+    try {
+      // Act
+      const response = await action({ request, params: {}, context: {} });
+      const data = await response.json();
 
-    // Assert
-    expect(response.status).toBe(200);
-    expect(mockCreateOrderFromCheckout).toHaveBeenCalled();
+      // Assert
+      expect(response.status).toBe(200);
+      expect(createOrderFromCheckout).toHaveBeenCalled();
+      expect(data).toEqual({
+        success: true,
+        orderId: 'order-123',
+        orderNumber: 'NO-20250315-ABCD',
+      });
+    } catch (error) {
+      console.error('Test failed with error:', error);
+      throw error;
+    }
   });
 });

@@ -122,7 +122,7 @@ describe('StripePaymentProvider', () => {
     const result = await provider.verifyPayment('pi_test123');
 
     expect(result.success).toBe(true);
-    expect(result.status).toBe('completed');
+    expect(result.status).toBe('paid');
     expect(result.paymentId).toBe('pi_test123');
   });
 

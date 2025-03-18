@@ -52,13 +52,6 @@ export type OrderStatus =
 
 // Payment status types
 export type PaymentStatus = DbPaymentStatus;
-/*  | 'pending'
-  | 'processing'
-  | 'completed'
-  | 'cancelled'
-  | 'failed'
-  | 'refunded'
-  | 'paid';*/
 
 // Order item type
 export interface OrderItem {
@@ -81,10 +74,9 @@ export interface OrderItem {
 // Order status history type
 export interface OrderStatusHistory {
   id?: string;
+  orderId: string;
   status: OrderStatus;
-  date: string;
-  note?: string;
-  notes?: string; // For backward compatibility
+  notes?: string;
   createdAt?: string;
   createdBy?: string;
 }

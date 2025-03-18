@@ -40,6 +40,7 @@ describe('OrderSummary', () => {
         name: 'Test Product 1',
         sku: 'TP1',
         quantity: 2,
+        price: 25.0,
         unitPrice: 25.0,
         totalPrice: 50.0,
         imageUrl: 'product1.jpg',
@@ -53,6 +54,7 @@ describe('OrderSummary', () => {
         name: 'Test Product 2',
         sku: 'TP2',
         quantity: 1,
+        price: 50.0,
         unitPrice: 50.0,
         totalPrice: 50.0,
         createdAt: '2025-03-15T12:00:00Z',
@@ -150,7 +152,7 @@ describe('OrderSummary', () => {
       ...mockOrder,
       metadata: {
         tracking: {
-          number: '1Z999AA10123456784',
+          trackingNumber: '1Z999AA10123456784',
           carrier: 'UPS',
           url: 'https://www.ups.com/track?tracknum=1Z999AA10123456784',
         },

@@ -45,18 +45,35 @@ export function exportOrder(
   order: Order,
   options: Partial<OrderExportOptions> = {}
 ): string | Buffer {
-  // Merge with default options
-  const mergedOptions: OrderExportOptions = { ...DEFAULT_OPTIONS, ...options };
+  if (!order) {
+    throw new Error('Order cannot be null or undefined');
+  }
 
-  switch (mergedOptions.format) {
-    case 'csv':
-      return exportOrderToCsv(order, mergedOptions);
-    case 'json':
-      return exportOrderToJson(order, mergedOptions);
-    case 'excel':
-      return exportOrderToExcel(order, mergedOptions);
-    default:
-      throw new Error(`Unsupported export format: ${mergedOptions.format}`);
+  try {
+    // Merge with default options
+    const mergedOptions: OrderExportOptions = { ...DEFAULT_OPTIONS, ...options };
+    console.log('exportOrder called with format:', mergedOptions.format);
+
+    // For JSON format, use direct JSON exporter for maximum reliability
+    if (mergedOptions.format === 'json') {
+      return exportOrderDirectToJson(order, mergedOptions);
+    }
+
+    switch (mergedOptions.format) {
+      case 'csv':
+        return exportOrderToCsv(order, mergedOptions);
+      case 'excel':
+        return exportOrderToExcel(order, mergedOptions);
+      default:
+        throw new Error(`Unsupported export format: ${mergedOptions.format}`);
+    }
+  } catch (error) {
+    console.error('Error in exportOrder:', error);
+    console.error('Order:', order ? `ID: ${order.id}, Type: ${typeof order}` : 'null');
+    console.error('Options:', options);
+    throw new Error(
+      `Failed to export order: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -67,18 +84,126 @@ export function exportOrders(
   orders: Order[],
   options: Partial<OrderExportOptions> = {}
 ): string | Buffer {
-  // Merge with default options
-  const mergedOptions: OrderExportOptions = { ...DEFAULT_OPTIONS, ...options };
+  if (!orders || !Array.isArray(orders)) {
+    throw new Error('Orders must be a valid array');
+  }
 
-  switch (mergedOptions.format) {
-    case 'csv':
-      return exportOrdersToCsv(orders, mergedOptions);
-    case 'json':
-      return exportOrdersToJson(orders, mergedOptions);
-    case 'excel':
-      return exportOrdersToExcel(orders, mergedOptions);
-    default:
-      throw new Error(`Unsupported export format: ${mergedOptions.format}`);
+  try {
+    // Merge with default options
+    const mergedOptions: OrderExportOptions = { ...DEFAULT_OPTIONS, ...options };
+
+    switch (mergedOptions.format) {
+      case 'csv':
+        return exportOrdersToCsv(orders, mergedOptions);
+      case 'json':
+        return exportOrdersToJson(orders, mergedOptions);
+      case 'excel':
+        return exportOrdersToExcel(orders, mergedOptions);
+      default:
+        throw new Error(`Unsupported export format: ${mergedOptions.format}`);
+    }
+  } catch (error) {
+    console.error('Error in exportOrders:', error);
+    console.error('Orders count:', orders ? orders.length : 'null');
+    console.error('Options:', options);
+    throw new Error(
+      `Failed to export orders: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
+}
+
+/**
+ * Export an order directly to JSON
+ * This is a simpler, focused implementation for the JSON export case
+ */
+export function exportOrderDirectToJson(
+  order: Order,
+  options: Partial<OrderExportOptions> = { includeStatusHistory: true }
+): string {
+  if (!order) {
+    throw new Error('Order cannot be null or undefined');
+  }
+
+  try {
+    // Merge with default options
+    const mergedOptions: OrderExportOptions = { ...DEFAULT_OPTIONS, ...options };
+
+    // Create a clean copy with all fields
+    const cleanOrder: Record<string, string | number | boolean | object | undefined> = {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      email: order.email,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      totalAmount: order.totalAmount,
+      subtotalAmount: order.subtotalAmount,
+      taxAmount: order.taxAmount,
+      shippingCost: order.shippingCost,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      notes: order.notes,
+    };
+
+    // Include items based on options
+    if (mergedOptions.includeItems !== false && order.items && Array.isArray(order.items)) {
+      cleanOrder.items = order.items.map(item => ({
+        id: item.id,
+        productId: item.productId,
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        sku: item.sku,
+        orderId: item.orderId,
+      }));
+    }
+
+    // Include addresses based on options
+    if (mergedOptions.includeAddresses !== false) {
+      if (order.shippingAddress) {
+        cleanOrder.shippingAddress = { ...order.shippingAddress };
+      }
+
+      if (order.billingAddress) {
+        cleanOrder.billingAddress = { ...order.billingAddress };
+      }
+    }
+
+    // Include payment info based on options
+    if (mergedOptions.includePaymentInfo !== false) {
+      if (order.paymentIntentId) cleanOrder.paymentIntentId = order.paymentIntentId;
+      if (order.paymentMethodId) cleanOrder.paymentMethodId = order.paymentMethodId;
+      if (order.paymentProvider) cleanOrder.paymentProvider = order.paymentProvider;
+    }
+
+    // Include status history based on options
+    if (
+      mergedOptions.includeStatusHistory !== false &&
+      order.statusHistory &&
+      Array.isArray(order.statusHistory)
+    ) {
+      cleanOrder.statusHistory = order.statusHistory.map(history => ({
+        id: history.id,
+        orderId: history.orderId,
+        status: history.status,
+        notes: history.notes,
+        createdAt: history.createdAt,
+      }));
+    }
+
+    // Include other relevant fields
+    if (order.userId) cleanOrder.userId = order.userId;
+    if (order.shippingMethod) cleanOrder.shippingMethod = order.shippingMethod;
+    if (order.checkoutSessionId) cleanOrder.checkoutSessionId = order.checkoutSessionId;
+    if (order.cartId) cleanOrder.cartId = order.cartId;
+
+    // Simple JSON stringification without risking circular references
+    return JSON.stringify(cleanOrder, null, 2);
+  } catch (error) {
+    console.error('Error in exportOrderDirectToJson:', error);
+    throw new Error(
+      `Failed to export order to JSON: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -86,6 +211,9 @@ export function exportOrders(
  * Export a single order to CSV format
  */
 function exportOrderToCsv(order: Order, options: OrderExportOptions): string {
+  if (!order) {
+    throw new Error('Order cannot be null or undefined');
+  }
   // For a single order, we'll create a CSV with two sections:
   // 1. Order header data
   // 2. Order items (if includeItems is true)
@@ -174,8 +302,8 @@ function exportOrderToCsv(order: Order, options: OrderExportOptions): string {
 
     order.statusHistory.forEach(history => {
       // Use date or createdAt (or fallback to current date)
-      const dateToUse = history.date || history.createdAt || new Date().toISOString();
-      const notesToUse = history.notes || history.note || '';
+      const dateToUse = history.createdAt || new Date().toISOString();
+      const notesToUse = history.notes || '';
       csv += `${formatDate(dateToUse, options.dateFormat)},${history.status},${notesToUse}\n`;
     });
   }
@@ -187,6 +315,9 @@ function exportOrderToCsv(order: Order, options: OrderExportOptions): string {
  * Export multiple orders to CSV format
  */
 function exportOrdersToCsv(orders: Order[], options: OrderExportOptions): string {
+  if (!orders || !Array.isArray(orders)) {
+    throw new Error('Orders must be a valid array');
+  }
   // For multiple orders, we'll create a more tabular format
   // with one row per order and optionally additional rows for items
 
@@ -269,66 +400,178 @@ function exportOrdersToCsv(orders: Order[], options: OrderExportOptions): string
  * Export a single order to JSON format
  */
 function exportOrderToJson(order: Order, options: OrderExportOptions): string {
-  // Create a copy of the order to modify
-  const exportOrder = { ...order };
-
-  // Remove sections if not requested
-  if (!options.includeItems) {
-    exportOrder.items = [];
+  if (!order) {
+    throw new Error('Order cannot be null or undefined');
   }
 
-  if (!options.includeAddresses) {
-    delete exportOrder.shippingAddress;
-    delete exportOrder.billingAddress;
-  }
+  try {
+    console.log('exportOrderToJson called with format:', options.format);
+    console.log('includeStatusHistory option:', options.includeStatusHistory);
 
-  if (!options.includePaymentInfo) {
-    delete exportOrder.paymentIntentId;
-    delete exportOrder.paymentMethodId;
-    delete exportOrder.paymentProvider;
-  }
+    // Create a clean copy without potential circular references
+    const cleanOrder: Record<string, unknown> = {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      email: order.email,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      totalAmount: order.totalAmount,
+      subtotalAmount: order.subtotalAmount,
+      taxAmount: order.taxAmount,
+      shippingCost: order.shippingCost,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
 
-  if (!options.includeStatusHistory) {
-    delete exportOrder.statusHistory;
-  }
+    // Include additional fields based on options
+    if (options.includeItems !== false && order.items && Array.isArray(order.items)) {
+      cleanOrder.items = order.items.map(item => ({
+        id: item.id,
+        productId: item.productId,
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        sku: item.sku,
+        orderId: item.orderId,
+      }));
+    }
 
-  // Return formatted JSON
-  return JSON.stringify(exportOrder, null, 2);
+    if (options.includeAddresses !== false) {
+      if (order.shippingAddress) {
+        cleanOrder.shippingAddress = { ...order.shippingAddress };
+      }
+
+      if (order.billingAddress) {
+        cleanOrder.billingAddress = { ...order.billingAddress };
+      }
+    }
+
+    if (options.includePaymentInfo !== false) {
+      if (order.paymentIntentId) cleanOrder.paymentIntentId = order.paymentIntentId;
+      if (order.paymentMethodId) cleanOrder.paymentMethodId = order.paymentMethodId;
+      if (order.paymentProvider) cleanOrder.paymentProvider = order.paymentProvider;
+    }
+
+    // For JSON format, include status history by default unless explicitly disabled
+    if (
+      (options.format === 'json'
+        ? options.includeStatusHistory !== false
+        : options.includeStatusHistory === true) &&
+      order.statusHistory &&
+      Array.isArray(order.statusHistory)
+    ) {
+      cleanOrder.statusHistory = order.statusHistory.map(history => ({
+        id: history.id,
+        orderId: history.orderId,
+        status: history.status,
+        notes: history.notes,
+        createdAt: history.createdAt,
+      }));
+    }
+
+    // Simple JSON stringification without risking circular references
+    return JSON.stringify(cleanOrder, null, 2);
+  } catch (error) {
+    console.error('Error processing order for JSON export:', error);
+    console.error('Order type:', typeof order);
+    console.error('Order ID:', order.id);
+    throw new Error(
+      `Failed to export order to JSON: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
 }
 
 /**
  * Export multiple orders to JSON format
  */
 function exportOrdersToJson(orders: Order[], options: OrderExportOptions): string {
-  // Process each order according to the options
-  const exportOrders = orders.map(order => {
-    const exportOrder = { ...order };
+  if (!orders || !Array.isArray(orders)) {
+    throw new Error('Orders must be a valid array');
+  }
 
-    // Remove sections if not requested
-    if (!options.includeItems) {
-      exportOrder.items = [];
-    }
+  try {
+    // Process each order into a clean format without circular references
+    const cleanOrders = orders.map(order => {
+      if (!order) {
+        throw new Error('Order in the array cannot be null or undefined');
+      }
 
-    if (!options.includeAddresses) {
-      delete exportOrder.shippingAddress;
-      delete exportOrder.billingAddress;
-    }
+      // Create a clean object for each order
+      const cleanOrder: Record<string, unknown> = {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        email: order.email,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        totalAmount: order.totalAmount,
+        subtotalAmount: order.subtotalAmount,
+        taxAmount: order.taxAmount,
+        shippingCost: order.shippingCost,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      };
 
-    if (!options.includePaymentInfo) {
-      delete exportOrder.paymentIntentId;
-      delete exportOrder.paymentMethodId;
-      delete exportOrder.paymentProvider;
-    }
+      // Include additional fields based on options
+      if (options.includeItems !== false && order.items && Array.isArray(order.items)) {
+        cleanOrder.items = order.items.map(item => ({
+          id: item.id,
+          productId: item.productId,
+          name: item.name,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+          sku: item.sku,
+          orderId: item.orderId,
+        }));
+      }
 
-    if (!options.includeStatusHistory) {
-      delete exportOrder.statusHistory;
-    }
+      if (options.includeAddresses !== false) {
+        if (order.shippingAddress) {
+          cleanOrder.shippingAddress = { ...order.shippingAddress };
+        }
 
-    return exportOrder;
-  });
+        if (order.billingAddress) {
+          cleanOrder.billingAddress = { ...order.billingAddress };
+        }
+      }
 
-  // Return formatted JSON
-  return JSON.stringify(exportOrders, null, 2);
+      if (options.includePaymentInfo !== false) {
+        if (order.paymentIntentId) cleanOrder.paymentIntentId = order.paymentIntentId;
+        if (order.paymentMethodId) cleanOrder.paymentMethodId = order.paymentMethodId;
+        if (order.paymentProvider) cleanOrder.paymentProvider = order.paymentProvider;
+      }
+
+      // For JSON format, include status history by default unless explicitly disabled
+      if (
+        (options.format === 'json'
+          ? options.includeStatusHistory !== false
+          : options.includeStatusHistory === true) &&
+        order.statusHistory &&
+        Array.isArray(order.statusHistory)
+      ) {
+        cleanOrder.statusHistory = order.statusHistory.map(history => ({
+          id: history.id,
+          orderId: history.orderId,
+          status: history.status,
+          notes: history.notes,
+          createdAt: history.createdAt,
+        }));
+      }
+
+      return cleanOrder;
+    });
+
+    // Simple JSON stringification
+    return JSON.stringify(cleanOrders, null, 2);
+  } catch (error) {
+    console.error('Error processing orders for JSON export:', error);
+    console.error('Orders type:', typeof orders);
+    console.error('Orders length:', orders ? orders.length : 'null');
+    throw new Error(
+      `Failed to export orders to JSON: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
 }
 
 /**
@@ -336,15 +579,26 @@ function exportOrdersToJson(orders: Order[], options: OrderExportOptions): strin
  * Note: In a real implementation, this would use a library like ExcelJS
  */
 function exportOrderToExcel(order: Order, options: OrderExportOptions): Buffer {
-  // This is a placeholder. In a real implementation, you would:
-  // 1. Create an Excel workbook with ExcelJS
-  // 2. Add worksheets for the order and items
-  // 3. Format them nicely
-  // 4. Return the workbook as a buffer
+  if (!order) {
+    throw new Error('Order cannot be null or undefined');
+  }
 
-  // For simplicity in this example, we'll just convert to JSON and return as buffer
-  const json = exportOrderToJson(order, options);
-  return Buffer.from(`Excel format not implemented. JSON data:\n${json}`);
+  try {
+    // This is a placeholder. In a real implementation, you would:
+    // 1. Create an Excel workbook with ExcelJS
+    // 2. Add worksheets for the order and items
+    // 3. Format them nicely
+    // 4. Return the workbook as a buffer
+
+    // For simplicity in this example, we'll just convert to JSON and return as buffer
+    const json = exportOrderToJson(order, options);
+    return Buffer.from(`Excel format not implemented. JSON data:\n${json}`);
+  } catch (error) {
+    console.error('Error creating Excel export for order:', error);
+    return Buffer.from(
+      `Error creating Excel export: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
 }
 
 /**
@@ -352,13 +606,24 @@ function exportOrderToExcel(order: Order, options: OrderExportOptions): Buffer {
  * Note: In a real implementation, this would use a library like ExcelJS
  */
 function exportOrdersToExcel(orders: Order[], options: OrderExportOptions): Buffer {
-  // This is a placeholder. In a real implementation, you would:
-  // 1. Create an Excel workbook with ExcelJS
-  // 2. Add worksheets for orders and items
-  // 3. Format them nicely
-  // 4. Return the workbook as a buffer
+  if (!orders || !Array.isArray(orders)) {
+    throw new Error('Orders must be a valid array');
+  }
 
-  // For simplicity in this example, we'll just convert to JSON and return as buffer
-  const json = exportOrdersToJson(orders, options);
-  return Buffer.from(`Excel format not implemented. JSON data:\n${json}`);
+  try {
+    // This is a placeholder. In a real implementation, you would:
+    // 1. Create an Excel workbook with ExcelJS
+    // 2. Add worksheets for orders and items
+    // 3. Format them nicely
+    // 4. Return the workbook as a buffer
+
+    // For simplicity in this example, we'll just convert to JSON and return as buffer
+    const json = exportOrdersToJson(orders, options);
+    return Buffer.from(`Excel format not implemented. JSON data:\n${json}`);
+  } catch (error) {
+    console.error('Error creating Excel export for orders:', error);
+    return Buffer.from(
+      `Error creating Excel export: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
 }

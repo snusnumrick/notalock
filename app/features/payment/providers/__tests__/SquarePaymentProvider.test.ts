@@ -1,10 +1,10 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { SquarePaymentProvider } from '../SquarePaymentProvider';
-import { Client } from 'square';
+import { SquareClient } from 'square';
 
 // Mock the Square client
 vi.mock('square', () => ({
-  Client: vi.fn().mockImplementation(() => ({
+  SquareClient: vi.fn().mockImplementation(() => ({
     locationsApi: {
       retrieveLocation: vi.fn().mockResolvedValue({
         result: {
@@ -71,7 +71,7 @@ vi.mock('square', () => ({
       }),
     },
   })),
-  Environment: {
+  SquareEnvironment: {
     Production: 'production',
     Sandbox: 'sandbox',
   },
@@ -101,7 +101,7 @@ describe('SquarePaymentProvider', () => {
     });
 
     expect(result).toBe(true);
-    expect(Client).toHaveBeenCalled();
+    expect(SquareClient).toHaveBeenCalled();
   });
 
   test('should create a payment intent', async () => {

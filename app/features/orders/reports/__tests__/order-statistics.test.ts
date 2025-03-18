@@ -38,20 +38,26 @@ describe('Order Statistics', () => {
         totalAmount: 100,
         items: [
           {
+            id: 'item-1',
+            orderId: 'order-1',
             productId: 'product-1',
             name: 'Product 1',
             sku: 'P1',
             quantity: 2,
             unitPrice: 25,
             totalPrice: 50,
+            price: 25,
           },
           {
+            id: 'item-2',
+            orderId: 'order-1',
             productId: 'product-2',
             name: 'Product 2',
             sku: 'P2',
             quantity: 1,
             unitPrice: 50,
             totalPrice: 50,
+            price: 50,
           },
         ],
       }),
@@ -63,12 +69,15 @@ describe('Order Statistics', () => {
         totalAmount: 125,
         items: [
           {
+            id: 'item-3',
+            orderId: 'order-2',
             productId: 'product-3',
             name: 'Product 3',
             sku: 'P3',
             quantity: 1,
             unitPrice: 125,
             totalPrice: 125,
+            price: 125,
           },
         ],
       }),
@@ -82,12 +91,15 @@ describe('Order Statistics', () => {
         totalAmount: 75,
         items: [
           {
+            id: 'item-4',
+            orderId: 'order-3',
             productId: 'product-1',
             name: 'Product 1',
             sku: 'P1',
             quantity: 3,
             unitPrice: 25,
             totalPrice: 75,
+            price: 25,
           },
         ],
       }),
@@ -101,12 +113,15 @@ describe('Order Statistics', () => {
         totalAmount: 50,
         items: [
           {
+            id: 'item-5',
+            orderId: 'order-4',
             productId: 'product-2',
             name: 'Product 2',
             sku: 'P2',
             quantity: 1,
             unitPrice: 50,
             totalPrice: 50,
+            price: 50,
           },
         ],
       }),
@@ -120,12 +135,15 @@ describe('Order Statistics', () => {
         totalAmount: 150,
         items: [
           {
+            id: 'item-6',
+            orderId: 'order-5',
             productId: 'product-4',
             name: 'Product 4',
             sku: 'P4',
             quantity: 1,
             unitPrice: 150,
             totalPrice: 150,
+            price: 150,
           },
         ],
       }),
@@ -139,12 +157,15 @@ describe('Order Statistics', () => {
         totalAmount: 200,
         items: [
           {
+            id: 'item-7',
+            orderId: 'order-6',
             productId: 'product-5',
             name: 'Product 5',
             sku: 'P5',
             quantity: 2,
             unitPrice: 100,
             totalPrice: 200,
+            price: 100,
           },
         ],
       }),
@@ -164,7 +185,12 @@ describe('Order Statistics', () => {
       static now() {
         return mockReferenceDate.getTime();
       }
-    };
+
+      // Add implementation for Date() without 'new'
+      static toString() {
+        return new originalDate(mockReferenceDate).toString();
+      }
+    } as unknown as DateConstructor;
   });
 
   afterEach(() => {

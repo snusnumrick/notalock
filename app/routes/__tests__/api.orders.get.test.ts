@@ -104,7 +104,7 @@ describe('Order Get API', () => {
     // Setup mock implementations
     (getOrderById as jest.Mock).mockResolvedValue(mockOrder);
     (getUserOrders as jest.Mock).mockResolvedValue(mockOrders);
-    (requireAuth as jest.Mock).mockResolvedValue(mockUser);
+    (requireAuth as jest.Mock).mockResolvedValue({ user: mockUser, response: new Response() });
 
     // Import the loader function
     await importLoader();
@@ -123,7 +123,8 @@ describe('Order Get API', () => {
       expect(requireAuth).toHaveBeenCalledWith(request);
       expect(getUserOrders).toHaveBeenCalledWith(mockUser.id);
       expect(response.status).toBe(200);
-      expect(data).toEqual({ orders: mockOrders });
+      const { orders } = data;
+      expect(orders).toEqual(mockOrders);
     });
   });
 
@@ -178,7 +179,10 @@ describe('Order Get API', () => {
         email: 'different@example.com',
       };
 
-      (requireAuth as jest.Mock).mockResolvedValue(differentUser);
+      (requireAuth as jest.Mock).mockResolvedValue({
+        user: differentUser,
+        response: new Response(),
+      });
 
       const request = new Request('http://localhost/api/orders/order-123');
 

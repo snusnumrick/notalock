@@ -1,3 +1,4 @@
+import { validateOrderCreation, validateOrderUpdate } from '../utils/order-validator';
 import { type SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -62,6 +63,9 @@ export class OrderService {
    * Create a new order
    */
   async createOrder(input: OrderCreateInput): Promise<Order> {
+    // Validate the input
+    validateOrderCreation(input);
+
     // Generate a unique order ID and order number
     const orderId = uuidv4();
     const orderNumber = this.generateOrderNumber();
@@ -318,7 +322,7 @@ export class OrderService {
       }
 
       if (options.email) {
-        query = query.eq('guest_email', options.email);
+        query = query.eq('email', options.email);
       }
 
       if (options.status) {
@@ -353,10 +357,10 @@ export class OrderService {
         query = query.lte('total_amount', options.maxAmount);
       }
 
-      // Add search query logic for order_number or guest_email
+      // Add search query logic for order_number or email
       if (options.searchQuery) {
         query = query.or(
-          `order_number.ilike.%${options.searchQuery}%,guest_email.ilike.%${options.searchQuery}%`
+          `order_number.ilike.%${options.searchQuery}%,email.ilike.%${options.searchQuery}%`
         );
       }
 
@@ -404,6 +408,12 @@ export class OrderService {
    */
   async updateOrder(orderId: string, input: OrderUpdateInput): Promise<Order> {
     try {
+      // First, get the current order to validate status transitions
+      const currentOrder = await this.getOrderById(orderId);
+
+      // Validate the update input against current state
+      validateOrderUpdate(input, currentOrder.status, currentOrder.paymentStatus);
+
       // Prepare the update data
       const updateData: Record<string, unknown> = {
         updated_at: new Date().toISOString(),

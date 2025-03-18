@@ -5,7 +5,7 @@
  */
 
 import type Stripe from 'stripe';
-import { PaymentResult } from '../types';
+import { PaymentResult, PaymentStatus } from '../types';
 import { updateOrderStatusFromPayment } from '~/features/orders/api/actions.server';
 
 /**
@@ -170,6 +170,15 @@ export async function handleStripeWebhookForOrder(event: Stripe.Event): Promise<
 
   // If we have a payment result with an order reference, update the order
   if (paymentResult && paymentResult.orderReference) {
-    await updateOrderStatusFromPayment(paymentResult.orderReference, paymentResult);
+    // Map Stripe payment status to order status
+    const orderStatus = paymentResult.status === 'paid' ? 'completed' : paymentResult.status;
+
+    // Add the order status to the payment result
+    const paymentResultWithStatus: PaymentResult = {
+      ...paymentResult,
+      status: orderStatus as PaymentStatus,
+    };
+
+    await updateOrderStatusFromPayment(paymentResult.orderReference, paymentResultWithStatus);
   }
 }

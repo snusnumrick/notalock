@@ -4,8 +4,14 @@ import { mockDeep } from 'vitest-mock-extended';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { type OrderCreateInput, type OrderUpdateInput } from '../../types';
 
+// Extend SupabaseClient type to include our custom flags
+type ExtendedSupabaseClient = SupabaseClient & {
+  _isDetailedQuery?: boolean;
+  _getCounter?: number;
+};
+
 // Mock Supabase client
-const mockSupabaseClient = mockDeep<SupabaseClient>();
+const mockSupabaseClient = mockDeep<ExtendedSupabaseClient>();
 
 describe('Order Data Validation', () => {
   let orderService: OrderService;
@@ -16,19 +22,69 @@ describe('Order Data Validation', () => {
 
     // Reset the mock implementation
     mockSupabaseClient.from.mockClear();
+    mockSupabaseClient._isDetailedQuery = false;
 
     // Setup successful mock responses
     mockSupabaseClient.from.mockImplementation(table => {
       if (table === 'orders') {
-        return {
-          insert: vi.fn().mockReturnThis(),
-          update: vi.fn().mockReturnThis(),
-          select: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({ data: {}, error: null }),
-        } as any;
+        if (mockSupabaseClient._isDetailedQuery) {
+          // For detailed queries (e.g., getOrderById)
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: {
+                id: 'order-123',
+                order_number: 'NO-123',
+                email: 'test@example.com',
+                status: 'pending',
+                payment_status: 'pending',
+                shipping_cost: 10,
+                tax_amount: 5,
+                subtotal_amount: 100,
+                total_amount: 115,
+                created_at: '2025-03-15T12:00:00Z',
+                updated_at: '2025-03-15T12:00:00Z',
+              },
+              error: null,
+            }),
+          } as any;
+        } else {
+          // For basic queries (list, insert, update)
+          mockSupabaseClient._isDetailedQuery = true; // Set flag for next query
+          return {
+            insert: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: {
+                id: 'order-123',
+                order_number: 'NO-123',
+                status: 'pending',
+                payment_status: 'pending',
+              },
+              error: null,
+            }),
+          } as any;
+        }
       } else if (table === 'order_items') {
         return {
           insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({
+            data: [],
+            error: null,
+          }),
+        } as any;
+      } else if (table === 'order_status_history') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockResolvedValue({
+            data: [],
+            error: null,
+          }),
         } as any;
       } else if (table === 'carts') {
         return {
@@ -333,14 +389,33 @@ describe('Order Data Validation', () => {
         if (table === 'orders') {
           return {
             select: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: {
                 id: 'order-123',
                 status: 'completed', // Already completed
+                payment_status: 'paid',
                 created_at: '2025-03-15T12:00:00Z',
                 updated_at: '2025-03-15T12:00:00Z',
               },
+              error: null,
+            }),
+          } as any;
+        } else if (table === 'order_items') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({
+              data: [],
+              error: null,
+            }),
+          } as any;
+        } else if (table === 'order_status_history') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockResolvedValue({
+              data: [],
               error: null,
             }),
           } as any;
@@ -365,14 +440,33 @@ describe('Order Data Validation', () => {
         if (table === 'orders') {
           return {
             select: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: {
                 id: 'order-123',
+                status: 'completed',
                 payment_status: 'paid', // Already paid
                 created_at: '2025-03-15T12:00:00Z',
                 updated_at: '2025-03-15T12:00:00Z',
               },
+              error: null,
+            }),
+          } as any;
+        } else if (table === 'order_items') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({
+              data: [],
+              error: null,
+            }),
+          } as any;
+        } else if (table === 'order_status_history') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockResolvedValue({
+              data: [],
               error: null,
             }),
           } as any;
@@ -395,32 +489,47 @@ describe('Order Data Validation', () => {
       // Arrange - Mock the order with current status
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
-          const getOrderSpy = vi
-            .fn()
-            .mockResolvedValueOnce({
-              data: {
-                id: 'order-123',
-                status: 'pending', // Current status
-                created_at: '2025-03-15T12:00:00Z',
-                updated_at: '2025-03-15T12:00:00Z',
-              },
-              error: null,
-            })
-            .mockResolvedValueOnce({
-              data: {
-                id: 'order-123',
-                status: 'processing', // Updated status
-                created_at: '2025-03-15T12:00:00Z',
-                updated_at: '2025-03-15T12:30:00Z',
-              },
-              error: null,
-            });
+          // Use a counter to track which call to single we're on
+          if (!mockSupabaseClient._getCounter) {
+            mockSupabaseClient._getCounter = 0;
+          }
 
           return {
             select: vi.fn().mockReturnThis(),
             update: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
-            single: getOrderSpy,
+            single: vi.fn().mockImplementation(() => {
+              mockSupabaseClient._getCounter++;
+
+              // First call is for validation, return pending
+              if (mockSupabaseClient._getCounter === 1) {
+                return Promise.resolve({
+                  data: {
+                    id: 'order-123',
+                    status: 'pending', // Current status
+                    payment_status: 'pending',
+                    created_at: '2025-03-15T12:00:00Z',
+                    updated_at: '2025-03-15T12:00:00Z',
+                    guest_email: 'test@example.com',
+                  },
+                  error: null,
+                });
+              }
+              // Second call is after update, return processing
+              else {
+                return Promise.resolve({
+                  data: {
+                    id: 'order-123',
+                    status: 'processing', // Updated status
+                    payment_status: 'pending',
+                    created_at: '2025-03-15T12:00:00Z',
+                    updated_at: '2025-03-15T12:30:00Z',
+                    guest_email: 'test@example.com',
+                  },
+                  error: null,
+                });
+              }
+            }),
           } as any;
         } else if (table === 'order_items') {
           return {
@@ -442,6 +551,9 @@ describe('Order Data Validation', () => {
         }
         return mockSupabaseClient;
       });
+
+      // Reset counter before the test
+      mockSupabaseClient._getCounter = 0;
 
       // Setup valid transition
       const validTransition = {

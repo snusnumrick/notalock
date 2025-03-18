@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { OrderDetail } from '../OrderDetail';
-import { type Order, OrderStatus, PaymentStatus } from '../../../types';
+import { type Order, OrderStatus, OrderStatusHistory, PaymentStatus } from '../../../types';
 import { vi, beforeAll } from 'vitest';
 
 // Mock scrollIntoView which is missing from JSDOM
@@ -30,6 +30,22 @@ vi.mock('~/components/ui/badge', () => ({
   badgeVariants: () => 'mock-badge-variants-class',
 }));
 
+vi.mock('~/components/ui/label', () => ({
+  Label: ({ htmlFor, children }: any) => <label htmlFor={htmlFor}>{children}</label>,
+}));
+
+vi.mock('~/components/ui/textarea', () => ({
+  Textarea: ({ id, className, value, onChange, placeholder }: any) => (
+    <textarea
+      id={id}
+      className={className}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+    />
+  ),
+}));
+
 vi.mock('~/components/ui/card', () => ({
   Card: ({ className, children }: any) => <div className={className}>{children}</div>,
   CardHeader: ({ className, children }: any) => <div className={className}>{children}</div>,
@@ -39,11 +55,17 @@ vi.mock('~/components/ui/card', () => ({
 }));
 
 vi.mock('~/components/ui/button', () => ({
-  Button: ({ className, children, variant, onClick }: any) => (
-    <button className={`${className} ${variant || ''}`} onClick={onClick}>
-      {children}
-    </button>
-  ),
+  Button: ({ className, children, variant, onClick, asChild }: any) => {
+    // If asChild is true, return the children directly
+    if (asChild) {
+      return children;
+    }
+    return (
+      <button className={`${className} ${variant || ''}`} onClick={onClick}>
+        {children}
+      </button>
+    );
+  },
 }));
 
 vi.mock('~/components/ui/select', () => ({
@@ -53,13 +75,31 @@ vi.mock('~/components/ui/select', () => ({
     defaultValue,
     'aria-labelledby': ariaLabelledBy,
     id,
-  }: any) => (
-    <div data-testid="select-mock" onChange={e => onValueChange?.(e.target.value)}>
-      <select defaultValue={defaultValue} id={id} aria-labelledby={ariaLabelledBy}>
-        {children}
-      </select>
-    </div>
-  ),
+  }: any) => {
+    // Create a custom handler that can be called from tests
+    const handleValueChange = (e: any) => {
+      if (onValueChange) {
+        onValueChange(e.target.dataset.value);
+      }
+    };
+
+    return (
+      <div data-testid="select-mock" className="mock-select">
+        <select defaultValue={defaultValue} id={id} aria-labelledby={ariaLabelledBy}>
+          {children}
+        </select>
+        <div className="test-select-options">
+          {/* Create buttons for each value that we need in tests */}
+          <button data-value="completed" data-testid="option-completed" onClick={handleValueChange}>
+            Set Completed
+          </button>
+          <button data-value="paid" data-testid="option-paid" onClick={handleValueChange}>
+            Set Paid
+          </button>
+        </div>
+      </div>
+    );
+  },
   SelectContent: ({ children }: any) => <div>{children}</div>,
   SelectItem: ({ children, value }: any) => <option value={value}>{children}</option>,
   SelectTrigger: ({ children, 'aria-labelledby': ariaLabelledBy }: any) => (
@@ -164,6 +204,7 @@ describe('Admin OrderDetail', () => {
         quantity: 2,
         unitPrice: 25.0,
         totalPrice: 50.0,
+        price: 25.0,
         imageUrl: 'product1.jpg',
         options: [
           { name: 'Color', value: 'Blue' },
@@ -181,6 +222,9 @@ describe('Admin OrderDetail', () => {
         quantity: 1,
         unitPrice: 50.0,
         totalPrice: 50.0,
+        price: 50.0,
+        imageUrl: '',
+        options: [],
         createdAt: '2025-03-15T12:00:00Z',
         updatedAt: '2025-03-15T12:00:00Z',
       },
@@ -188,18 +232,16 @@ describe('Admin OrderDetail', () => {
     statusHistory: [
       {
         id: 'history-1',
-        orderId: 'order-123',
         status: 'pending',
         notes: 'Order created',
         createdAt: '2025-03-15T11:00:00Z',
-      },
+      } as OrderStatusHistory,
       {
         id: 'history-2',
-        orderId: 'order-123',
         status: 'processing',
         notes: 'Payment received',
         createdAt: '2025-03-15T12:00:00Z',
-      },
+      } as OrderStatusHistory,
     ],
     notes: 'Customer requested gift wrapping',
     createdAt: '2025-03-15T11:00:00Z',
@@ -460,22 +502,21 @@ describe('Admin OrderDetail', () => {
       />
     );
 
-    // Act - Find our mocked select and trigger change
-    const selectMocks = screen.getAllByTestId('select-mock');
-
-    // Use standard DOM event to trigger the change on our mocked component
-    // The first select mock is for order status
-    const selectElement = within(selectMocks[0]).getByRole('combobox');
-    fireEvent.change(selectElement, {
-      target: { value: 'completed' },
-    });
-
-    // Find and click the update button
+    // Act - First find the Update Status button to locate the right section
     const updateButton = screen.getByText('Update Status');
+    // Find the container that contains both the button and select options
+    const container = screen.getByTestId('order-status-container'); // Add this data-testid to your component
+    expect(container).toBeInTheDocument();
+
+    // Now find the button within this specific container
+    const completedOption = within(container).getByText('Set Completed');
+    fireEvent.click(completedOption);
+
+    // Click the update button
     fireEvent.click(updateButton);
 
     // Assert
-    expect(mockOnStatusChange).toHaveBeenCalledWith('completed', expect.any(Object));
+    expect(mockOnStatusChange).toHaveBeenCalledWith('completed', mockOrder.id);
   });
 
   it('calls onPaymentStatusChange when payment status is updated', () => {
@@ -489,22 +530,21 @@ describe('Admin OrderDetail', () => {
       />
     );
 
-    // Act - Find our mocked select and trigger change
-    const selectMocks = screen.getAllByTestId('select-mock');
-
-    // Use standard DOM event to trigger the change on our mocked component
-    // The second select mock is for payment status
-    const selectElement = within(selectMocks[1]).getByRole('combobox');
-    fireEvent.change(selectElement, {
-      target: { value: 'paid' },
-    });
-
-    // Find and click the update button
+    // Act - First find the Update Payment Status button to locate the right section
     const updateButton = screen.getByText('Update Payment Status');
+    // Find the container using testId instead of DOM traversal
+    const container = screen.getByTestId('payment-status-container'); // Make sure to add this data-testid to your component
+    expect(container).toBeInTheDocument();
+
+    // Now find the button within this specific container
+    const paidOption = within(container).getByText('Set Paid');
+    fireEvent.click(paidOption);
+
+    // Click the update button
     fireEvent.click(updateButton);
 
     // Assert
-    expect(mockOnPaymentStatusChange).toHaveBeenCalledWith('paid', expect.any(Object));
+    expect(mockOnPaymentStatusChange).toHaveBeenCalledWith('paid', mockOrder.id);
   });
 
   it('calls onAddNote when a new note is added', () => {
@@ -526,7 +566,7 @@ describe('Admin OrderDetail', () => {
     fireEvent.click(addButton);
 
     // Assert
-    expect(mockOnAddNote).toHaveBeenCalledWith('New test note', expect.any(Object));
+    expect(mockOnAddNote).toHaveBeenCalledWith('New test note', mockOrder.id);
   });
 
   it('provides a link to print invoice', () => {
@@ -543,10 +583,11 @@ describe('Admin OrderDetail', () => {
     // Assert - Check invoice link
     const printLink = screen.getByText('Print Invoice');
     expect(printLink).toBeInTheDocument();
-    expect(within(printLink).getByRole('link')).toHaveAttribute(
-      'href',
-      `/api/orders/${mockOrder.id}/invoice?print=true`
-    );
+
+    // Get the link directly using getByRole
+    const anchor = screen.getByRole('link', { name: /print invoice/i });
+    expect(anchor).toBeInTheDocument();
+    expect(anchor).toHaveAttribute('href', `/api/orders/${mockOrder.id}/invoice?print=true`);
   });
 
   it('provides a back button to return to orders list', () => {
@@ -563,6 +604,10 @@ describe('Admin OrderDetail', () => {
     // Assert - Check back button
     const backButton = screen.getByText('Back to Orders');
     expect(backButton).toBeInTheDocument();
-    expect(within(backButton).getByRole('link')).toHaveAttribute('href', '/admin/orders');
+
+    // Find the anchor by its role and text content
+    const anchor = screen.getByRole('link', { name: 'Back to Orders' });
+    expect(anchor).toBeInTheDocument();
+    expect(anchor).toHaveAttribute('href', '/admin/orders');
   });
 });

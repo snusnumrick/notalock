@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { createOrderFromCheckout } from '~/features/orders/api/integrations/checkoutIntegration';
-import { CartService } from '~/features/cart/api/cartService';
-import { getOrderService } from '~/features/orders/api/orderService';
-import { type CheckoutSession } from '~/features/checkout/types/checkout.types';
-import { type Order, OrderStatus, PaymentStatus } from '~/features/orders/types';
+import { createOrderFromCheckout } from '../../app/features/orders/api/integrations/checkoutIntegration';
+import { CartService } from '../../app/features/cart/api/cartService';
+import { type CheckoutSession } from '../../app/features/checkout/types/checkout.types';
+import { type Order, OrderStatus, getOrderService, PaymentStatus } from '../../app/features/orders';
 
 // Mock Supabase client
 vi.mock('@supabase/supabase-js', () => ({
@@ -42,7 +41,8 @@ describe('Order Creation Flow Integration Test', () => {
     id: 'checkout-123',
     cartId: 'cart-123',
     userId: 'user-123',
-    status: 'pending',
+    currentStep: 'shipping', // Added the missing required property
+    // Removing the status property as it's not part of the CheckoutSession type
     shippingAddress: {
       firstName: 'John',
       lastName: 'Doe',
@@ -52,6 +52,7 @@ describe('Order Creation Flow Integration Test', () => {
       postalCode: '12345',
       country: 'US',
       email: 'test@example.com',
+      phone: '555-123-4567',
     },
     billingAddress: {
       firstName: 'John',
@@ -62,13 +63,16 @@ describe('Order Creation Flow Integration Test', () => {
       postalCode: '12345',
       country: 'US',
       email: 'test@example.com',
+      phone: '555-123-4567',
     },
-    shippingMethod: 'Standard Shipping',
+    shippingMethod: 'standard', // Use lowercase enum value
     shippingOption: {
       id: 'standard',
       name: 'Standard Shipping',
       description: '3-5 business days',
       price: 10,
+      method: 'standard',
+      estimatedDelivery: '3-5 business days',
     },
     shippingCost: 10,
     tax: 5,
@@ -78,8 +82,8 @@ describe('Order Creation Flow Integration Test', () => {
       provider: 'stripe',
       type: 'card',
     },
-    created_at: '2025-03-15T11:30:00Z',
-    updated_at: '2025-03-15T11:30:00Z',
+    createdAt: '2025-03-15T11:30:00Z',
+    updatedAt: '2025-03-15T11:30:00Z',
   };
 
   const mockCartItems = [
@@ -136,6 +140,7 @@ describe('Order Creation Flow Integration Test', () => {
         quantity: 2,
         unitPrice: 25,
         totalPrice: 50,
+        price: 25, // Added the required price property
         imageUrl: 'image1.jpg',
         createdAt: '2025-03-15T12:00:00Z',
         updatedAt: '2025-03-15T12:00:00Z',
@@ -149,6 +154,7 @@ describe('Order Creation Flow Integration Test', () => {
         quantity: 1,
         unitPrice: 50,
         totalPrice: 50,
+        price: 50, // Added the required price property
         imageUrl: 'image2.jpg',
         createdAt: '2025-03-15T12:00:00Z',
         updatedAt: '2025-03-15T12:00:00Z',
@@ -221,7 +227,28 @@ describe('Order Creation Flow Integration Test', () => {
         userId: mockCheckoutSession.userId,
         email: mockCheckoutSession.shippingAddress?.email,
         cartId: mockCheckoutSession.cartId,
-        items: mockCartItems,
+        items: expect.arrayContaining([
+          expect.objectContaining({
+            product_id: 'product-1',
+            quantity: 2,
+            price: 25,
+            product: expect.objectContaining({
+              name: 'Product 1',
+              sku: 'SKU1',
+              image_url: 'image1.jpg',
+            }),
+          }),
+          expect.objectContaining({
+            product_id: 'product-2',
+            quantity: 1,
+            price: 50,
+            product: expect.objectContaining({
+              name: 'Product 2',
+              sku: 'SKU2',
+              image_url: 'image2.jpg',
+            }),
+          }),
+        ]),
         paymentIntentId,
         paymentMethodId: 'pm-123',
         paymentProvider: 'stripe',

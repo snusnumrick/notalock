@@ -225,7 +225,7 @@ describe('createPaymentErrorFromProvider', () => {
   test('should create a PaymentValidationError for invalid card details', () => {
     const error = createPaymentErrorFromProvider('stripe', 'invalid_card_number', 'Invalid card');
     expect(error instanceof PaymentValidationError).toBe(true);
-    expect(error.validationErrors).toHaveProperty('cardNumber');
+    expect((error as PaymentValidationError).validationErrors).toHaveProperty('cardNumber');
   });
 
   test('should create a PaymentValidationError for invalid expiry date', () => {
@@ -235,13 +235,13 @@ describe('createPaymentErrorFromProvider', () => {
       'Invalid expiry'
     );
     expect(error instanceof PaymentValidationError).toBe(true);
-    expect(error.validationErrors).toHaveProperty('expiryDate');
+    expect((error as PaymentValidationError).validationErrors).toHaveProperty('expiryDate');
   });
 
   test('should create a PaymentValidationError for invalid security code', () => {
     const error = createPaymentErrorFromProvider('stripe', 'incorrect_cvc', 'Invalid CVC');
     expect(error instanceof PaymentValidationError).toBe(true);
-    expect(error.validationErrors).toHaveProperty('cvv');
+    expect((error as PaymentValidationError).validationErrors).toHaveProperty('cvv');
   });
 
   test('should create a PaymentProcessingError for other error codes', () => {
