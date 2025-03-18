@@ -439,7 +439,7 @@ CREATE INDEX idx_order_status_history_order_id ON order_status_history(order_id)
 ### update_hero_banner_positions
 ```sql
 CREATE OR REPLACE FUNCTION update_hero_banner_positions(banner_ids UUID[])
-RETURNS void AS $
+RETURNS void AS $$
 DECLARE
     banner_id UUID;
     i INTEGER;
@@ -457,7 +457,7 @@ BEGIN
         WHERE id = banner_id;
     END LOOP;
 END;
-$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION update_hero_banner_positions(UUID[]) TO authenticated;
@@ -468,7 +468,7 @@ This function reorders hero banners by updating their positions based on the ord
 ### ensure_single_anonymous_cart
 ```sql
 CREATE OR REPLACE FUNCTION ensure_single_anonymous_cart()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     -- If inserting an anonymous cart, mark any existing active carts as 'merged'
     IF NEW.anonymous_id IS NOT NULL AND NEW.status = 'active' THEN
@@ -480,7 +480,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 ```
 
 This trigger function ensures that only one active cart exists per anonymous ID. If a new active cart is created with an existing anonymous ID, any previous active carts with the same anonymous ID are marked as 'merged'.
@@ -511,7 +511,7 @@ BEGIN
             created_by
         ) VALUES (
             NEW.id,
-            NEW.status,
+            NEW.status::order_status,
             'Status changed from ' || COALESCE(OLD.status::TEXT, 'NULL') || ' to ' || NEW.status::TEXT,
             auth.uid()
         );
@@ -521,7 +521,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-This function creates a status history entry whenever an order's status changes. It's triggered by updates to the `status` field in the `orders` table.
+This function creates a status history entry whenever an order's status changes. It's triggered by updates to the `status` field in the `orders` table. It uses explicit type casting with `::order_status` to ensure the status value is properly converted to the PostgreSQL enum type.
 
 ### log_initial_order_status
 ```sql
@@ -546,6 +546,42 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 This function logs the initial status when an order is created. It's triggered by inserts into the `orders` table.
 
+### update_order_status
+```sql
+CREATE OR REPLACE FUNCTION update_order_status(
+  order_id UUID,
+  new_status TEXT,
+  updated_timestamp TIMESTAMPTZ
+)
+RETURNS VOID AS $$
+DECLARE
+  current_status order_status;
+BEGIN
+  -- First get the current status to avoid triggering the history if status hasn't changed
+  SELECT status INTO current_status FROM orders WHERE id = order_id;
+  
+  -- Only update if the status has changed (convert new_status to order_status for comparison)
+  IF current_status IS NULL OR current_status::text != new_status THEN
+    
+    -- Update the order status with explicit type casting to order_status enum
+    UPDATE orders 
+    SET status = new_status::order_status, 
+        updated_at = updated_timestamp
+    WHERE id = order_id;
+    
+  ELSE
+    -- Just update the timestamp if status hasn't changed
+    UPDATE orders SET updated_at = updated_timestamp WHERE id = order_id;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Grant execute permissions to authenticated users
+GRANT EXECUTE ON FUNCTION update_order_status TO authenticated;
+```
+
+This function updates an order's status with proper type casting from text to the `order_status` enum type. It checks if the status actually changed before performing the update to avoid unnecessary triggers and history entries. The function uses explicit type casting with `::order_status` to handle PostgreSQL enum type safety.
+
 ### Cart Management RPC Functions
 
 #### add_to_cart
@@ -560,7 +596,7 @@ CREATE OR REPLACE FUNCTION public.add_to_cart(
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 DECLARE
   v_item_id UUID;
   v_now TIMESTAMP WITH TIME ZONE := CURRENT_TIMESTAMP;
@@ -622,7 +658,7 @@ BEGIN
     RETURN v_item_id;
   END IF;
 END;
-$;
+$$;
 ```
 
 This function adds an item to a cart, handling both new items and quantity updates for existing items. It returns the cart item ID.
@@ -636,7 +672,7 @@ CREATE OR REPLACE FUNCTION public.update_cart_item(
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 BEGIN
   -- Update the item quantity
   UPDATE cart_items
@@ -647,7 +683,7 @@ BEGIN
   
   RETURN FOUND;
 END;
-$;
+$$;
 ```
 
 This function updates the quantity of a cart item and returns whether the update was successful.
@@ -660,7 +696,7 @@ CREATE OR REPLACE FUNCTION public.remove_cart_item(
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 BEGIN
   -- Delete the item
   DELETE FROM cart_items
@@ -668,7 +704,7 @@ BEGIN
   
   RETURN FOUND;
 END;
-$;
+$$;
 ```
 
 This function removes an item from a cart and returns whether the deletion was successful.
@@ -681,7 +717,7 @@ CREATE OR REPLACE FUNCTION public.remove_cart_item_fixed(
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 DECLARE
   v_exists BOOLEAN;
   v_cart_id UUID;
@@ -716,7 +752,7 @@ BEGIN
   
   RETURN (v_exists > 0);
 END;
-$;
+$$;
 ```
 
 This enhanced version of the cart item removal function includes additional validation, diagnostics, and logging to make cart item removal more robust.
@@ -729,7 +765,7 @@ CREATE OR REPLACE FUNCTION public.force_delete_cart_item(
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 DECLARE
   v_exists BOOLEAN;
   v_product_id UUID;
@@ -757,7 +793,7 @@ BEGIN
   
   RETURN (v_exists > 0);
 END;
-$;
+$$;
 ```
 
 This function provides a forceful cart item removal option, bypassing most constraints and intended as a fallback when standard removal fails.
@@ -778,7 +814,7 @@ CREATE OR REPLACE FUNCTION public.list_cart_items(
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 BEGIN
   RETURN QUERY
   SELECT 
@@ -793,7 +829,7 @@ BEGIN
   WHERE cart_id = p_cart_id
   ORDER BY created_at DESC;
 END;
-$;
+$$;
 ```
 
 This function returns a detailed list of all items in a given cart, ordered by creation date.

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Order, OrderStatus, PaymentStatus } from '~/features/orders/types';
 import {
   Table,
@@ -31,8 +31,46 @@ interface OrdersTableProps {
  */
 export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersTableProps) {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [orderStatusOptions, setOrderStatusOptions] = useState<Record<string, OrderStatus[]>>({});
 
-  console.log('OrdersTable rendering with:', { orderCount: orders?.length, loading });
+  // Fetch available status transitions for each order
+  useEffect(() => {
+    if (!orders || !Array.isArray(orders) || orders.length === 0) {
+      return;
+    }
+
+    const fetchOrderStatusOptions = async () => {
+      const options: Record<string, OrderStatus[]> = {};
+
+      for (const order of orders) {
+        try {
+          const response = await fetch(`/api/orders/${order.id}/status`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.allowedTransitions && Array.isArray(data.allowedTransitions)) {
+              options[order.id] = data.allowedTransitions;
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching status options for order ${order.id}:`, error);
+        }
+      }
+
+      setOrderStatusOptions(options);
+    };
+
+    fetchOrderStatusOptions();
+  }, [orders]);
+
+  console.log('OrdersTable rendering with:', {
+    orderCount: orders?.length,
+    loading,
+    ordersArray: Array.isArray(orders),
+    orderItems: orders?.[0]?.items ? 'has items' : 'no items',
+    firstOrderSample: orders?.[0]
+      ? JSON.stringify(orders[0]).substring(0, 200) + '...'
+      : 'No orders',
+  });
 
   const toggleOrderDetails = (orderId: string) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
@@ -76,7 +114,11 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
 
   const handleStatusChange = (orderId: string, status: string) => {
     if (onStatusChange) {
-      onStatusChange(orderId, status as OrderStatus);
+      try {
+        onStatusChange(orderId, status as OrderStatus);
+      } catch (err) {
+        console.error('Error in handleStatusChange:', err);
+      }
     }
   };
 
@@ -85,12 +127,32 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
   }
 
   if (!orders || !Array.isArray(orders) || orders.length === 0) {
+    console.log('Rendering no orders found message');
     return (
       <div className="p-8 text-center">
         <p className="text-lg text-gray-500 mb-2">No orders found</p>
         <p className="text-sm text-gray-400">
           Orders will appear here once customers make purchases
         </p>
+      </div>
+    );
+  }
+
+  // Safety check for orders.map
+  try {
+    if (!orders.map) {
+      console.error('orders does not have map function:', orders);
+      return (
+        <div className="p-8 text-center">
+          <p className="text-lg text-red-500 mb-2">Error: Invalid orders data format</p>
+        </div>
+      );
+    }
+  } catch (err) {
+    console.error('Error checking orders:', err);
+    return (
+      <div className="p-8 text-center">
+        <p className="text-lg text-red-500 mb-2">Error processing orders data</p>
       </div>
     );
   }
@@ -127,13 +189,38 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="processing">Processing</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                        <SelectItem value="refunded">Refunded</SelectItem>
-                        <SelectItem value="failed">Failed</SelectItem>
+                        {/* Always keep current status as an option */}
+                        <SelectItem value={order.status}>
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        </SelectItem>
+
+                        {/* Show allowed transitions */}
+                        {orderStatusOptions[order.id]
+                          ?.filter(s => s !== order.status)
+                          .map(status => (
+                            <SelectItem key={status} value={status}>
+                              {status.charAt(0).toUpperCase() + status.slice(1)}
+                            </SelectItem>
+                          ))}
+
+                        {/* If no allowed transitions detected, show core statuses */}
+                        {(!orderStatusOptions[order.id] ||
+                          orderStatusOptions[order.id].length === 0) &&
+                          [
+                            'pending',
+                            'processing',
+                            'paid',
+                            'completed',
+                            'cancelled',
+                            'refunded',
+                            'failed',
+                          ]
+                            .filter(s => s !== order.status)
+                            .map(status => (
+                              <SelectItem key={status} value={status}>
+                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                              </SelectItem>
+                            ))}
                       </SelectContent>
                     </Select>
                   ) : (

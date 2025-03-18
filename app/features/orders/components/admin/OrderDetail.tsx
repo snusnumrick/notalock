@@ -80,13 +80,26 @@ export function OrderDetail({
 
   const handleStatusChange = async () => {
     if (onStatusChange) {
-      await onStatusChange(status, order.id);
+      try {
+        console.log('OrderDetail: Calling onStatusChange with', { status, orderId: order.id });
+        await onStatusChange(status, order.id);
+      } catch (err) {
+        console.error('Error in handleStatusChange:', err);
+      }
     }
   };
 
   const handlePaymentStatusChange = async () => {
     if (onPaymentStatusChange) {
-      await onPaymentStatusChange(paymentStatus, order.id);
+      try {
+        console.log('OrderDetail: Calling onPaymentStatusChange with', {
+          paymentStatus,
+          orderId: order.id,
+        });
+        await onPaymentStatusChange(paymentStatus, order.id);
+      } catch (err) {
+        console.error('Error in handlePaymentStatusChange:', err);
+      }
     }
   };
 

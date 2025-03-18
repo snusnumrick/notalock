@@ -1,6 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { type LoaderFunctionArgs, json } from '@remix-run/node';
-import { Link, useLoaderData, useSubmit, useSearchParams } from '@remix-run/react';
+import { Link, useLoaderData, useSearchParams } from '@remix-run/react';
 import { requireAdmin } from '~/server/middleware/auth.server';
 import { getOrderService } from '~/features/orders/api/orderService';
 import { OrdersTable } from '~/features/orders/components/admin/OrdersTable';
@@ -81,31 +81,112 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 }
 
-export default function OrdersRoute() {
+export default function OrdersIndexRoute() {
   const { orders, total, currentPage, totalPages, limit, error } = useLoaderData<typeof loader>();
 
   console.log('🔍 ORDERS LIST COMPONENT RENDERING (INDEX)', {
     ordersCount: orders?.length,
+    ordersArray: Array.isArray(orders),
+    firstOrder: orders?.[0] ? JSON.stringify(orders[0]).substring(0, 200) + '...' : 'No orders',
     total,
     error,
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const submit = useSubmit();
 
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [status, setStatus] = useState(searchParams.get('status') || 'all');
   const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || '');
   const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || '');
 
+  try {
+    if (orders && (!Array.isArray(orders) || !orders.map)) {
+      console.error('Invalid orders data format:', typeof orders, orders);
+      return (
+        <div className="container py-8">
+          <h1 className="text-2xl font-bold mb-6">Orders</h1>
+          <div className="bg-yellow-100 p-4 rounded-md border border-yellow-300 mb-6">
+            <p className="text-yellow-700">
+              Error: Invalid order data format received. Please contact support.
+            </p>
+          </div>
+        </div>
+      );
+    }
+  } catch (err) {
+    console.error('Error checking orders data:', err);
+  }
+
   // Handle status change for an order
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
-    const formData = new FormData();
-    formData.append('orderId', orderId);
-    formData.append('status', newStatus);
-    formData.append('_action', 'updateStatus');
+    try {
+      console.log('Updating order status:', { orderId, newStatus });
 
-    submit(formData, { method: 'post', action: `/api/orders/${orderId}/status` });
+      // Make a direct fetch call to the API endpoint
+      const response = await fetch(`/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          notes: 'Status updated via admin panel',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error updating order status:', errorData);
+
+        // Create a user-friendly message
+        let errorMessage = 'Failed to update order status.';
+
+        if (errorData.error) {
+          if (errorData.error.includes('Invalid status transition')) {
+            errorMessage = errorData.error;
+            if (errorData.allowedTransitions && errorData.allowedTransitions.length > 0) {
+              errorMessage += `\nAllowed transitions: ${errorData.allowedTransitions.join(', ')}`;
+            }
+          } else if (
+            errorData.message &&
+            errorData.message.includes('column "status" is of type order_status')
+          ) {
+            errorMessage =
+              'The selected status is not compatible with the database. Please try a different status.';
+          } else {
+            // Include the actual error message
+            errorMessage = errorData.message || errorData.error;
+          }
+        }
+
+        // Create a better error display rather than using window.alert
+        const errorElement = document.createElement('div');
+        errorElement.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+        errorElement.innerHTML = `
+          <div class="bg-white p-6 rounded-lg max-w-md w-full shadow-lg">
+            <h3 class="text-lg font-bold text-red-600 mb-2">Error Updating Order Status</h3>
+            <p class="mb-4">${errorMessage}</p>
+            <div class="flex justify-end">
+              <button class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300" id="close-error">Close</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(errorElement);
+
+        // Add event listener to close button
+        document.getElementById('close-error')?.addEventListener('click', () => {
+          document.body.removeChild(errorElement);
+        });
+
+        return;
+      }
+
+      // Success! Refresh the page to show updated data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      window.alert('A network error occurred while updating the status. Please try again.');
+    }
   };
 
   // Handle filter form submission

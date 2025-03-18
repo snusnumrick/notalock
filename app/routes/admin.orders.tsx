@@ -1,8 +1,7 @@
 import { Outlet } from '@remix-run/react';
 import { requireAdmin } from '~/server/middleware/auth.server';
 import { type LoaderFunctionArgs, type MetaFunction, json } from '@remix-run/node';
-import { getOrders, getOrderById } from '~/features/orders/api/queries.server';
-import type { OrderStatus, PaymentStatus } from '~/features/orders/types';
+import { getOrderById } from '~/features/orders/api/queries.server';
 
 export const meta: MetaFunction = () => {
   return [
@@ -19,12 +18,6 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   // Get URL search params
   const url = new URL(request.url);
-  const page = parseInt(url.searchParams.get('page') || '1');
-  const limit = parseInt(url.searchParams.get('limit') || '20');
-  const offset = (page - 1) * limit;
-  const status = url.searchParams.get('status') || undefined;
-  const paymentStatus = url.searchParams.get('paymentStatus') || undefined;
-  const searchQuery = url.searchParams.get('search') || undefined;
 
   // Check if we have an orderId parameter
   if (params.orderId) {
@@ -40,24 +33,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   // Check if we're directly on /admin/orders without a child route
   if (url.pathname === '/admin/orders') {
-    // Get a list of orders with filters
-    const ordersResult = await getOrders({
-      status: status as OrderStatus | undefined,
-      paymentStatus: paymentStatus as PaymentStatus | undefined,
-      searchQuery,
-      limit,
-      offset,
-      sortBy: 'createdAt',
-      sortDirection: 'desc',
-    });
-
-    return json({
-      orders: ordersResult.orders,
-      total: ordersResult.total,
-      page,
-      limit,
-      totalPages: Math.ceil(ordersResult.total / limit),
-    });
+    return json(null); // Let the index route handle data fetching
   }
 
   return null;
@@ -68,6 +44,9 @@ export default function OrdersLayout() {
 
   return (
     <div className="min-h-screen">
+      <div className="p-4 bg-blue-100 text-blue-800 mb-4">
+        <p>Admin Orders Management</p>
+      </div>
       <Outlet />
     </div>
   );

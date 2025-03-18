@@ -1033,6 +1033,14 @@ export interface Database {
         Args: Record<string, never>;
         Returns: unknown;
       };
+      update_order_status: {
+        Args: {
+          order_id: string;
+          new_status: string;
+          updated_timestamp: string;
+        };
+        Returns: void;
+      };
     };
     Enums: {
       checkout_step: CheckoutStep;

@@ -1,7 +1,38 @@
-import { json, type ActionFunctionArgs } from '@remix-run/node';
+import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/node';
 import { requireAdmin } from '~/server/middleware/auth.server';
 import { getOrderService } from '~/features/orders/api/orderService';
 import type { PaymentStatus } from '~/features/orders/types';
+
+/**
+ * Loader function to handle GET requests
+ */
+export async function loader({ request, params }: LoaderFunctionArgs) {
+  // Verify user is an admin
+  await requireAdmin(request);
+
+  try {
+    const orderId = params.id;
+
+    if (!orderId) {
+      return json({ error: 'Order ID is required' }, { status: 400 });
+    }
+
+    // Get the order service
+    const orderService = await getOrderService();
+
+    // Get the order
+    const order = await orderService.getOrderById(orderId);
+
+    if (!order) {
+      return json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    return json({ order });
+  } catch (error) {
+    console.error('Error in payment status GET API:', error);
+    return json({ error: 'Failed to fetch payment status' }, { status: 500 });
+  }
+}
 
 /**
  * Action function to update an order's payment status

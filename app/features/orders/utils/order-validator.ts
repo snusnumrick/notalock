@@ -67,7 +67,7 @@ export function validateOrderCreation(input: OrderCreateInput): void {
 /**
  * Valid order statuses
  */
-const VALID_ORDER_STATUSES: OrderStatus[] = [
+export const VALID_ORDER_STATUSES: OrderStatus[] = [
   'pending',
   'processing',
   'paid',
@@ -80,7 +80,7 @@ const VALID_ORDER_STATUSES: OrderStatus[] = [
 /**
  * Valid payment statuses
  */
-const VALID_PAYMENT_STATUSES: PaymentStatus[] = [
+export const VALID_PAYMENT_STATUSES: PaymentStatus[] = [
   'pending',
   'processing',
   'paid',
@@ -91,23 +91,23 @@ const VALID_PAYMENT_STATUSES: PaymentStatus[] = [
 
 /**
  * Allowed order status transitions
- * Key: current status, Value: array of allowed next statuses
+ * Key: current status, Value: array of allowed next statuses (including current status for idempotency)
  */
-const ALLOWED_ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  pending: ['processing', 'paid', 'cancelled', 'failed'],
-  processing: ['paid', 'completed', 'cancelled', 'failed'],
-  paid: ['processing', 'completed', 'refunded'],
-  completed: ['refunded'],
-  cancelled: [],
-  refunded: [],
-  failed: ['pending', 'processing'],
+export const ALLOWED_ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  pending: ['pending', 'processing', 'paid', 'cancelled', 'failed'],
+  processing: ['processing', 'paid', 'completed', 'cancelled', 'failed', 'pending'],
+  paid: ['paid', 'processing', 'completed', 'refunded'],
+  completed: ['completed', 'refunded', 'processing'], // Allow back to processing for corrections
+  cancelled: ['cancelled', 'pending'], // Allow reactivation of cancelled orders
+  refunded: ['refunded'],
+  failed: ['failed', 'pending', 'processing'],
 };
 
 /**
  * Allowed payment status transitions
  * Key: current status, Value: array of allowed next statuses
  */
-const ALLOWED_PAYMENT_STATUS_TRANSITIONS: Record<PaymentStatus, PaymentStatus[]> = {
+export const ALLOWED_PAYMENT_STATUS_TRANSITIONS: Record<PaymentStatus, PaymentStatus[]> = {
   pending: ['processing', 'paid', 'failed', 'cancelled'],
   processing: ['paid', 'failed', 'cancelled'],
   paid: ['refunded'],
@@ -117,6 +117,22 @@ const ALLOWED_PAYMENT_STATUS_TRANSITIONS: Record<PaymentStatus, PaymentStatus[]>
 };
 
 /**
+ * Get allowed status transitions for a current status
+ */
+export function getAllowedOrderStatusTransitions(currentStatus: OrderStatus): OrderStatus[] {
+  return ALLOWED_ORDER_STATUS_TRANSITIONS[currentStatus] || [];
+}
+
+/**
+ * Get allowed payment status transitions for a current status
+ */
+export function getAllowedPaymentStatusTransitions(
+  currentPaymentStatus: PaymentStatus
+): PaymentStatus[] {
+  return ALLOWED_PAYMENT_STATUS_TRANSITIONS[currentPaymentStatus] || [];
+}
+
+/**
  * Validates order update input
  */
 export function validateOrderUpdate(
@@ -124,6 +140,12 @@ export function validateOrderUpdate(
   currentStatus?: OrderStatus,
   currentPaymentStatus?: PaymentStatus
 ): void {
+  console.log('OrderValidator - validateOrderUpdate called with:', {
+    input,
+    currentStatus,
+    currentPaymentStatus,
+  });
+
   // Check that status and payment status are not updated together
   if (input.status && input.paymentStatus) {
     throw new Error('Cannot update both order status and payment status in one operation');
@@ -131,31 +153,49 @@ export function validateOrderUpdate(
 
   // Validate order status
   if (input.status) {
+    console.log(`Validating order status transition: ${currentStatus} → ${input.status}`);
+
     if (!VALID_ORDER_STATUSES.includes(input.status)) {
       throw new Error(`Invalid order status: ${input.status}`);
     }
 
     // Validate status transition if we have current status
     if (currentStatus && !ALLOWED_ORDER_STATUS_TRANSITIONS[currentStatus].includes(input.status)) {
+      console.error(`Invalid status transition detected:`, {
+        from: currentStatus,
+        to: input.status,
+        allowedTransitions: ALLOWED_ORDER_STATUS_TRANSITIONS[currentStatus],
+      });
       throw new Error(
-        `Invalid status transition: Cannot change from ${currentStatus} to ${input.status}`
+        `Invalid status transition: Cannot change from ${currentStatus} to ${input.status}. ` +
+          `Allowed transitions: ${ALLOWED_ORDER_STATUS_TRANSITIONS[currentStatus].join(', ')}`
       );
     }
   }
 
   // Validate payment status
   if (input.paymentStatus) {
+    console.log(
+      `Validating payment status transition: ${currentPaymentStatus} → ${input.paymentStatus}`
+    );
+
     if (!VALID_PAYMENT_STATUSES.includes(input.paymentStatus)) {
       throw new Error(`Invalid payment status: ${input.paymentStatus}`);
     }
 
-    // Validate payment status transition if we have current payment status
+    // Validate payment status transition if we have current status
     if (
       currentPaymentStatus &&
       !ALLOWED_PAYMENT_STATUS_TRANSITIONS[currentPaymentStatus].includes(input.paymentStatus)
     ) {
+      console.error(`Invalid payment status transition detected:`, {
+        from: currentPaymentStatus,
+        to: input.paymentStatus,
+        allowedTransitions: ALLOWED_PAYMENT_STATUS_TRANSITIONS[currentPaymentStatus],
+      });
       throw new Error(
-        `Invalid payment status transition: Cannot change from ${currentPaymentStatus} to ${input.paymentStatus}`
+        `Invalid payment status transition: Cannot change from ${currentPaymentStatus} to ${input.paymentStatus}. ` +
+          `Allowed transitions: ${ALLOWED_PAYMENT_STATUS_TRANSITIONS[currentPaymentStatus].join(', ')}`
       );
     }
   }

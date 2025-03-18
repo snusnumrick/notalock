@@ -1,6 +1,6 @@
 import { validateOrderCreation, validateOrderUpdate } from '../utils/order-validator';
 import { type SupabaseClient } from '@supabase/supabase-js';
-import { v4 as uuidv4 } from 'uuid';
+import { v4, v4 as uuidv4 } from 'uuid';
 import {
   type Order,
   type OrderCreateInput,
@@ -414,27 +414,59 @@ export class OrderService {
       // Validate the update input against current state
       validateOrderUpdate(input, currentOrder.status, currentOrder.paymentStatus);
 
-      // Prepare the update data
-      const updateData: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
+      // Timestamp for all updates
+      const now = new Date().toISOString();
+
+      // STEP 1: Handle status update if needed
+      if (input.status) {
+        console.log('Updating order status with RPC...', {
+          orderId,
+          status: input.status,
+          timestamp: now,
+        });
+
+        // Use the simpler function that avoids permission issues
+        const { data: statusUpdateResult, error: statusError } = await this.supabase.rpc(
+          'update_order_status_simple',
+          {
+            order_id: orderId,
+            new_status: input.status,
+            updated_timestamp: now,
+          }
+        );
+
+        if (statusError) {
+          console.error('Status update error:', statusError);
+          throw new Error(`Failed to update order status: ${statusError.message}`);
+        }
+
+        console.log('Status update result:', statusUpdateResult);
+      }
+
+      // STEP 2: Handle other fields if needed
+      const otherFields: Record<string, unknown> = {
+        updated_at: now,
       };
 
-      // Add fields to update if they are provided
-      if (input.status) updateData.status = input.status;
-      if (input.paymentStatus) updateData.payment_status = input.paymentStatus;
-      if (input.paymentIntentId) updateData.payment_intent_id = input.paymentIntentId;
-      if (input.paymentMethodId) updateData.payment_method_id = input.paymentMethodId;
-      if (input.notes) updateData.notes = input.notes;
-      if (input.metadata) updateData.metadata = input.metadata;
+      if (input.paymentStatus) otherFields.payment_status = input.paymentStatus;
+      if (input.paymentIntentId) otherFields.payment_intent_id = input.paymentIntentId;
+      if (input.paymentMethodId) otherFields.payment_method_id = input.paymentMethodId;
+      if (input.notes) otherFields.notes = input.notes;
+      if (input.metadata) otherFields.metadata = input.metadata;
 
-      // Update the order
-      const { error: updateError } = await this.supabase
-        .from('orders')
-        .update(updateData)
-        .eq('id', orderId);
+      // Only update if there are fields other than updated_at
+      if (Object.keys(otherFields).length > 1) {
+        console.log('Updating other order fields...', otherFields);
 
-      if (updateError) {
-        throw new Error(`Failed to update order: ${updateError.message}`);
+        const { error: updateError } = await this.supabase
+          .from('orders')
+          .update(otherFields)
+          .eq('id', orderId);
+
+        if (updateError) {
+          console.error('Other fields update error:', updateError);
+          throw new Error(`Failed to update order fields: ${updateError.message}`);
+        }
       }
 
       // Return the updated order
@@ -444,7 +476,6 @@ export class OrderService {
       throw error;
     }
   }
-
   /**
    * Update order status
    */
@@ -769,6 +800,43 @@ export class OrderService {
    */
   private camelToSnakeCase(str: string): string {
     return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+  }
+
+  /**
+   * Adds a new entry to the order status history with the provided details.
+   *
+   * @param {Object} param - The parameters for the order status history entry.
+   * @param {string | Uint8Array} param.id - The unique identifier for the history entry.
+   * @param {string} param.order_id - The unique identifier for the order.
+   * @param {OrderStatus} param.status - The status of the order.
+   * @param {string} param.notes - Additional notes regarding the status change.
+   * @param {string} param.created_at - The timestamp when the status change occurred.
+   * @param {string} param.created_by - The identifier for the entity or user that created the entry.
+   *
+   * @return {Promise<void>} Resolves when the order status history entry is successfully added.
+   * Throws an error if the insertion fails.
+   */
+  async addOrderStatusHistory(param: {
+    id: string | Uint8Array;
+    order_id: string;
+    status: OrderStatus;
+    notes: string;
+    created_at: string;
+    created_by: string;
+  }) {
+    const { error: historyError } = await this.supabase.from('order_status_history').insert({
+      id: v4(),
+      order_id: param.order_id,
+      status: param.status,
+      notes: param.notes,
+      created_at: new Date().toISOString(),
+      created_by: 'system',
+    });
+
+    if (historyError) {
+      console.error('Failed to add status history:', historyError);
+      throw new Error(`Failed to add order status history item: ${historyError.message}`);
+    }
   }
 }
 

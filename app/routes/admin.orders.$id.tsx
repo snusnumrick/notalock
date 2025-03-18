@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/node';
-import { useLoaderData, useActionData, useSubmit, useNavigation } from '@remix-run/react';
+import { useLoaderData, useActionData, useNavigation } from '@remix-run/react';
 import { requireAdmin } from '~/server/middleware/auth.server';
 import { OrderDetail } from '~/features/orders/components/admin/OrderDetail';
 import { getOrderById } from '~/features/orders/api/queries.server';
@@ -127,57 +127,108 @@ export async function action({ request, params }: ActionFunctionArgs) {
 export default function OrderDetailRoute() {
   const { order } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  const submit = useSubmit();
   const navigation = useNavigation();
   const isLoading = navigation.state === 'submitting';
 
   // Maintain a local order state to reflect updates immediately
   const [currentOrder, setCurrentOrder] = useState<Order>(order as Order);
 
-  // Handle status change
-  const handleStatusChange = async (status: OrderStatus) => {
-    // Use JSON for submission to avoid TextDecoder issues
-    const data = {
-      intent: 'updateStatus',
-      status,
-      notes: 'Order completed',
-    };
+  // Debug log
+  console.log('Rendering OrderDetailRoute', {
+    orderFromLoader: order,
+    currentOrderState: currentOrder,
+    actionData,
+    navigationState: navigation.state,
+  });
 
-    submit(data, {
-      method: 'post',
-      encType: 'application/json',
-    });
+  // Update local state when order from loader changes
+  useEffect(() => {
+    setCurrentOrder(order as Order);
+  }, [order]);
+
+  // Handle status change
+  const handleStatusChange = async (status: OrderStatus, orderId: string) => {
+    console.log('Status change requested:', { status, orderId });
+
+    try {
+      // Instead of using submit, we'll use fetch directly
+      const response = await fetch(`/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status,
+          notes: 'Status updated by admin',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error updating status:', errorData);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Status updated successfully:', data);
+
+      // Reload the page to reflect changes
+      window.location.reload();
+    } catch (error) {
+      console.error('Error in handleStatusChange:', error);
+    }
   };
 
   // Handle payment status change
-  const handlePaymentStatusChange = async (status: PaymentStatus) => {
-    // Use JSON for submission to avoid TextDecoder issues
-    const data = {
-      intent: 'updatePaymentStatus',
-      paymentStatus: status,
-      notes: 'Payment confirmed',
-    };
+  const handlePaymentStatusChange = async (status: PaymentStatus, orderId: string) => {
+    console.log('Payment status change requested:', { status, orderId });
 
-    submit(data, {
-      method: 'post',
-      encType: 'application/json',
-    });
+    try {
+      // Instead of using submit, we'll use fetch directly
+      const response = await fetch(`/api/orders/${orderId}/update-payment-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentStatus: status,
+          notes: 'Payment status updated by admin',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error updating payment status:', errorData);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Payment status updated successfully:', data);
+
+      // Reload the page to reflect changes
+      window.location.reload();
+    } catch (error) {
+      console.error('Error in handlePaymentStatusChange:', error);
+    }
   };
 
   // Update local order state when the server responds with a new order
-  if (
-    actionData &&
-    'success' in actionData &&
-    actionData.success &&
-    actionData.order &&
-    actionData.order.id === currentOrder.id
-  ) {
-    setCurrentOrder(actionData.order as Order);
-  }
+  useEffect(() => {
+    if (
+      actionData &&
+      'success' in actionData &&
+      actionData.success &&
+      actionData.order &&
+      actionData.order.id === currentOrder.id
+    ) {
+      console.log('Updating order state from action data', actionData.order);
+      setCurrentOrder(actionData.order as Order);
+    }
+  }, [actionData, currentOrder.id]);
 
   return (
     <div className="container py-8">
-      {'error' in actionData! && actionData.error && (
+      {actionData && 'error' in actionData && actionData.error && (
         <Alert variant="destructive" className="mb-6">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{actionData.error}</AlertDescription>
