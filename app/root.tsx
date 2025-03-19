@@ -23,6 +23,8 @@ import './root.client';
 // Import cart cookie functions
 import { getAnonymousCartId, setAnonymousCartId } from '~/features/cart/utils/serverCookie';
 import { CART_COUNT_EVENT_NAME, CART_DATA_STORAGE_KEY } from '~/features/cart/constants';
+import { Toaster } from '~/components/ui/toaster';
+import { ToastManagerProvider } from '~/components/ui/toast-manager';
 
 export const links = () => [{ rel: 'stylesheet', href: stylesheet }];
 
@@ -215,7 +217,10 @@ export default function App() {
       </head>
       <body className="flex flex-col min-h-screen">
         <CartProvider initialCartItems={cartItems}>
-          <Outlet />
+          <ToastManagerProvider>
+            <Outlet />
+            <Toaster />
+          </ToastManagerProvider>
         </CartProvider>
         <ScrollRestoration />
         <script

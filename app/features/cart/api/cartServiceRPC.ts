@@ -23,7 +23,7 @@ export class CartServiceRPC {
   private serverAnonymousCartId?: string;
 
   constructor(supabase: SupabaseClient, serverAnonymousCartId?: string) {
-    console.log('CartServiceRPC - constructor. serverAnonymousCartId:', serverAnonymousCartId);
+    // console.log('CartServiceRPC - constructor. serverAnonymousCartId:', serverAnonymousCartId);
     this.supabase = supabase;
     this.serverAnonymousCartId = serverAnonymousCartId;
   }
@@ -39,14 +39,13 @@ export class CartServiceRPC {
     try {
       // Get the user's cart ID (create if needed)
       const cartId = await this.getOrCreateCart();
-      console.log('Got cart ID:', cartId);
+      // console.log('Got cart ID:', cartId);
 
       // Check cart exists in database using our debug function
-      const { data: cartDebug, error: debugError } = await this.supabase.rpc('debug_cart', {
+      /* const { data: cartDebug, error: debugError } = await this.supabase.rpc('debug_cart', {
         p_cart_id: cartId,
       });
-
-      console.log('Cart debug info:', cartDebug, debugError);
+      console.log('Cart debug info:', cartDebug, debugError);*/
 
       // Use the RPC function to add the item
       const { data: itemId, error } = await this.supabase.rpc('add_to_cart', {
@@ -62,7 +61,7 @@ export class CartServiceRPC {
         throw new Error(`Failed to add item to cart: ${error.message}`);
       }
 
-      console.log('Item added with ID:', itemId);
+      // console.log('Item added with ID:', itemId);
 
       // Fetch the cart item details
       const { data: cartItem, error: fetchError } = await this.supabase
@@ -136,11 +135,11 @@ export class CartServiceRPC {
    */
   async removeCartItem(itemId: string): Promise<boolean> {
     try {
-      console.log('CartServiceRPC - Forcefully removing item:', itemId);
+      // console.log('CartServiceRPC - Forcefully removing item:', itemId);
 
       // Try all available methods in sequence until one succeeds
       // 1. First try the new fixed RPC function
-      console.log('Attempt 1: Using remove_cart_item_fixed RPC function');
+      // console.log('Attempt 1: Using remove_cart_item_fixed RPC function');
       const { data: fixedSuccess, error: fixedError } = await this.supabase.rpc(
         'remove_cart_item_fixed',
         {
@@ -149,7 +148,7 @@ export class CartServiceRPC {
       );
 
       if (fixedSuccess) {
-        console.log('Successfully removed item using fixed RPC function');
+        // console.log('Successfully removed item using fixed RPC function');
         this.updateClientSideCart({ id: itemId } as CartItem, 'remove');
         return true;
       }
@@ -159,7 +158,7 @@ export class CartServiceRPC {
       }
 
       // 2. Try force delete RPC function as fallback
-      console.log('Attempt 2: Using force_delete_cart_item RPC function');
+      // console.log('Attempt 2: Using force_delete_cart_item RPC function');
       const { data: forceSuccess, error: forceError } = await this.supabase.rpc(
         'force_delete_cart_item',
         {
@@ -168,7 +167,7 @@ export class CartServiceRPC {
       );
 
       if (forceSuccess) {
-        console.log('Successfully removed item using force delete RPC function');
+        // console.log('Successfully removed item using force delete RPC function');
         this.updateClientSideCart({ id: itemId } as CartItem, 'remove');
         return true;
       }
@@ -178,7 +177,7 @@ export class CartServiceRPC {
       }
 
       // 3. Try original RPC function
-      console.log('Attempt 3: Using original remove_cart_item RPC function');
+      // console.log('Attempt 3: Using original remove_cart_item RPC function');
       const { data: originalSuccess, error: originalError } = await this.supabase.rpc(
         'remove_cart_item',
         {
@@ -187,7 +186,7 @@ export class CartServiceRPC {
       );
 
       if (originalSuccess) {
-        console.log('Successfully removed item using original RPC function');
+        // console.log('Successfully removed item using original RPC function');
         this.updateClientSideCart({ id: itemId } as CartItem, 'remove');
         return true;
       }
@@ -197,7 +196,7 @@ export class CartServiceRPC {
       }
 
       // 4. Try direct SQL delete as final fallback
-      console.log('Attempt 4: Using direct SQL delete');
+      // console.log('Attempt 4: Using direct SQL delete');
       await this.getOrCreateCart();
       const { error: directError } = await this.supabase
         .from('cart_items')
@@ -205,7 +204,7 @@ export class CartServiceRPC {
         .eq('id', itemId);
 
       if (!directError) {
-        console.log('Successfully removed item using direct SQL delete');
+        // console.log('Successfully removed item using direct SQL delete');
         this.updateClientSideCart({ id: itemId } as CartItem, 'remove');
         return true;
       }
@@ -276,7 +275,7 @@ export class CartServiceRPC {
 
     // For authenticated users
     if (userId) {
-      console.log('Getting cart for authenticated user:', userId);
+      // console.log('Getting cart for authenticated user:', userId);
 
       // First check if the user already has an active cart
       const { data: activeCarts } = await this.supabase
@@ -287,7 +286,7 @@ export class CartServiceRPC {
         .limit(1);
 
       if (activeCarts && activeCarts.length > 0) {
-        console.log('Found existing active cart for user:', activeCarts[0].id);
+        // console.log('Found existing active cart for user:', activeCarts[0].id);
         return activeCarts[0].id;
       }
 
@@ -302,7 +301,7 @@ export class CartServiceRPC {
 
       if (inactiveCarts && inactiveCarts.length > 0) {
         // Reactivate an existing cart instead of creating a new one
-        console.log('Reactivating existing cart for user:', inactiveCarts[0].id);
+        // console.log('Reactivating existing cart for user:', inactiveCarts[0].id);
 
         const { data: updatedCart, error: updateError } = await this.supabase
           .from('carts')
@@ -322,7 +321,7 @@ export class CartServiceRPC {
       }
 
       // Create new cart for user only if no existing cart was found
-      console.log('Creating new cart for user:', userId);
+      // console.log('Creating new cart for user:', userId);
       const { data: newCart, error: createError } = await this.supabase
         .from('carts')
         .insert({
@@ -340,33 +339,33 @@ export class CartServiceRPC {
         throw new Error(`Failed to create cart: ${createError.message}`);
       }
 
-      console.log('Created new cart for user:', newCart.id);
+      // console.log('Created new cart for user:', newCart.id);
       return newCart.id;
     }
 
     // For anonymous users
     else {
-      console.log('user is anonymous');
+      // console.log('user is anonymous');
       // Get the anonymous cart ID
       let anonymousCartId = '';
 
       if (this.serverAnonymousCartId) {
         anonymousCartId = this.serverAnonymousCartId;
-        console.log('Using server-provided anonymous cart ID:', anonymousCartId);
+        // console.log('Using server-provided anonymous cart ID:', anonymousCartId);
       } else if (typeof window !== 'undefined' && window.localStorage) {
         // Try to get from localStorage using the same key as the cookie for consistency
         anonymousCartId = window.localStorage.getItem(ANONYMOUS_CART_COOKIE_NAME) || '';
-        console.log('Using anonymous cart ID from localStorage:', anonymousCartId);
-        console.log('Anonymous cart ID from localStorage:', anonymousCartId || 'none');
+        // console.log('Using anonymous cart ID from localStorage:', anonymousCartId);
+        // console.log('Anonymous cart ID from localStorage:', anonymousCartId || 'none');
 
         if (!anonymousCartId) {
           anonymousCartId = uuidv4();
           window.localStorage.setItem(ANONYMOUS_CART_COOKIE_NAME, anonymousCartId);
-          console.log('Created new anonymous cart ID:', anonymousCartId);
+          // console.log('Created new anonymous cart ID:', anonymousCartId);
         }
       } else {
         anonymousCartId = uuidv4();
-        console.log('Using temporary anonymous cart ID for server side:', anonymousCartId);
+        // console.log('Using temporary anonymous cart ID for server side:', anonymousCartId);
       }
 
       // Check for ALL carts with this anonymous ID, including inactive ones
@@ -382,10 +381,10 @@ export class CartServiceRPC {
 
       // If no carts found at all, create a new one
       if (!allCarts || allCarts.length === 0) {
-        console.log(
-          'No existing carts found, creating new cart with anonymous_id:',
-          anonymousCartId
-        );
+        // console.log(
+        //   'No existing carts found, creating new cart with anonymous_id:',
+        //   anonymousCartId
+        // );
 
         const newCartId = uuidv4();
         const { data: newCart, error: createError } = await this.supabase
@@ -406,19 +405,19 @@ export class CartServiceRPC {
           throw new Error(`Failed to create anonymous cart: ${createError.message}`);
         }
 
-        console.log('Created new anonymous cart:', newCart.id);
+        // console.log('Created new anonymous cart:', newCart.id);
         return newCart.id;
       }
 
       // Check if there's an active cart
       const activeCart = allCarts.find(cart => cart.status === 'active');
       if (activeCart) {
-        console.log('Found existing active cart:', activeCart.id);
+        // console.log('Found existing active cart:', activeCart.id);
         return activeCart.id;
       }
 
       // Otherwise, reactivate the most recent cart
-      console.log('Reactivating most recent cart:', allCarts[0].id);
+      // console.log('Reactivating most recent cart:', allCarts[0].id);
 
       const { data: updatedCart, error: updateError } = await this.supabase
         .from('carts')
@@ -435,7 +434,7 @@ export class CartServiceRPC {
         throw new Error(`Failed to reactivate cart: ${updateError.message}`);
       }
 
-      console.log('Successfully reactivated cart:', updatedCart.id);
+      // console.log('Successfully reactivated cart:', updatedCart.id);
       return updatedCart.id;
     }
   }

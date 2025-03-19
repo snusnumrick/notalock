@@ -8,17 +8,12 @@ import {
   TableHeader,
   TableRow,
 } from '~/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '~/components/ui/select';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 import { Link } from '@remix-run/react';
 import { formatDate } from '~/lib/utils';
+import { OrderStatusSelector } from '../OrderStatusSelector';
+import { getOrderService } from '~/features/orders/api/orderService';
 
 interface OrdersTableProps {
   orders: Order[];
@@ -111,17 +106,6 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
         return 'bg-gray-100 text-gray-800';
     }
   };
-
-  const handleStatusChange = (orderId: string, status: string) => {
-    if (onStatusChange) {
-      try {
-        onStatusChange(orderId, status as OrderStatus);
-      } catch (err) {
-        console.error('Error in handleStatusChange:', err);
-      }
-    }
-  };
-
   if (loading) {
     return <p className="text-center py-4">Loading orders...</p>;
   }
@@ -181,48 +165,35 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
                 <TableCell>${(order.totalAmount || 0).toFixed(2)}</TableCell>
                 <TableCell>
                   {onStatusChange ? (
-                    <Select
-                      defaultValue={order.status}
-                      onValueChange={value => handleStatusChange(order.id, value)}
-                    >
-                      <SelectTrigger className="w-[130px]">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {/* Always keep current status as an option */}
-                        <SelectItem value={order.status}>
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                        </SelectItem>
+                    <OrderStatusSelector
+                      orderId={order.id}
+                      currentStatus={order.status}
+                      allowedStatuses={
+                        orderStatusOptions[order.id] || [
+                          'pending',
+                          'processing',
+                          'paid',
+                          'completed',
+                          'cancelled',
+                          'refunded',
+                          'failed',
+                        ]
+                      }
+                      onStatusChange={async (orderId, newStatus) => {
+                        // Call the traditional handler for compatibility
+                        if (onStatusChange) {
+                          await onStatusChange(orderId, newStatus);
+                        }
 
-                        {/* Show allowed transitions */}
-                        {orderStatusOptions[order.id]
-                          ?.filter(s => s !== order.status)
-                          .map(status => (
-                            <SelectItem key={status} value={status}>
-                              {status.charAt(0).toUpperCase() + status.slice(1)}
-                            </SelectItem>
-                          ))}
-
-                        {/* If no allowed transitions detected, show core statuses */}
-                        {(!orderStatusOptions[order.id] ||
-                          orderStatusOptions[order.id].length === 0) &&
-                          [
-                            'pending',
-                            'processing',
-                            'paid',
-                            'completed',
-                            'cancelled',
-                            'refunded',
-                            'failed',
-                          ]
-                            .filter(s => s !== order.status)
-                            .map(status => (
-                              <SelectItem key={status} value={status}>
-                                {status.charAt(0).toUpperCase() + status.slice(1)}
-                              </SelectItem>
-                            ))}
-                      </SelectContent>
-                    </Select>
+                        // For undo support, using the new method
+                        const orderService = await getOrderService();
+                        return orderService.updateOrderStatusWithUndo(orderId, newStatus);
+                      }}
+                      onCheckUndoStatus={async orderId => {
+                        const orderService = await getOrderService();
+                        return orderService.canUndoStatusChange(orderId);
+                      }}
+                    />
                   ) : (
                     <Badge
                       className={getStatusBadgeColor(order.status)}

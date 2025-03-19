@@ -3,7 +3,7 @@ import { type LoaderFunction, redirect } from '@remix-run/node';
 import { requireAdmin } from '~/server/middleware/auth.server';
 
 export const loader: LoaderFunction = async ({ request }) => {
-  console.log('Starting admin permissions check');
+  // console.log('Starting admin permissions check');
   try {
     await requireAdmin(request);
     return null;

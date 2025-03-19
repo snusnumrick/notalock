@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Order, OrderStatus, PaymentStatus } from '~/features/orders/types';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
@@ -22,6 +22,9 @@ import { formatDate } from '~/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { Label } from '~/components/ui/label';
 import { Textarea } from '~/components/ui/textarea';
+import { OrderStatusSelector } from '../OrderStatusSelector';
+import { getAllowedOrderStatusTransitions } from '~/features/orders/utils/order-validator';
+import { getOrderService } from '~/features/orders/api/orderService';
 
 interface OrderDetailProps {
   order: Order;
@@ -29,6 +32,8 @@ interface OrderDetailProps {
   onPaymentStatusChange?: (status: PaymentStatus, orderId: string) => Promise<void>;
   onAddNote?: (note: string, orderId: string) => Promise<void>;
   isLoading?: boolean;
+  isAsync?: boolean; // Prop to indicate async operation is in progress
+  debug?: boolean; // Enable debug logging
 }
 
 export function OrderDetail({
@@ -37,10 +42,24 @@ export function OrderDetail({
   onPaymentStatusChange,
   onAddNote,
   isLoading = false,
+  isAsync = false,
+  debug = false,
 }: OrderDetailProps) {
   const [status, setStatus] = useState<OrderStatus>(order.status);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(order.paymentStatus);
   const [noteText, setNoteText] = useState('');
+
+  // Update local state when the order prop changes
+  useEffect(() => {
+    console.log('OrderDetail: Order prop changed, updating local state', order.status);
+    setStatus(order.status);
+    setPaymentStatus(order.paymentStatus);
+  }, [order]); // Use the entire order as dependency to catch any updates
+
+  // Log isLoading state whenever it changes
+  useEffect(() => {
+    console.log('OrderDetail: isLoading state changed:', isLoading);
+  }, [isLoading]);
 
   const getStatusBadgeColor = (status: OrderStatus) => {
     switch (status) {
@@ -77,18 +96,6 @@ export function OrderDetail({
         return 'bg-gray-100 text-gray-800';
     }
   };
-
-  const handleStatusChange = async () => {
-    if (onStatusChange) {
-      try {
-        console.log('OrderDetail: Calling onStatusChange with', { status, orderId: order.id });
-        await onStatusChange(status, order.id);
-      } catch (err) {
-        console.error('Error in handleStatusChange:', err);
-      }
-    }
-  };
-
   const handlePaymentStatusChange = async () => {
     if (onPaymentStatusChange) {
       try {
@@ -123,36 +130,57 @@ export function OrderDetail({
           <div className="flex flex-col gap-1">
             <div className="text-sm font-medium">Order Status</div>
             {onStatusChange ? (
-              <div className="flex items-center gap-2" data-testid="order-status-container">
-                <Select
-                  defaultValue={status}
-                  onValueChange={value => setStatus(value as OrderStatus)}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                    <SelectItem value="refunded">Refunded</SelectItem>
-                    <SelectItem value="failed">Failed</SelectItem>
-                  </SelectContent>
-                </Select>
-                {isLoading ? (
-                  <div className="animate-spin">⟳</div>
-                ) : (
-                  <Button onClick={handleStatusChange} size="sm">
-                    Update Status
-                  </Button>
-                )}
+              <div data-testid="order-status-container">
+                <OrderStatusSelector
+                  orderId={order.id}
+                  currentStatus={status}
+                  allowedStatuses={getAllowedOrderStatusTransitions(status)}
+                  onStatusChange={async (orderId, newStatus) => {
+                    console.log(
+                      'OrderDetail: OrderStatusSelector triggered status change to',
+                      newStatus
+                    );
+
+                    try {
+                      // Call the traditional handler for compatibility
+                      if (onStatusChange) {
+                        await onStatusChange(newStatus, orderId);
+                      }
+
+                      // For undo support, using the new method
+                      const orderService = await getOrderService();
+                      const result = await orderService.updateOrderStatusWithUndo(
+                        orderId,
+                        newStatus
+                      );
+
+                      // Update local state to match the current status
+                      setStatus(newStatus);
+
+                      return result;
+                    } catch (error) {
+                      console.error('Error in OrderDetail onStatusChange handler:', error);
+                      // Ensure we throw the error so the OrderStatusSelector can handle it properly
+                      throw error;
+                    }
+                  }}
+                  onCheckUndoStatus={async orderId => {
+                    try {
+                      const orderService = await getOrderService();
+                      return await orderService.canUndoStatusChange(orderId);
+                    } catch (error) {
+                      console.error('Error checking undo status:', error);
+                      // Return a default response indicating undo is not available
+                      return { canUndo: false };
+                    }
+                  }}
+                  externalIsLoading={isAsync}
+                  debug={debug}
+                />
               </div>
             ) : (
-              <Badge className={getStatusBadgeColor(order.status)}>
-                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+              <Badge className={getStatusBadgeColor(status)}>
+                {status.charAt(0).toUpperCase() + status.slice(1)}
               </Badge>
             )}
           </div>

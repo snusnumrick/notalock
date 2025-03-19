@@ -45,7 +45,7 @@ export async function requireAuth(request: Request): Promise<AuthResult> {
  * Throws redirect to unauthorized if user is not an admin
  */
 export async function requireAdmin(request: Request): Promise<AuthResult> {
-  console.log('app/server/middleware/auth.server.ts -Starting requireAdmin check');
+  // console.log('app/server/middleware/auth.server.ts -Starting requireAdmin check');
   const { user, response } = await requireAuth(request);
   const supabase = createSupabaseClient(request, response);
   const url = new URL(request.url);
@@ -59,7 +59,7 @@ export async function requireAdmin(request: Request): Promise<AuthResult> {
   } = await supabase.from('profiles').select('role').eq('id', user.id).single();
 
   if (profileError || profile?.role !== 'admin') {
-    console.log('Admin check failed:', { profileError, role: profile?.role });
+    // console.log('Admin check failed:', { profileError, role: profile?.role });
     const loginUrl = new URL('/login', url.origin);
     loginUrl.searchParams.set('from', 'unauthorized');
     throw redirect(loginUrl.pathname + loginUrl.search);

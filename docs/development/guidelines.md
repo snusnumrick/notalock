@@ -109,6 +109,64 @@ export async function categoryLoader({ request }: LoaderArgs) {
    - Handle transitions
    - Implement fetchers
    - Use proper hooks
+   - Use React refs alongside state for asynchronous operations
+   
+### React State Management for Asynchronous Operations
+
+When dealing with asynchronous operations in React components (like API calls or status updates), the usual React state might not reliably reflect the operation's status due to async timing issues and React's batched state updates. To address this, use both React state and refs for tracking operation status:
+
+```tsx
+// Example pattern for tracking async operation state
+const Component = () => {
+  // Use both state (for rendering) and ref (for immediate access)
+  const [isLoading, setIsLoading] = useState(false);
+  const loadingRef = useRef(false);
+  
+  const handleAsyncOperation = async () => {
+    try {
+      // Update both state and ref
+      setIsLoading(true);
+      loadingRef.current = true;
+      
+      // Perform async operation
+      await someAsyncFunction();
+      
+      // Success handling
+    } catch (error) {
+      // Error handling
+    } finally {
+      // Always reset both state and ref
+      setIsLoading(false);
+      loadingRef.current = false;
+    }
+  };
+  
+  return (
+    <div>
+      {/* Use both state and ref for UI conditionals */}
+      {(isLoading || loadingRef.current) && <LoadingIndicator />}
+      <button 
+        onClick={handleAsyncOperation}
+        disabled={isLoading || loadingRef.current}
+      >
+        Perform Action
+      </button>
+    </div>
+  );
+};
+```
+
+**Benefits of this approach:**
+- The ref provides immediate, synchronous access to the operation status
+- The state ensures the component re-renders to reflect status changes
+- Using both in UI conditionals ensures loading indicators appear/disappear reliably
+- The ref value is accessible in event handlers and async callbacks even if they close over stale state values
+
+**When to use this pattern:**
+- Components with loading indicators that need to appear/disappear based on async operations
+- UI elements that should be disabled during async operations
+- Complex multi-step operations where tracking the "in progress" state is critical
+- Components that manage their own loading state instead of using Remix transitions
 
 ## Authentication and Session Management
 

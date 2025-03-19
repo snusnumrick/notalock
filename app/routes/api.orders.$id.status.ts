@@ -68,7 +68,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 export async function action({ request, params }: ActionFunctionArgs) {
   try {
     // Verify user is an admin
-    await requireAdmin(request);
+    const { user: adminUser } = await requireAdmin(request);
+    const adminUserId = adminUser?.id || 'system'; // Get the admin user ID
 
     const orderId = params.id;
 
@@ -109,23 +110,25 @@ export async function action({ request, params }: ActionFunctionArgs) {
     // Get the order service
     const orderService = await getOrderService();
 
+    // Update the order status using the OrderService method
     try {
-      // Update the order status using the OrderService method
       const updatedOrder = await orderService.updateOrderStatus(orderId, orderStatus);
 
       // Add a status history entry if notes are provided
       if (notes) {
         try {
+          // Call addOrderStatusHistory but don't let failure stop the process
           await orderService.addOrderStatusHistory({
             id: v4(),
             order_id: orderId,
-            status: status,
-            notes: notes,
+            status,
+            notes,
             created_at: new Date().toISOString(),
-            created_by: 'system',
+            created_by: adminUserId, // Use the actual admin user ID
           });
-        } catch (error) {
-          console.log('Continue even if adding history fails');
+        } catch (historyError) {
+          console.warn('Status history update failed but continuing', historyError);
+          // Don't propagate this error since it's not critical
         }
       }
 
@@ -184,7 +187,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       JSON.stringify({
         error: isDbTypeError ? 'Database type error' : 'Failed to update order status',
         message: errorMessage,
-        isDbTypeError: isDbTypeError,
+        isDbTypeError,
       }),
       {
         status: isDbTypeError ? 422 : 500,

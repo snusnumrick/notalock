@@ -33,11 +33,29 @@ export interface TrackingInfo {
   paymentId?: string;
 }
 
+// Status change history entry type
+export interface StatusChangeHistoryEntry {
+  previousStatus: OrderStatus;
+  newStatus: OrderStatus;
+  changeTime: string;
+  canUndoUntil: string;
+  undone?: boolean;
+  undoneAt?: string;
+}
+
 // Order metadata type
 export interface OrderMetadata {
-  [key: string]: TrackingInfo | string | number | boolean | null | undefined;
+  [key: string]:
+    | TrackingInfo
+    | StatusChangeHistoryEntry[]
+    | string
+    | number
+    | boolean
+    | null
+    | undefined;
   tracking?: TrackingInfo;
   notes?: string;
+  statusChangeHistory?: StatusChangeHistoryEntry[];
 }
 
 // Order status types

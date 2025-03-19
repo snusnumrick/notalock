@@ -103,6 +103,7 @@ feature/
 ├── components/         # Route and shared components
 │   ├── admin/         # Admin-specific components
 │   └── public/        # Public-facing components
+├── utils/              # Feature-specific utilities
 └── types/              # TypeScript types and interfaces
 ```
 

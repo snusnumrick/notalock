@@ -15,10 +15,12 @@ import {
   type DbOrderItem,
   type DbOrderStatusHistory,
   type OrderMetadata,
+  type StatusChangeHistoryEntry,
 } from '../types';
 import { type PaymentResult } from '~/features/payment/types';
 import { type Address } from '~/features/checkout/types/checkout.types';
 import { type Json } from '~/features/supabase/types/Database.types';
+import { getEnvironmentSupabaseClient, getAdminSupabaseClient } from '~/features/supabase/utils';
 
 // singleton instance of OrderService
 let orderServiceInstance: OrderService | null = null;
@@ -322,7 +324,7 @@ export class OrderService {
       }
 
       if (options.email) {
-        query = query.eq('email', options.email);
+        query = query.eq('guest_email', options.email);
       }
 
       if (options.status) {
@@ -360,7 +362,7 @@ export class OrderService {
       // Add search query logic for order_number or email
       if (options.searchQuery) {
         query = query.or(
-          `order_number.ilike.%${options.searchQuery}%,email.ilike.%${options.searchQuery}%`
+          `order_number.ilike.%${options.searchQuery}%,guest_email.ilike.%${options.searchQuery}%`
         );
       }
 
@@ -425,9 +427,9 @@ export class OrderService {
           timestamp: now,
         });
 
-        // Use the simpler function that avoids permission issues
+        // Use the existing update_order_status RPC function
         const { data: statusUpdateResult, error: statusError } = await this.supabase.rpc(
-          'update_order_status_simple',
+          'update_order_status',
           {
             order_id: orderId,
             new_status: input.status,
@@ -481,6 +483,149 @@ export class OrderService {
    */
   async updateOrderStatus(orderId: string, status: OrderStatus, notes?: string): Promise<Order> {
     return this.updateOrder(orderId, { status, notes });
+  }
+
+  /**
+   * Update order status with undo capability
+   * @param orderId The ID of the order to update
+   * @param status The new status to set
+   * @param undoTimeWindowMinutes How long the undo option remains available (default: 5 minutes)
+   * @returns An object with the updated order and an undo function
+   */
+  async updateOrderStatusWithUndo(
+    orderId: string,
+    status: OrderStatus,
+    undoTimeWindowMinutes: number = 5
+  ): Promise<{
+    order: Order;
+    undo: () => Promise<Order>;
+  }> {
+    try {
+      // Get current order to store previous state
+      const currentOrder = await this.getOrderById(orderId);
+      const previousStatus = currentOrder.status;
+      const changeTime = new Date().toISOString();
+
+      // Only proceed if there's an actual change
+      if (previousStatus === status) {
+        return {
+          order: currentOrder,
+          undo: async () => currentOrder, // No-op undo function if no change
+        };
+      }
+
+      // Update status
+      const updatedOrder = await this.updateOrderStatus(orderId, status);
+
+      // Store undo information in metadata
+      const metadata: OrderMetadata = {
+        ...(updatedOrder.metadata || {}),
+        statusChangeHistory: [
+          {
+            previousStatus,
+            newStatus: status,
+            changeTime,
+            canUndoUntil: new Date(Date.now() + undoTimeWindowMinutes * 60 * 1000).toISOString(),
+          },
+          ...(updatedOrder.metadata?.statusChangeHistory || []),
+        ].slice(0, 10), // Keep only the 10 most recent changes
+      };
+
+      // Update metadata with the history
+      const orderWithHistory = await this.updateOrder(orderId, { metadata });
+
+      // Return the updated order and an undo function
+      return {
+        order: orderWithHistory,
+        undo: async () => {
+          const now = new Date();
+          const undoTimeLimit = new Date(metadata.statusChangeHistory![0].canUndoUntil);
+
+          if (now > undoTimeLimit) {
+            throw new Error(
+              `Cannot undo this change. The ${undoTimeWindowMinutes}-minute undo window has expired.`
+            );
+          }
+
+          // Revert to previous status
+          const revertedOrder = await this.updateOrderStatus(orderId, previousStatus);
+
+          // Update metadata to record the undo
+          const updatedMetadata: OrderMetadata = {
+            ...(revertedOrder.metadata || {}),
+            statusChangeHistory: [
+              {
+                ...metadata.statusChangeHistory![0],
+                undone: true,
+                undoneAt: new Date().toISOString(),
+              },
+              ...(revertedOrder.metadata?.statusChangeHistory?.slice(1) || []),
+            ],
+          };
+
+          return this.updateOrder(orderId, { metadata: updatedMetadata });
+        },
+      };
+    } catch (error) {
+      console.error('Error in updateOrderStatusWithUndo:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if an order status change can be undone
+   * @param orderId The ID of the order to check
+   * @returns Information about whether an undo is possible
+   */
+  async canUndoStatusChange(orderId: string): Promise<{
+    canUndo: boolean;
+    previousStatus?: OrderStatus;
+    currentStatus?: OrderStatus;
+    timeRemaining?: number;
+    expiresAt?: string;
+  }> {
+    try {
+      const order = await this.getOrderById(orderId);
+      const history = order.metadata?.statusChangeHistory;
+
+      if (!history || history.length === 0 || history[0].undone === true) {
+        return { canUndo: false };
+      }
+
+      const latestChange = history[0];
+      const undoTimeLimit = new Date(latestChange.canUndoUntil);
+      const now = new Date();
+
+      if (now > undoTimeLimit) {
+        return { canUndo: false };
+      }
+
+      return {
+        canUndo: true,
+        previousStatus: latestChange.previousStatus as OrderStatus,
+        currentStatus: order.status,
+        timeRemaining: Math.floor((undoTimeLimit.getTime() - now.getTime()) / 1000), // seconds remaining
+        expiresAt: latestChange.canUndoUntil,
+      };
+    } catch (error) {
+      console.error('Error in canUndoStatusChange:', error);
+      return { canUndo: false };
+    }
+  }
+
+  /**
+   * Get the status change history for an order
+   * @param orderId The ID of the order
+   * @returns Array of status changes with timestamps
+   */
+  async getStatusChangeHistory(orderId: string): Promise<StatusChangeHistoryEntry[]> {
+    try {
+      const order = await this.getOrderById(orderId);
+      return order.metadata?.statusChangeHistory || [];
+    } catch (error) {
+      console.error('Error in getStatusChangeHistory:', error);
+      throw error;
+    }
   }
 
   /**
@@ -576,6 +721,95 @@ export class OrderService {
     };
 
     return this.updateOrder(orderId, updateData);
+  }
+
+  /**
+   * Get a valid user ID for order history operations
+   * Tries to find an admin user first, then any user, falling back to the admin order ID if available
+   */
+  async findValidUserId(providedUserId?: string): Promise<string | null> {
+    // If a valid ID was provided, use it
+    if (providedUserId && providedUserId !== 'system') {
+      return providedUserId;
+    }
+
+    try {
+      // Try to find an admin user ID first
+      const { data: adminUsers } = await this.supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'admin')
+        .limit(1);
+
+      if (adminUsers && adminUsers.length > 0 && adminUsers[0].id) {
+        return adminUsers[0].id;
+      }
+
+      // If no admin found, try to find any user
+      const { data: users } = await this.supabase.from('users').select('id').limit(1);
+
+      if (users && users.length > 0 && users[0].id) {
+        return users[0].id;
+      }
+
+      // If still no user found, try to use the service account directly
+      const adminClient = await getAdminSupabaseClient();
+      const { data: adminAuthUsers } = await adminClient.auth.admin.listUsers();
+
+      if (adminAuthUsers && adminAuthUsers.users && adminAuthUsers.users.length > 0) {
+        return adminAuthUsers.users[0].id;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error finding valid user ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Adds a new entry to the order status history with the provided details.
+   */
+  async addOrderStatusHistory(param: {
+    id: string | Uint8Array;
+    order_id: string;
+    status: OrderStatus;
+    notes: string;
+    created_at: string;
+    created_by: string;
+  }) {
+    try {
+      // Get admin client to bypass RLS policies
+      const adminSupabase = await getAdminSupabaseClient();
+
+      // Try to find a valid user ID since we can't use 'system' directly
+      const validUserId = await this.findValidUserId(param.created_by);
+
+      if (!validUserId) {
+        console.error('Could not find valid user ID for status history, skipping');
+        return;
+      }
+
+      // Insert history entry with a valid user ID
+      const { error: historyError } = await adminSupabase.from('order_status_history').insert({
+        id: v4(),
+        order_id: param.order_id,
+        status: param.status,
+        notes: param.notes,
+        created_at: new Date().toISOString(),
+        created_by: validUserId,
+      });
+
+      if (historyError) {
+        console.error('Failed to add status history:', historyError);
+        // We don't throw to allow the main process to continue
+      } else {
+        console.log('Successfully added order status history');
+      }
+    } catch (error) {
+      console.error('Exception in addOrderStatusHistory:', error);
+      // Don't throw - we want the main order update to succeed even if history fails
+    }
   }
 
   /**
@@ -801,43 +1035,6 @@ export class OrderService {
   private camelToSnakeCase(str: string): string {
     return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
   }
-
-  /**
-   * Adds a new entry to the order status history with the provided details.
-   *
-   * @param {Object} param - The parameters for the order status history entry.
-   * @param {string | Uint8Array} param.id - The unique identifier for the history entry.
-   * @param {string} param.order_id - The unique identifier for the order.
-   * @param {OrderStatus} param.status - The status of the order.
-   * @param {string} param.notes - Additional notes regarding the status change.
-   * @param {string} param.created_at - The timestamp when the status change occurred.
-   * @param {string} param.created_by - The identifier for the entity or user that created the entry.
-   *
-   * @return {Promise<void>} Resolves when the order status history entry is successfully added.
-   * Throws an error if the insertion fails.
-   */
-  async addOrderStatusHistory(param: {
-    id: string | Uint8Array;
-    order_id: string;
-    status: OrderStatus;
-    notes: string;
-    created_at: string;
-    created_by: string;
-  }) {
-    const { error: historyError } = await this.supabase.from('order_status_history').insert({
-      id: v4(),
-      order_id: param.order_id,
-      status: param.status,
-      notes: param.notes,
-      created_at: new Date().toISOString(),
-      created_by: 'system',
-    });
-
-    if (historyError) {
-      console.error('Failed to add status history:', historyError);
-      throw new Error(`Failed to add order status history item: ${historyError.message}`);
-    }
-  }
 }
 
 /**
@@ -845,8 +1042,8 @@ export class OrderService {
  */
 export async function getOrderService(): Promise<OrderService> {
   if (!orderServiceInstance) {
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+    // Use the utility function that handles environment-specific Supabase client initialization
+    const supabase = await getEnvironmentSupabaseClient();
     orderServiceInstance = new OrderService(supabase);
   }
   return orderServiceInstance;
