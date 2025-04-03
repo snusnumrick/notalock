@@ -234,22 +234,22 @@ describe('Order Data Validation', () => {
           // Define chain mocks ONCE
           const selectByIdChain = {
             eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue(finalOrderDataWithEmail),
+            single: vi.fn().mockResolvedValue(finalOrderDataWithEmail), // Resolves with email
           };
           const insertChain = {
             select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue(initialInsertResult),
+            single: vi.fn().mockResolvedValue(initialInsertResult), // Initial insert result
           };
-          const updateChain = {
+          const updateChain = { // For cart update
             eq: vi.fn().mockResolvedValue({ data: null, error: null }),
           };
 
-          // Return an object containing functions that return these mocks consistently
+          // Return an object containing the mocks directly
           return {
-            select: vi.fn(() => selectByIdChain), // Function returning the select chain mock
-            insert: vi.fn(() => insertChain), // Function returning the insert chain mock
-            update: vi.fn(() => updateChain), // Function returning the update chain mock
-            eq: vi.fn().mockReturnThis(), // Fallback for direct eq calls after update
+            select: vi.fn().mockReturnValue(selectByIdChain), // Ensure select() returns the chain resolving WITH email
+            insert: vi.fn().mockReturnValue(insertChain),
+            update: vi.fn().mockReturnValue(updateChain),
+            eq: vi.fn().mockReturnThis(),
           } as any;
         } else if (table === 'order_items') {
           return {
