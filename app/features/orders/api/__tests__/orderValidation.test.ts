@@ -247,13 +247,22 @@ describe('Order Data Validation', () => {
                 return { single: vi.fn().mockResolvedValue({ data: finalOrderData, error: null }) };
               }
               // Fallback for unexpected eq calls
-              return { single: vi.fn().mockResolvedValue({ data: null, error: { message: `Unexpected eq call: ${column}=${value}` } }) };
+              return {
+                single: vi.fn().mockResolvedValue({
+                  data: null,
+                  error: { message: `Unexpected eq call: ${column}=${value}` },
+                }),
+              };
             }),
             // Fallback if single is called directly after select
-            single: vi.fn().mockResolvedValue({ data: null, error: { message: 'Direct single call after select not expected' } })
+            single: vi.fn().mockResolvedValue({
+              data: null,
+              error: { message: 'Direct single call after select not expected' },
+            }),
           };
 
-          const updateChain = { // For cart update
+          const updateChain = {
+            // For cart update
             eq: vi.fn().mockResolvedValue({ data: null, error: null }),
           };
 
@@ -287,6 +296,7 @@ describe('Order Data Validation', () => {
       });
 
       // Act
+      console.log('validInput', validInput);
       const result = await orderService.createOrder(validInput);
 
       // Assert
