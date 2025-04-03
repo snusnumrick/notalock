@@ -17,9 +17,16 @@
 export function initializeSupabase(): void {
   // Verify environment variables are available
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-    throw new Error(
-      'Missing Supabase environment variables. SUPABASE_URL and SUPABASE_ANON_KEY must be set.'
-    );
+    if (process.env.NODE_ENV === 'production') {
+      console.error(
+        'Missing Supabase environment variables. SUPABASE_URL and SUPABASE_ANON_KEY must be set.'
+      );
+      // Continue in production but log the error
+    } else {
+      throw new Error(
+        'Missing Supabase environment variables. SUPABASE_URL and SUPABASE_ANON_KEY must be set.'
+      );
+    }
   }
 
   console.log('Supabase environment verified and ready for connections');

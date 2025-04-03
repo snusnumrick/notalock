@@ -40,7 +40,22 @@ export function createSupabaseClient(request: Request, response?: Response): Sup
   };
 
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-    throw new Error('Missing Supabase environment variables');
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Missing Supabase environment variables');
+      // Return a dummy client in production to prevent crashes
+      return createServerClient('https://placeholder-url.supabase.co', 'placeholder-key', {
+        cookies: cookieHandlers,
+        auth: {
+          detectSessionInUrl: true,
+          flowType: 'pkce',
+          autoRefreshToken: true,
+          persistSession: true,
+          storageKey: 'sb-session',
+        },
+      });
+    } else {
+      throw new Error('Missing Supabase environment variables');
+    }
   }
 
   return createServerClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
