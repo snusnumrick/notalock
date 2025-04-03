@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderService } from '../orderService';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid'; // Import uuid
 import {
   type OrderCreateInput,
   OrderStatus,
