@@ -1,6 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { OrderService } from '../orderService';
-import { mockDeep } from 'vitest-mock-extended';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { type OrderCreateInput, type OrderUpdateInput } from '../../types';
 import { createMockSupabaseClient } from './mocks/supabaseMock';
@@ -59,7 +58,8 @@ describe('Order Data Validation', () => {
         return {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(), // Needs to return 'this' for chaining
-          order: vi.fn().mockResolvedValue({ // Add the missing order method
+          order: vi.fn().mockResolvedValue({
+            // Add the missing order method
             data: [],
             error: null,
           }),
@@ -124,6 +124,7 @@ describe('Order Data Validation', () => {
     it('validates the items array is not empty', async () => {
       // Arrange
       const emptyItemsInput = {
+        userId: 'user-123',
         email: 'test@example.com',
         items: [], // Empty items array
         shippingCost: 10,
@@ -228,14 +229,14 @@ describe('Order Data Validation', () => {
           // Define chain mocks ONCE
           const selectByIdChain = {
             eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue(finalOrderDataWithEmail)
+            single: vi.fn().mockResolvedValue(finalOrderDataWithEmail),
           };
           const insertChain = {
             select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue(initialInsertResult)
+            single: vi.fn().mockResolvedValue(initialInsertResult),
           };
           const updateChain = {
-             eq: vi.fn().mockResolvedValue({ data: null, error: null })
+            eq: vi.fn().mockResolvedValue({ data: null, error: null }),
           };
 
           // Return an object containing functions that return these mocks consistently
@@ -243,9 +244,8 @@ describe('Order Data Validation', () => {
             select: vi.fn(() => selectByIdChain), // Function returning the select chain mock
             insert: vi.fn(() => insertChain), // Function returning the insert chain mock
             update: vi.fn(() => updateChain), // Function returning the update chain mock
-            eq: vi.fn().mockReturnThis(),     // Fallback for direct eq calls after update
+            eq: vi.fn().mockReturnThis(), // Fallback for direct eq calls after update
           } as any;
-
         } else if (table === 'order_items') {
           return {
             insert: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -323,7 +323,7 @@ describe('Order Data Validation', () => {
         notes: null,
         created_at: '2025-03-15T11:00:00Z',
         updated_at: '2025-03-15T11:00:00Z',
-        email: 'test@example.com' // Add required email field
+        email: 'test@example.com', // Add required email field
       };
       const updatedOrderData = {
         ...initialOrderData,
@@ -332,11 +332,9 @@ describe('Order Data Validation', () => {
         updated_at: '2025-03-15T12:00:00Z',
       };
 
-      // Mock the update operation
-      const updateMock = vi.fn().mockResolvedValue({ data: [updatedOrderData], error: null });
-      
       // Mock the single calls with proper sequencing
-      const singleMock = vi.fn()
+      const singleMock = vi
+        .fn()
         .mockResolvedValueOnce({ data: initialOrderData, error: null })
         .mockResolvedValueOnce({ data: updatedOrderData, error: null });
 
@@ -540,7 +538,7 @@ describe('Order Data Validation', () => {
         shipping_cost: 10,
         tax_amount: 5,
         subtotal_amount: 100,
-        total_amount: 115
+        total_amount: 115,
       };
 
       mockSupabaseClient.from.mockImplementation(table => {
