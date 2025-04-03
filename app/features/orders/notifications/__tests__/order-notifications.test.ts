@@ -16,6 +16,7 @@ import {
   generateOrderStatusEmailData,
   generateOrderStatusSmsData,
   handleOrderStatusChangeNotifications,
+  NotificationTemplateType,
 } from '../order-notifications';
 import { type Order, OrderStatus, PaymentStatus } from '../../types';
 
@@ -38,7 +39,7 @@ describe('Order Notifications', () => {
     // We'll re-implement the original functionality for the functions we're testing
     vi.mocked(generateOrderStatusEmailData).mockImplementation((order, newStatus, oldStatus) => {
       // Determine the template type based on the new status
-      let templateType;
+      let templateType: NotificationTemplateType;
       let subject;
 
       switch (newStatus) {
@@ -109,7 +110,7 @@ describe('Order Notifications', () => {
       }
 
       // Determine the template type and message based on the new status
-      let templateType;
+      let templateType: NotificationTemplateType;
       let message;
 
       switch (newStatus) {
@@ -385,9 +386,9 @@ describe('Order Notifications', () => {
       const emailData = generateOrderStatusEmailData(mockOrder, 'processing');
 
       // Assert
-      expect(emailData.data.items).toHaveLength(2);
-      expect(emailData.data.items[0]).toEqual(mockOrder.items[0]);
-      expect(emailData.data.items[1]).toEqual(mockOrder.items[1]);
+      expect((emailData.data as any).items).toHaveLength(2);
+      expect((emailData.data as any).items[0]).toEqual(mockOrder.items[0]);
+      expect((emailData.data as any).items[1]).toEqual(mockOrder.items[1]);
       expect(emailData.data.itemCount).toBe(3); // Total quantity: 2 + 1
     });
 
@@ -478,17 +479,19 @@ describe('Order Notifications', () => {
     it('sends both email and SMS notifications for significant status changes', async () => {
       // Arrange
       // Reset our implementation mocks first to get default behavior
-      vi.mocked(generateOrderStatusEmailData).mockImplementation((order, newStatus, oldStatus) => ({
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        customerEmail: order.email,
-        customerName: 'John Doe',
-        subject: 'Test Subject',
-        templateType: 'order_confirmed' as any,
-        data: { order },
-      }));
+      vi.mocked(generateOrderStatusEmailData).mockImplementation(
+        (order, _newStatus, _oldStatus) => ({
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          customerEmail: order.email,
+          customerName: 'John Doe',
+          subject: 'Test Subject',
+          templateType: 'order_confirmed' as any,
+          data: { order },
+        })
+      );
 
-      vi.mocked(generateOrderStatusSmsData).mockImplementation((order, newStatus) => ({
+      vi.mocked(generateOrderStatusSmsData).mockImplementation((order, _newStatus) => ({
         phoneNumber: order.shippingAddress?.phone || '',
         message: 'Test message',
         templateType: 'order_confirmed' as any,
@@ -531,15 +534,17 @@ describe('Order Notifications', () => {
     it('only sends email for non-critical status changes', async () => {
       // Arrange
       // Reset our implementation mocks first to get default behavior
-      vi.mocked(generateOrderStatusEmailData).mockImplementation((order, newStatus, oldStatus) => ({
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        customerEmail: order.email,
-        customerName: 'John Doe',
-        subject: 'Test Subject',
-        templateType: 'order_created' as any,
-        data: { order },
-      }));
+      vi.mocked(generateOrderStatusEmailData).mockImplementation(
+        (order, _newStatus, _oldStatus) => ({
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          customerEmail: order.email,
+          customerName: 'John Doe',
+          subject: 'Test Subject',
+          templateType: 'order_created' as any,
+          data: { order },
+        })
+      );
 
       // Return null to simulate non-critical status (no SMS needed)
       vi.mocked(generateOrderStatusSmsData).mockReturnValue(null);

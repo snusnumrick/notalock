@@ -4,7 +4,7 @@ import { Square, SquareClient as Client, SquareEnvironment as Environment } from
 import { v4 as uuidv4 } from 'uuid';
 
 // Define a type for Square currency
-type Currency = 'USD' | 'CAD' | 'GBP' | 'EUR' | 'JPY' | 'AUD';
+// type Currency = 'USD' | 'CAD' | 'GBP' | 'EUR' | 'JPY' | 'AUD';
 
 // Type for Square errors to handle error messages
 interface ApiError extends Error {
@@ -74,14 +74,14 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
    */
   async createPayment(
     amount: PaymentAmount,
-    options?: PaymentOptions
+    _options?: PaymentOptions
   ): Promise<{ clientSecret?: string; paymentIntentId?: string; error?: string }> {
     if (!this.squareClient || !this.locationId) {
       return { error: 'Square payment provider not properly initialized' };
     }
 
     try {
-      // const { currency, value, items } = amount;
+      const { currency, value, items } = amount;
 
       // For testing, we'll bypass the actual Square API call and return a dummy order ID
       const orderId = 'test_order_id';
