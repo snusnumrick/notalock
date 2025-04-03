@@ -1,7 +1,12 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderService } from '../orderService';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { type OrderCreateInput, type OrderUpdateInput } from '../../types';
+import {
+  type OrderCreateInput,
+  OrderStatus,
+  type OrderUpdateInput,
+  PaymentStatus,
+} from '../../types';
 import { createMockSupabaseClient } from './mocks/supabaseMock';
 
 // Mock Supabase client
@@ -338,7 +343,7 @@ describe('Order Data Validation', () => {
         .mockResolvedValueOnce({ data: initialOrderData, error: null })
         .mockResolvedValueOnce({ data: updatedOrderData, error: null });
 
-      mockSupabaseClient.from.mockImplementation(table => {
+      vi.mocked(mockSupabaseClient.from).mockImplementation(table => {
         if (table === 'orders') {
           return {
             select: vi.fn().mockReturnThis(),
@@ -381,7 +386,7 @@ describe('Order Data Validation', () => {
       const combinedUpdate = {
         status: 'completed',
         paymentStatus: 'paid',
-      };
+      } as OrderUpdateInput;
 
       // Act & Assert
       await expect(orderService.updateOrder('order-123', combinedUpdate)).rejects.toThrow(
@@ -452,7 +457,7 @@ describe('Order Data Validation', () => {
 
       // Setup update attempt to go from 'completed' to 'processing' (not allowed)
       const invalidTransition = {
-        status: 'processing', // Can't go back to processing after completed
+        status: 'processing' as OrderStatus, // Can't go back to processing after completed
       };
 
       // Since we're checking that validation fails, add a specific mock for this test
@@ -513,7 +518,7 @@ describe('Order Data Validation', () => {
 
       // Setup update attempt
       const invalidTransition = {
-        paymentStatus: 'pending', // Can't go back to pending after paid
+        paymentStatus: 'pending' as PaymentStatus, // Can't go back to pending after paid
       };
 
       // Act & Assert
@@ -541,7 +546,7 @@ describe('Order Data Validation', () => {
         total_amount: 115,
       };
 
-      mockSupabaseClient.from.mockImplementation(table => {
+      vi.mocked(mockSupabaseClient.from).mockImplementation(table => {
         if (table === 'orders') {
           return {
             select: vi.fn().mockReturnThis(),
@@ -571,7 +576,7 @@ describe('Order Data Validation', () => {
       });
 
       // Override the rpc check to bypass validation
-      mockSupabaseClient.rpc.mockResolvedValue({
+      mockSupabaseClient.rpc = vi.fn().mockResolvedValue({
         data: { status: 'processing', canTransition: true },
         error: null,
       });
@@ -580,7 +585,7 @@ describe('Order Data Validation', () => {
 
       // Setup valid transition
       const validTransition = {
-        status: 'processing', // Valid: pending -> processing
+        status: 'processing' as OrderStatus, // Valid: pending -> processing
       };
 
       // Act
