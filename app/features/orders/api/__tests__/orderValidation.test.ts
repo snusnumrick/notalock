@@ -247,9 +247,12 @@ describe('Order Data Validation', () => {
             eq: vi.fn((column, value) => {
               // Check if eq is called with 'id' and the mocked UUID
               if (column === 'id' && value === 'mocked-uuid') {
+                // Log the data being returned by the mock for debugging
+                console.log('DEBUG: Mock getOrderById returning:', finalOrderData);
                 return { single: vi.fn().mockResolvedValue({ data: finalOrderData, error: null }) };
               }
               // Fallback for unexpected eq calls
+              console.log(`DEBUG: Mock getOrderById fallback for eq(${column}, ${value})`);
               return {
                 single: vi.fn().mockResolvedValue({
                   data: null,
