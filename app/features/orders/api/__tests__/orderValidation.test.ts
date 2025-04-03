@@ -214,33 +214,32 @@ describe('Order Data Validation', () => {
       // Create a more detailed mock implementation that explicitly includes the email field
       const mockOrderWithEmail = {
         ...createdOrderData,
-        email: 'test@example.com', // Explicitly include email field
+        email: 'test@example.com',
       };
 
+      // Simplified mock for the 'orders' table
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
-          // Define the chain that starts with insert()
-          const insertChain = {
+          const mockData = { data: mockOrderWithEmail, error: null };
+
+          // Chain for insert().select().single()
+          const insertSelectSingleChain = {
+            single: vi.fn().mockResolvedValue(mockData),
             select: vi.fn().mockReturnThis(),
-            // Ensure the single() call following insert().select() returns data with email
-            single: vi.fn().mockResolvedValue({ data: mockOrderWithEmail, error: null }),
           };
 
-          // Define the chain that starts with select() (for potential getOrderById calls)
-          const selectChain = {
+          // Chain for select().eq().single()
+          const selectEqSingleChain = {
+            single: vi.fn().mockResolvedValue(mockData),
             eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: mockOrderWithEmail, error: null }),
           };
 
           return {
-            // When insert() is called, return the insertChain object
-            insert: vi.fn().mockReturnValue(insertChain),
-            // When select() is called, return the selectChain object
-            select: vi.fn().mockReturnValue(selectChain),
-            // Fallback mocks for safety, though ideally not needed if above is correct
-            eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: mockOrderWithEmail, error: null }),
+            insert: vi.fn().mockReturnValue(insertSelectSingleChain),
+            select: vi.fn().mockReturnValue(selectEqSingleChain),
+            // Add other methods if needed by the test, but keep it minimal
             update: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(), // Basic fallback if needed elsewhere
           } as any;
         } else if (table === 'order_items') {
           return {
