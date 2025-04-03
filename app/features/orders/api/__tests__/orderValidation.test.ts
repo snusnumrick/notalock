@@ -220,22 +220,23 @@ describe('Order Data Validation', () => {
       // Mock implementation for createOrder test
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
-          // Mock for the insert().select().single() call
+          // Mock for the insert(...).select().single() chain
+          // Ensure this specific chain returns the object WITH the email
           const insertChain = {
-            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }), // Returns basic inserted data
+            single: vi.fn().mockResolvedValue({ data: mockOrderWithEmail, error: null }), // Return data WITH email
             select: vi.fn().mockReturnThis(),
           };
-          // Mock for the final getOrderById (select().eq().single()) call
+          // Mock for any subsequent getOrderById calls (select().eq().single())
           const selectChain = {
-            single: vi.fn().mockResolvedValue({ data: mockOrderWithEmail, error: null }), // Returns complete data WITH email
+            single: vi.fn().mockResolvedValue({ data: mockOrderWithEmail, error: null }),
             eq: vi.fn().mockReturnThis(),
           };
 
           return {
-            insert: vi.fn().mockReturnValue(insertChain),
-            select: vi.fn().mockReturnValue(selectChain), // This handles the final getOrderById
-            update: vi.fn().mockReturnThis(), // For cart update
-            eq: vi.fn().mockReturnThis(), // For cart update
+            insert: vi.fn().mockReturnValue(insertChain), // This chain must resolve with email
+            select: vi.fn().mockReturnValue(selectChain), // Handles potential getOrderById calls
+            update: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
           } as any;
         } else if (table === 'order_items') {
           return {

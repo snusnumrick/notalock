@@ -508,33 +508,31 @@ describe('OrderService', () => {
       // that is now used in updateOrderFromPayment to avoid validation errors
 
       // Mock implementation for successful payment update sequence
+      // Define counters OUTSIDE the implementation to persist across calls
+      let getOrderByIdCallCount_success = 0;
+      let updateCallCount_success = 0;
       mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
           const initialOrderState = { data: { ...mockOrder, status: 'pending', payment_status: 'pending' }, error: null };
-          // State after only payment details are updated
           const afterPaymentUpdateState = { data: { ...mockOrder, status: 'pending', payment_status: 'paid', payment_intent_id: 'pi_123456', metadata: { /* updated metadata */ } }, error: null };
-          // Final state after status is also updated
           const finalOrderState = { data: updatedOrder, error: null }; // Should be status: 'paid', payment_status: 'paid'
 
-          let getOrderByIdCallCount = 0;
           const selectEqSingleMock = vi.fn().mockImplementation(() => {
-            getOrderByIdCallCount++;
-            // console.log(`DEBUG: getOrderById call ${getOrderByIdCallCount}`);
-            if (getOrderByIdCallCount === 1) return Promise.resolve(initialOrderState); // Inside first updateOrder (payment)
-            if (getOrderByIdCallCount === 2) return Promise.resolve(afterPaymentUpdateState); // End of first updateOrder (payment)
-            if (getOrderByIdCallCount === 3) return Promise.resolve(afterPaymentUpdateState); // Inside second updateOrder (status)
-            if (getOrderByIdCallCount === 4) return Promise.resolve(finalOrderState); // End of second updateOrder (status)
-            if (getOrderByIdCallCount === 5) return Promise.resolve(finalOrderState); // Final getOrderById in updateOrderFromPayment
-            return Promise.resolve(finalOrderState); // Default to final state
+            getOrderByIdCallCount_success++;
+            // console.log(`DEBUG: Success getOrderById call ${getOrderByIdCallCount_success}`);
+            if (getOrderByIdCallCount_success === 1) return Promise.resolve(initialOrderState);
+            if (getOrderByIdCallCount_success === 2) return Promise.resolve(afterPaymentUpdateState);
+            if (getOrderByIdCallCount_success === 3) return Promise.resolve(afterPaymentUpdateState);
+            if (getOrderByIdCallCount_success === 4) return Promise.resolve(finalOrderState);
+            if (getOrderByIdCallCount_success === 5) return Promise.resolve(finalOrderState); // Ensure 5th call returns final state
+            return Promise.resolve(finalOrderState); // Default
           });
 
-          // Mock the update().eq().select().single() chain results
-          let updateCallCount = 0;
           const updateEqSelectSingleMock = vi.fn().mockImplementation(() => {
-            updateCallCount++;
-            // console.log(`DEBUG: update call ${updateCallCount}`);
-            if (updateCallCount === 1) return Promise.resolve(afterPaymentUpdateState); // Result of payment update
-            if (updateCallCount === 2) return Promise.resolve(finalOrderState); // Result of status update
+            updateCallCount_success++;
+            // console.log(`DEBUG: Success update call ${updateCallCount_success}`);
+            if (updateCallCount_success === 1) return Promise.resolve(afterPaymentUpdateState);
+            if (updateCallCount_success === 2) return Promise.resolve(finalOrderState);
             return Promise.resolve(finalOrderState);
           });
 
@@ -589,32 +587,31 @@ describe('OrderService', () => {
       };
 
       // Mock implementation for failed payment update sequence
+      // Define counters OUTSIDE the implementation to persist across calls
+      let getOrderByIdCallCount_fail = 0;
+      let updateCallCount_fail = 0;
       mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
           const initialOrderState = { data: { ...mockOrder, status: 'pending', payment_status: 'pending' }, error: null };
-          // State after only payment details are updated (to failed)
           const afterPaymentUpdateState = { data: { ...mockOrder, status: 'pending', payment_status: 'failed', metadata: { /* updated metadata */ } }, error: null };
-           // Final state after status is also updated (to failed)
           const finalOrderState = { data: updatedOrder, error: null }; // Should be status: 'failed', payment_status: 'failed'
 
-          let getOrderByIdCallCount = 0;
           const selectEqSingleMock = vi.fn().mockImplementation(() => {
-            getOrderByIdCallCount++;
-            // console.log(`DEBUG: getOrderById call ${getOrderByIdCallCount}`);
-            if (getOrderByIdCallCount === 1) return Promise.resolve(initialOrderState);
-            if (getOrderByIdCallCount === 2) return Promise.resolve(afterPaymentUpdateState);
-            if (getOrderByIdCallCount === 3) return Promise.resolve(afterPaymentUpdateState);
-            if (getOrderByIdCallCount === 4) return Promise.resolve(finalOrderState);
-            if (getOrderByIdCallCount === 5) return Promise.resolve(finalOrderState);
-            return Promise.resolve(finalOrderState);
+            getOrderByIdCallCount_fail++;
+            // console.log(`DEBUG: Fail getOrderById call ${getOrderByIdCallCount_fail}`);
+            if (getOrderByIdCallCount_fail === 1) return Promise.resolve(initialOrderState);
+            if (getOrderByIdCallCount_fail === 2) return Promise.resolve(afterPaymentUpdateState);
+            if (getOrderByIdCallCount_fail === 3) return Promise.resolve(afterPaymentUpdateState);
+            if (getOrderByIdCallCount_fail === 4) return Promise.resolve(finalOrderState);
+            if (getOrderByIdCallCount_fail === 5) return Promise.resolve(finalOrderState); // Ensure 5th call returns final state
+            return Promise.resolve(finalOrderState); // Default
           });
 
-          let updateCallCount = 0;
           const updateEqSelectSingleMock = vi.fn().mockImplementation(() => {
-            updateCallCount++;
-            // console.log(`DEBUG: update call ${updateCallCount}`);
-            if (updateCallCount === 1) return Promise.resolve(afterPaymentUpdateState); // Result of payment update
-            if (updateCallCount === 2) return Promise.resolve(finalOrderState); // Result of status update
+            updateCallCount_fail++;
+            // console.log(`DEBUG: Fail update call ${updateCallCount_fail}`);
+            if (updateCallCount_fail === 1) return Promise.resolve(afterPaymentUpdateState);
+            if (updateCallCount_fail === 2) return Promise.resolve(finalOrderState);
             return Promise.resolve(finalOrderState);
           });
 
