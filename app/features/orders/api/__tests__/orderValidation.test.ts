@@ -407,7 +407,8 @@ describe('Order Data Validation', () => {
   describe('order state transitions', () => {
     it('validates allowed status transitions', async () => {
       // Arrange - Clear previous mock and set up a specific implementation for this test
-      vi.mocked(mockSupabaseClient.from).mockImplementation(table => {
+      // Use direct assignment for consistency
+      mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
           return {
             select: vi.fn().mockReturnThis(),
