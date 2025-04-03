@@ -5,14 +5,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { type OrderCreateInput, type OrderUpdateInput } from '../../types';
 import { createMockSupabaseClient } from './mocks/supabaseMock';
 
-// Extend SupabaseClient type to include our custom flags
-type ExtendedSupabaseClient = SupabaseClient & {
-  _isDetailedQuery?: boolean;
-  _getCounter?: number;
-};
-
 // Mock Supabase client
-let mockSupabaseClient: ExtendedSupabaseClient;
+let mockSupabaseClient: SupabaseClient;
 
 describe('Order Data Validation', () => {
   let orderService: OrderService;
@@ -21,57 +15,47 @@ describe('Order Data Validation', () => {
     vi.clearAllMocks();
 
     // Create a properly mocked Supabase client for each test
-    mockSupabaseClient = createMockSupabaseClient() as ExtendedSupabaseClient;
-    mockSupabaseClient._isDetailedQuery = false;
+    mockSupabaseClient = createMockSupabaseClient();
     orderService = new OrderService(mockSupabaseClient);
 
-    // Setup successful mock responses
+    // Default mock implementation - specific tests can override this
     mockSupabaseClient.from = vi.fn().mockImplementation(table => {
+      const mockOrderData = {
+        id: 'order-123',
+        order_number: 'NO-123',
+        email: 'test@example.com',
+        status: 'pending',
+        payment_status: 'pending',
+        shipping_cost: 10,
+        tax_amount: 5,
+        subtotal_amount: 100,
+        total_amount: 115,
+        created_at: '2025-03-15T12:00:00Z',
+        updated_at: '2025-03-15T12:00:00Z',
+      };
+
+      const baseQueryBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: mockOrderData, error: null }),
+        insert: vi.fn().mockReturnThis(), // Supports chaining after insert
+        update: vi.fn().mockReturnThis(), // Supports chaining after update
+        order: vi.fn().mockResolvedValue({ data: [], error: null }), // For history
+      };
+
       if (table === 'orders') {
-        if (mockSupabaseClient._isDetailedQuery) {
-          // For detailed queries (e.g., getOrderById)
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              data: {
-                id: 'order-123',
-                order_number: 'NO-123',
-                email: 'test@example.com',
-                status: 'pending',
-                payment_status: 'pending',
-                shipping_cost: 10,
-                tax_amount: 5,
-                subtotal_amount: 100,
-                total_amount: 115,
-                created_at: '2025-03-15T12:00:00Z',
-                updated_at: '2025-03-15T12:00:00Z',
-              },
-              error: null,
-            }),
-          } as any;
-        } else {
-          // For basic queries (list, insert, update)
-          mockSupabaseClient._isDetailedQuery = true; // Set flag for next query
-          return {
-            insert: vi.fn().mockReturnThis(),
-            update: vi.fn().mockReturnThis(),
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              data: {
-                id: 'order-123',
-                order_number: 'NO-123',
-                status: 'pending',
-                payment_status: 'pending',
-              },
-              error: null,
-            }),
-          } as any;
-        }
+        return baseQueryBuilder;
       } else if (table === 'order_items') {
         return {
           insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({
+            data: [],
+            error: null,
+          }),
+        } as any;
+      } else if (table === 'order_status_history') {
+        return {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockResolvedValue({
             data: [],
@@ -205,26 +189,44 @@ describe('Order Data Validation', () => {
         totalAmount: 115,
       } as OrderCreateInput;
 
-      // Mock successful order creation
+      // Mock successful order creation and subsequent getOrderById call
+      const createdOrderData = {
+        id: 'order-123',
+        order_number: 'NO-123',
+        email: 'test@example.com',
+        status: 'pending',
+        payment_status: 'pending',
+        shipping_cost: 10,
+        tax_amount: 5,
+        subtotal_amount: 100,
+        total_amount: 115,
+        created_at: '2025-03-15T12:00:00Z',
+        updated_at: '2025-03-15T12:00:00Z',
+      };
+      const createdOrderItemsData = [
+        {
+          id: 'item-1',
+          order_id: 'order-123',
+          product_id: 'product-1',
+          name: 'Test Product',
+          sku: 'TP1',
+          quantity: 2,
+          unit_price: 50,
+          total_price: 100,
+          created_at: '2025-03-15T12:00:00Z',
+          updated_at: '2025-03-15T12:00:00Z',
+        },
+      ];
+
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
+          // Mock for the insert().select().single() chain AND the getOrderById() chain
           return {
             insert: vi.fn().mockReturnThis(),
             select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(), // Add eq for getOrderById
             single: vi.fn().mockResolvedValue({
-              data: {
-                id: 'order-123',
-                order_number: 'NO-123',
-                email: 'test@example.com',
-                status: 'pending',
-                payment_status: 'pending',
-                shipping_cost: 10,
-                tax_amount: 5,
-                subtotal_amount: 100,
-                total_amount: 115,
-                created_at: '2025-03-15T12:00:00Z',
-                updated_at: '2025-03-15T12:00:00Z',
-              },
+              data: createdOrderData,
               error: null,
             }),
           } as any;
@@ -233,20 +235,7 @@ describe('Order Data Validation', () => {
             insert: vi.fn().mockResolvedValue({ data: null, error: null }),
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockResolvedValue({
-              data: [
-                {
-                  id: 'item-1',
-                  order_id: 'order-123',
-                  product_id: 'product-1',
-                  name: 'Test Product',
-                  sku: 'TP1',
-                  quantity: 2,
-                  unit_price: 50,
-                  total_price: 100,
-                  created_at: '2025-03-15T12:00:00Z',
-                  updated_at: '2025-03-15T12:00:00Z',
-                },
-              ],
+              data: createdOrderItemsData,
               error: null,
             }),
           } as any;
@@ -306,26 +295,39 @@ describe('Order Data Validation', () => {
         notes: 'Order is being processed',
       };
 
-      // Mock successful order update
-      (mockSupabaseClient.from as any).mockImplementation(table => {
+      // Mock successful order update:
+      // 1. Initial getOrderById
+      // 2. update().eq()
+      // 3. Final getOrderById
+      const initialOrderData = {
+        id: 'order-123',
+        order_number: 'NO-123',
+        status: 'pending', // Initial status
+        payment_status: 'pending',
+        notes: null,
+        created_at: '2025-03-15T11:00:00Z',
+        updated_at: '2025-03-15T11:00:00Z',
+      };
+      const updatedOrderData = {
+        ...initialOrderData,
+        status: 'processing', // Updated status
+        notes: 'Order is being processed',
+        updated_at: '2025-03-15T12:00:00Z', // Updated timestamp
+      };
+
+      // Use mockResolvedValueOnce for sequential calls to single()
+      const singleMock = vi
+        .fn()
+        .mockResolvedValueOnce({ data: initialOrderData, error: null }) // For initial getOrderById
+        .mockResolvedValueOnce({ data: updatedOrderData, error: null }); // For final getOrderById
+
+      mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
           return {
-            update: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockResolvedValue({
-              data: null,
-              error: null,
-            }),
             select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              data: {
-                id: 'order-123',
-                order_number: 'NO-123',
-                status: 'processing',
-                notes: 'Order is being processed',
-                updated_at: '2025-03-15T12:00:00Z',
-              },
-              error: null,
-            }),
+            eq: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
+            single: singleMock, // Use the sequential mock
           } as any;
         } else if (table === 'order_items') {
           return {
