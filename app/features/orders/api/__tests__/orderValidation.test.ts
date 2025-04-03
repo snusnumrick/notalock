@@ -222,27 +222,28 @@ describe('Order Data Validation', () => {
       // Use .mockImplementation() on the existing mock function from beforeEach, wrapped with vi.mocked()
       vi.mocked(mockSupabaseClient.from).mockImplementation(table => {
         if (table === 'orders') {
-          // Define the data we expect getOrderById to retrieve
           const finalOrderDataWithEmail = { data: mockOrderWithEmail, error: null };
+          const initialInsertResult = { data: createdOrderData, error: null };
 
-          // Mock for the select().eq().single() chain used by getOrderById
-          const selectByIdMock = {
+          // Define chain mocks ONCE
+          const selectByIdChain = {
             eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue(finalOrderDataWithEmail) // Explicitly return data with email
+            single: vi.fn().mockResolvedValue(finalOrderDataWithEmail)
           };
-
-          // Mock for the insert().select().single() chain
-          const insertMock = {
+          const insertChain = {
             select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }) // Initial insert result
+            single: vi.fn().mockResolvedValue(initialInsertResult)
+          };
+          const updateChain = {
+             eq: vi.fn().mockResolvedValue({ data: null, error: null })
           };
 
-          // Return mocks based on the first method called
+          // Return an object containing functions that return these mocks consistently
           return {
-            select: vi.fn().mockReturnValue(selectByIdMock), // This handles getOrderById
-            insert: vi.fn().mockReturnValue(insertMock), // This handles the initial insert
-            update: vi.fn().mockReturnThis(), // For cart update
-            eq: vi.fn().mockReturnThis(),     // For cart update chaining
+            select: vi.fn(() => selectByIdChain), // Function returning the select chain mock
+            insert: vi.fn(() => insertChain), // Function returning the insert chain mock
+            update: vi.fn(() => updateChain), // Function returning the update chain mock
+            eq: vi.fn().mockReturnThis(),     // Fallback for direct eq calls after update
           } as any;
 
         } else if (table === 'order_items') {
