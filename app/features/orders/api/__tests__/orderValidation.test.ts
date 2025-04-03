@@ -211,32 +211,22 @@ describe('Order Data Validation', () => {
         },
       ];
 
-      // Use mockImplementationOnce for sequential calls if needed, or refine the general mock
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
-          // Define mocks for the two expected call patterns separately
-          const insertMock = vi.fn().mockImplementation(() => ({
-            select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: { id: createdOrderData.id }, error: null }),
-          }));
+          // Mock single() sequentially:
+          // 1st call (after insert): returns minimal data { id }
+          // 2nd call (from getOrderById): returns full createdOrderData
+          const singleMock = vi
+            .fn()
+            .mockResolvedValueOnce({ data: { id: createdOrderData.id }, error: null }) // Result of insert().select().single()
+            .mockResolvedValueOnce({ data: createdOrderData, error: null }); // Result of select().eq().single()
 
-          const selectMock = vi.fn().mockImplementation(() => ({
-            eq: vi.fn().mockReturnThis(),
-            // Ensure this single() call returns the full data for getOrderById
-            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
-          }));
-
-          // Return the appropriate mock based on the chain start
-          // This assumes 'insert' is called first, then 'select'
-          // Vitest's mockImplementation might handle this implicitly,
-          // but let's be a bit more explicit if possible.
-          // A simpler approach might be needed if this doesn't work.
           return {
-            insert: insertMock,
-            select: selectMock,
-            // Add eq and single as fallbacks if the above isn't structured perfectly
+            insert: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
+            single: singleMock, // Use the sequential mock for single()
+            update: vi.fn().mockReturnThis(), // Keep other methods available if needed
           } as any;
         } else if (table === 'order_items') {
           return {
