@@ -13,6 +13,11 @@ import { createMockSupabaseClient } from './mocks/supabaseMock';
 // Mock Supabase client
 let mockSupabaseClient: SupabaseClient;
 
+// Mock the uuid module
+vi.mock('uuid', () => ({
+  v4: vi.fn(() => 'mocked-uuid'), // Ensure v4 returns the mocked UUID
+}));
+
 describe('Order Data Validation', () => {
   let orderService: OrderService;
 
@@ -228,23 +233,20 @@ describe('Order Data Validation', () => {
       // Mock implementation specifically for the 'accepts valid order input' test
       mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
-          // Use the ID from the actual createdOrderData ('order-123')
-          const initialInsertData = { ...createdOrderData }; // id: 'order-123'
-          // Ensure the final data also uses the correct ID and has the email
-          const finalOrderData = { ...mockOrderWithEmail, id: 'order-123' };
+          // Expect 'mocked-uuid' now that uuid is mocked
+          const initialInsertData = { ...createdOrderData, id: 'mocked-uuid' };
+          const finalOrderData = { ...mockOrderWithEmail, id: 'mocked-uuid' };
 
           const insertChain = {
             select: vi.fn().mockReturnThis(),
-            // Insert resolves with the initial data including the real ID
             single: vi.fn().mockResolvedValue({ data: initialInsertData, error: null }),
           };
 
-          // Mock for select().eq('id', 'order-123').single()
+          // Mock for select().eq('id', 'mocked-uuid').single()
           const selectByIdChain = {
             eq: vi.fn((column, value) => {
-              // Check if eq is called with 'id' and the ID from createdOrderData
-              if (column === 'id' && value === 'order-123') {
-                // Return the final step resolving with the full order data (including email)
+              // Check if eq is called with 'id' and the mocked UUID
+              if (column === 'id' && value === 'mocked-uuid') {
                 return { single: vi.fn().mockResolvedValue({ data: finalOrderData, error: null }) };
               }
               // Fallback for unexpected eq calls
