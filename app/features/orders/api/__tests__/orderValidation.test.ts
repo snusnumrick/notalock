@@ -211,23 +211,32 @@ describe('Order Data Validation', () => {
         },
       ];
 
+      // Use mockImplementationOnce for sequential calls if needed, or refine the general mock
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
-          // Mock for the insert().select().single() chain AND the getOrderById() chain
-          return {
-            // Mock for the insert().select().single() chain
-            insert: vi.fn().mockImplementation(() => ({
-              select: vi.fn().mockReturnThis(),
-              single: vi.fn().mockResolvedValue({ data: { id: createdOrderData.id }, error: null }), // Insert returns minimal data
-            })),
-            // Mock for the subsequent getOrderById() call (select().eq().single())
-            select: vi.fn().mockImplementation(() => ({
-              eq: vi.fn().mockReturnThis(),
-              single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }), // getOrderById returns full data
-            })),
-            // Add eq directly for cases where select might be skipped in chaining? (Less likely but safe)
+          // Define mocks for the two expected call patterns separately
+          const insertMock = vi.fn().mockImplementation(() => ({
+            select: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { id: createdOrderData.id }, error: null }),
+          }));
+
+          const selectMock = vi.fn().mockImplementation(() => ({
             eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }), // Fallback single
+            // Ensure this single() call returns the full data for getOrderById
+            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
+          }));
+
+          // Return the appropriate mock based on the chain start
+          // This assumes 'insert' is called first, then 'select'
+          // Vitest's mockImplementation might handle this implicitly,
+          // but let's be a bit more explicit if possible.
+          // A simpler approach might be needed if this doesn't work.
+          return {
+            insert: insertMock,
+            select: selectMock,
+            // Add eq and single as fallbacks if the above isn't structured perfectly
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
           } as any;
         } else if (table === 'order_items') {
           return {
