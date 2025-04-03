@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+// Force CommonJS in .mjs file
+// @ts-check
 /**
  * This script checks if all required environment variables are set
  * Run it before deployment to Vercel to ensure all required variables are configured
