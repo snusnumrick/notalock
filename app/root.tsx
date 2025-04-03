@@ -99,6 +99,8 @@ export function ErrorBoundary() {
   const error = useRouteError();
 
   let errorMessage = 'An unexpected error occurred.';
+  let errorTitle = 'Something went wrong';
+  let errorDetail = '';
   let errorStatus = 500;
 
   if (isRouteErrorResponse(error)) {
@@ -106,6 +108,11 @@ export function ErrorBoundary() {
     errorStatus = error.status;
   } else if (error instanceof Error) {
     errorMessage = error.message;
+    // Check for Supabase configuration errors
+    if (errorMessage.includes('Supabase') || errorMessage.includes('supabase')) {
+      errorTitle = 'Supabase Configuration Error';
+      errorDetail = `The application is not properly connected to the database. This usually happens when environment variables are missing.\n\nIf you are the site administrator, please check that SUPABASE_URL and SUPABASE_ANON_KEY are correctly set in your environment.`;
+    }
   }
 
   return (
@@ -125,9 +132,12 @@ export function ErrorBoundary() {
               <div className="sm:ml-6">
                 <div className="sm:border-l sm:border-gray-200 sm:pl-6">
                   <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
-                    Something went wrong
+                    {errorTitle}
                   </h1>
                   <p className="mt-2 text-base text-gray-500">{errorMessage}</p>
+                  {errorDetail && (
+                    <p className="mt-4 text-sm text-gray-500 whitespace-pre-line">{errorDetail}</p>
+                  )}
                 </div>
                 <div className="mt-10 flex space-x-3 sm:border-l sm:border-transparent sm:pl-6">
                   <a

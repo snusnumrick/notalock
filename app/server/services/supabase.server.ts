@@ -41,9 +41,10 @@ export function createSupabaseClient(request: Request, response?: Response): Sup
 
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
     if (process.env.NODE_ENV === 'production') {
-      console.error('Missing Supabase environment variables');
-      // Return a dummy client in production to prevent crashes
-      return createServerClient('https://placeholder-url.supabase.co', 'placeholder-key', {
+      console.error('WARN: Missing Supabase environment variables in createSupabaseClient');
+      // Just log the error but don't use fallback credentials in production
+      // Instead return a dummy client that will fail gracefully
+      return createServerClient('https://example.supabase.co', 'dummy-key', {
         cookies: cookieHandlers,
         auth: {
           detectSessionInUrl: true,

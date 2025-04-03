@@ -19,7 +19,7 @@ export function initializeSupabase(): void {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
     if (process.env.NODE_ENV === 'production') {
       console.error(
-        'Missing Supabase environment variables. SUPABASE_URL and SUPABASE_ANON_KEY must be set.'
+        'WARN: Missing Supabase environment variables. SUPABASE_URL and SUPABASE_ANON_KEY must be set.'
       );
       // Continue in production but log the error
     } else {
@@ -27,9 +27,12 @@ export function initializeSupabase(): void {
         'Missing Supabase environment variables. SUPABASE_URL and SUPABASE_ANON_KEY must be set.'
       );
     }
+  } else {
+    console.log('Supabase environment verified and ready for connections', {
+      url: process.env.SUPABASE_URL.substring(0, 10) + '...',
+      keyLength: process.env.SUPABASE_ANON_KEY?.length || 0,
+    });
   }
-
-  console.log('Supabase environment verified and ready for connections');
 }
 
 // Re-export the server client creator for convenience
