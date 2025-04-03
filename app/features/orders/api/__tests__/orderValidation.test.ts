@@ -314,24 +314,27 @@ describe('Order Data Validation', () => {
       const initialOrderData = {
         id: 'order-123',
         order_number: 'NO-123',
-        status: 'pending', // Initial status
+        status: 'pending',
         payment_status: 'pending',
         notes: null,
         created_at: '2025-03-15T11:00:00Z',
         updated_at: '2025-03-15T11:00:00Z',
+        email: 'test@example.com' // Add required email field
       };
       const updatedOrderData = {
         ...initialOrderData,
-        status: 'processing', // Updated status
+        status: 'processing',
         notes: 'Order is being processed',
-        updated_at: '2025-03-15T12:00:00Z', // Updated timestamp
+        updated_at: '2025-03-15T12:00:00Z',
       };
 
-      // Use mockResolvedValueOnce for sequential calls to single()
-      const singleMock = vi
-        .fn()
-        .mockResolvedValueOnce({ data: initialOrderData, error: null }) // For initial getOrderById
-        .mockResolvedValueOnce({ data: updatedOrderData, error: null }); // For final getOrderById
+      // Mock the update operation
+      const updateMock = vi.fn().mockResolvedValue({ data: [updatedOrderData], error: null });
+      
+      // Mock the single calls with proper sequencing
+      const singleMock = vi.fn()
+        .mockResolvedValueOnce({ data: initialOrderData, error: null })
+        .mockResolvedValueOnce({ data: updatedOrderData, error: null });
 
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
@@ -410,7 +413,8 @@ describe('Order Data Validation', () => {
               data: {
                 id: 'order-123',
                 status: 'completed', // Already completed
-                payment_status: 'paid',
+                payment_status: 'paid', // Current payment status
+                status: 'completed', // Current order status
                 created_at: '2025-03-15T12:00:00Z',
                 updated_at: '2025-03-15T12:00:00Z',
               },
@@ -512,7 +516,7 @@ describe('Order Data Validation', () => {
 
       // Act & Assert
       await expect(orderService.updateOrder('order-123', invalidTransition)).rejects.toThrow(
-        'Invalid payment status transition: Cannot change from paid to pending'
+        'Invalid payment status transition: Cannot change from paid to pending. Allowed transitions: refunded, cancelled'
       );
     });
 
@@ -520,11 +524,16 @@ describe('Order Data Validation', () => {
       // Arrange - Simpler mock for the order
       const updatedOrder = {
         id: 'order-123',
-        status: 'processing', // Updated status
+        order_number: 'NO-123',
+        status: 'processing',
         payment_status: 'pending',
         created_at: '2025-03-15T12:00:00Z',
         updated_at: '2025-03-15T12:30:00Z',
-        guest_email: 'test@example.com',
+        email: 'test@example.com', // Add required email field
+        shipping_cost: 10,
+        tax_amount: 5,
+        subtotal_amount: 100,
+        total_amount: 115
       };
 
       mockSupabaseClient.from.mockImplementation(table => {
