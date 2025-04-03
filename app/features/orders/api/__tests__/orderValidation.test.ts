@@ -55,18 +55,11 @@ describe('Order Data Validation', () => {
           }),
         } as any;
       } else if (table === 'order_status_history') {
+        // Combine the duplicated 'order_status_history' blocks
         return {
           select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockResolvedValue({
-            data: [],
-            error: null,
-          }),
-        } as any;
-      } else if (table === 'order_status_history') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockResolvedValue({
+          eq: vi.fn().mockReturnThis(), // Needs to return 'this' for chaining
+          order: vi.fn().mockResolvedValue({ // Add the missing order method
             data: [],
             error: null,
           }),
@@ -222,13 +215,19 @@ describe('Order Data Validation', () => {
         if (table === 'orders') {
           // Mock for the insert().select().single() chain AND the getOrderById() chain
           return {
-            insert: vi.fn().mockReturnThis(),
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(), // Add eq for getOrderById
-            single: vi.fn().mockResolvedValue({
-              data: createdOrderData,
-              error: null,
-            }),
+            // Mock for the insert().select().single() chain
+            insert: vi.fn().mockImplementation(() => ({
+              select: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({ data: { id: createdOrderData.id }, error: null }), // Insert returns minimal data
+            })),
+            // Mock for the subsequent getOrderById() call (select().eq().single())
+            select: vi.fn().mockImplementation(() => ({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }), // getOrderById returns full data
+            })),
+            // Add eq directly for cases where select might be skipped in chaining? (Less likely but safe)
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }), // Fallback single
           } as any;
         } else if (table === 'order_items') {
           return {
