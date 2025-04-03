@@ -213,21 +213,25 @@ describe('Order Data Validation', () => {
 
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
-          // Mock for the insert chain: insert().select().single() -> returns { id }
+          // Define the chain that starts with insert()
           const insertChain = {
             select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: { id: createdOrderData.id }, error: null }),
+            // Ensure the single() call following insert().select() returns the FULL data
+            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
           };
-          // Mock for the select chain (getOrderById): select().eq().single() -> returns full data
+
+          // Define the chain that starts with select() (for potential getOrderById calls)
           const selectChain = {
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
           };
 
           return {
-            insert: vi.fn().mockReturnValue(insertChain), // insert() returns the object for the insert chain
-            select: vi.fn().mockReturnValue(selectChain), // select() returns the object for the select chain
-            // Add fallbacks just in case the chaining isn't perfectly captured
+            // When insert() is called, return the insertChain object
+            insert: vi.fn().mockReturnValue(insertChain),
+            // When select() is called, return the selectChain object
+            select: vi.fn().mockReturnValue(selectChain),
+            // Fallback mocks for safety, though ideally not needed if above is correct
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
             update: vi.fn().mockReturnThis(),
