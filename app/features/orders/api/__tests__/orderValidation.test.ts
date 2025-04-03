@@ -307,7 +307,7 @@ describe('Order Data Validation', () => {
       };
 
       // Mock successful order update
-      mockSupabaseClient.from.mockImplementation(table => {
+      (mockSupabaseClient.from as any).mockImplementation(table => {
         if (table === 'orders') {
           return {
             update: vi.fn().mockReturnThis(),
