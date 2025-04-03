@@ -211,19 +211,25 @@ describe('Order Data Validation', () => {
         },
       ];
 
+      // Create a more detailed mock implementation that explicitly includes the email field
+      const mockOrderWithEmail = {
+        ...createdOrderData,
+        email: 'test@example.com', // Explicitly include email field
+      };
+
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
           // Define the chain that starts with insert()
           const insertChain = {
             select: vi.fn().mockReturnThis(),
-            // Ensure the single() call following insert().select() returns the FULL data
-            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
+            // Ensure the single() call following insert().select() returns data with email
+            single: vi.fn().mockResolvedValue({ data: mockOrderWithEmail, error: null }),
           };
 
           // Define the chain that starts with select() (for potential getOrderById calls)
           const selectChain = {
             eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
+            single: vi.fn().mockResolvedValue({ data: mockOrderWithEmail, error: null }),
           };
 
           return {
@@ -233,7 +239,7 @@ describe('Order Data Validation', () => {
             select: vi.fn().mockReturnValue(selectChain),
             // Fallback mocks for safety, though ideally not needed if above is correct
             eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
+            single: vi.fn().mockResolvedValue({ data: mockOrderWithEmail, error: null }),
             update: vi.fn().mockReturnThis(),
           } as any;
         } else if (table === 'order_items') {
