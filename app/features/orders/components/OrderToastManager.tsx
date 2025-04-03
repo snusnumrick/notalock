@@ -105,6 +105,13 @@ export function useOrderToastManager({
     previousStatus: OrderStatus,
     onUndo?: () => Promise<void>
   ) => {
+    // Check if this is part of an undo operation
+    // If so, we don't want to show a status change toast, as we'll show
+    // the "Status Reverted" toast instead
+    if (window.__isUndoOperation) {
+      logDebug(`Skipping status change toast during undo operation`);
+      return { id: 'skipped-during-undo', dismiss: () => {}, update: () => {} };
+    }
     logDebug(`Showing status change toast: ${previousStatus} → ${status}`);
 
     // First dismiss any existing status change toasts

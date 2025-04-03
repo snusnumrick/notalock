@@ -70,6 +70,11 @@ Detailed documentation is available in the [docs](./docs/README.md) directory.
   - Add to cart functionality
   - Related products
   - SEO optimizations
+- [Order Toast System](./docs/features/order-toast-system.md)
+  - Enhanced toast notifications
+  - Status change tracking
+  - Undo functionality
+  - Toast category management
 - [Category Management](./docs/features/category-management.md)
   - Hierarchical structure
   - Tree visualization

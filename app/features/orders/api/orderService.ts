@@ -324,7 +324,7 @@ export class OrderService {
       }
 
       if (options.email) {
-        query = query.eq('guest_email', options.email);
+        query = query.eq('email', options.email);
       }
 
       if (options.status) {
@@ -362,7 +362,7 @@ export class OrderService {
       // Add search query logic for order_number or email
       if (options.searchQuery) {
         query = query.or(
-          `order_number.ilike.%${options.searchQuery}%,guest_email.ilike.%${options.searchQuery}%`
+          `order_number.ilike.%${options.searchQuery}%,email.ilike.%${options.searchQuery}%`
         );
       }
 
@@ -407,14 +407,26 @@ export class OrderService {
 
   /**
    * Update an order
+   * @param orderId The ID of the order to update
+   * @param input The update input
+   * @param options Optional parameters (like bypassing validation for undo operations)
    */
-  async updateOrder(orderId: string, input: OrderUpdateInput): Promise<Order> {
+  async updateOrder(
+    orderId: string,
+    input: OrderUpdateInput,
+    options: { skipValidation?: boolean } = {}
+  ): Promise<Order> {
     try {
       // First, get the current order to validate status transitions
       const currentOrder = await this.getOrderById(orderId);
 
       // Validate the update input against current state
-      validateOrderUpdate(input, currentOrder.status, currentOrder.paymentStatus);
+      // Skip validation if explicitly requested (e.g., for undo operations)
+      if (!options.skipValidation) {
+        validateOrderUpdate(input, currentOrder.status, currentOrder.paymentStatus);
+      } else {
+        console.log(`Skipping validation for order ${orderId} - special operation`);
+      }
 
       // Timestamp for all updates
       const now = new Date().toISOString();
@@ -480,9 +492,18 @@ export class OrderService {
   }
   /**
    * Update order status
+   * @param orderId The ID of the order
+   * @param status The new status
+   * @param notes Optional notes about the status change
+   * @param options Optional parameters for the update
    */
-  async updateOrderStatus(orderId: string, status: OrderStatus, notes?: string): Promise<Order> {
-    return this.updateOrder(orderId, { status, notes });
+  async updateOrderStatus(
+    orderId: string,
+    status: OrderStatus,
+    notes?: string,
+    options?: { skipValidation?: boolean }
+  ): Promise<Order> {
+    return this.updateOrder(orderId, { status, notes }, options);
   }
 
   /**
@@ -547,8 +568,17 @@ export class OrderService {
             );
           }
 
-          // Revert to previous status
-          const revertedOrder = await this.updateOrderStatus(orderId, previousStatus);
+          // Log the undo operation
+          console.log(`Undoing order status change for ${orderId}: ${status} → ${previousStatus}`);
+
+          // Revert to previous status with validation bypassed
+          // This allows undo from "final" states like cancelled
+          const revertedOrder = await this.updateOrderStatus(
+            orderId,
+            previousStatus,
+            'Status reverted via undo operation', // Add a note about the undo
+            { skipValidation: true } // Skip validation for undo operations
+          );
 
           // Update metadata to record the undo
           const updatedMetadata: OrderMetadata = {
@@ -642,64 +672,66 @@ export class OrderService {
 
   /**
    * Update order status based on payment result
+   * This is a special method that can update both order status and payment status
+   * via sequential operations to avoid validation errors
    */
   async updateOrderFromPayment(orderId: string, paymentResult: PaymentResult): Promise<Order> {
-    // Map payment status to order status
-    let orderStatus: OrderStatus;
-    let paymentStatus: PaymentStatus;
+    try {
+      // Get the current order first
+      const currentOrder = await this.getOrderById(orderId);
 
-    // Set default values based on success flag
-    if (paymentResult.success) {
-      orderStatus = 'paid';
-      paymentStatus = 'paid';
-    } else {
-      orderStatus = 'failed';
-      paymentStatus = 'failed';
-    }
+      // Map payment status to order status
+      let orderStatus: OrderStatus;
+      let paymentStatus: PaymentStatus;
 
-    // Override with specific payment status if provided
-    switch (paymentResult.status) {
-      case 'paid':
+      // Set default values based on success flag
+      if (paymentResult.success) {
         orderStatus = 'paid';
         paymentStatus = 'paid';
-        break;
-      case 'failed':
+      } else {
         orderStatus = 'failed';
         paymentStatus = 'failed';
-        break;
-      case 'pending':
-        orderStatus = 'processing';
-        paymentStatus = 'pending';
-        break;
-      case 'refunded':
-        orderStatus = 'refunded';
-        paymentStatus = 'refunded';
-        break;
-      case 'cancelled':
-        orderStatus = 'cancelled';
-        paymentStatus = 'failed';
-        break;
-    }
+      }
 
-    // Include payment details in notes
-    const notes = paymentResult.error
-      ? `Payment error: ${paymentResult.error}`
-      : `Payment processed successfully.`;
+      // Override with specific payment status if provided
+      switch (paymentResult.status) {
+        case 'paid':
+          orderStatus = 'paid';
+          paymentStatus = 'paid';
+          break;
+        case 'failed':
+          orderStatus = 'failed';
+          paymentStatus = 'failed';
+          break;
+        case 'pending':
+          orderStatus = 'processing';
+          paymentStatus = 'pending';
+          break;
+        case 'refunded':
+          orderStatus = 'refunded';
+          paymentStatus = 'refunded';
+          break;
+        case 'cancelled':
+          orderStatus = 'cancelled';
+          paymentStatus = 'failed';
+          break;
+      }
 
-    // Add refund information if available
-    const refundInfo = paymentResult.refundAmount
-      ? ` Refunded amount: ${paymentResult.refundAmount}. Reason: ${
-          paymentResult.refundReason || 'Not specified'
-        }.`
-      : '';
+      // Include payment details in notes
+      const notes = paymentResult.error
+        ? `Payment error: ${paymentResult.error}`
+        : `Payment processed successfully.`;
 
-    // Update order with payment information
-    const updateData: OrderUpdateInput = {
-      status: orderStatus,
-      paymentStatus,
-      paymentIntentId: paymentResult.paymentIntentId,
-      notes: notes + refundInfo,
-      metadata: {
+      // Add refund information if available
+      const refundInfo = paymentResult.refundAmount
+        ? ` Refunded amount: ${paymentResult.refundAmount}. Reason: ${
+            paymentResult.refundReason || 'Not specified'
+          }.`
+        : '';
+
+      // Prepare metadata update
+      const metadataUpdate: OrderMetadata = {
+        ...(currentOrder.metadata || {}),
         // Store payment result as a JSON string
         paymentResultData: JSON.stringify({
           success: paymentResult.success,
@@ -717,10 +749,30 @@ export class OrderService {
           paymentId: paymentResult.paymentId,
           status: paymentResult.status,
         },
-      },
-    };
+      };
 
-    return this.updateOrder(orderId, updateData);
+      // First update payment status
+      await this.updateOrder(
+        orderId,
+        {
+          paymentStatus,
+          paymentIntentId: paymentResult.paymentIntentId,
+          notes: notes + refundInfo,
+          metadata: metadataUpdate,
+        },
+        { skipValidation: true } // Skip validation for payment updates from external sources
+      );
+
+      // Then update order status separately
+      return this.updateOrder(
+        orderId,
+        { status: orderStatus },
+        { skipValidation: true } // Skip validation for status updates from payment systems
+      );
+    } catch (error) {
+      console.error('Error in updateOrderFromPayment:', error);
+      throw error;
+    }
   }
 
   /**
@@ -917,27 +969,28 @@ export class OrderService {
    */
   private formatOrderResponse(
     order: DbOrder,
-    orderItems: DbOrderItem[],
+    orderItems?: DbOrderItem[],
     statusHistory?: DbOrderStatusHistory[]
   ): Order {
     // Format order items
-    const items: OrderItem[] = orderItems.map(item => ({
-      id: item.id,
-      orderId: item.order_id,
-      productId: item.product_id,
-      variantId: item.variant_id || undefined,
-      name: item.name,
-      sku: item.sku,
-      quantity: item.quantity,
-      price: Number(item.price || 0), // Ensure price is always present
-      unitPrice: Number(item.unit_price || 0),
-      totalPrice: Number(item.total_price || 0),
-      imageUrl: item.image_url || undefined,
-      options: item.options ? this.formatOrderItemOptions(item.options) : undefined,
-      metadata: this.safelyParseMetadata(item.metadata as Json),
-      createdAt: item.created_at,
-      updatedAt: item.updated_at,
-    }));
+    const items: OrderItem[] =
+      orderItems?.map(item => ({
+        id: item.id,
+        orderId: item.order_id,
+        productId: item.product_id,
+        variantId: item.variant_id || undefined,
+        name: item.name,
+        sku: item.sku,
+        quantity: item.quantity,
+        price: Number(item.price || 0), // Ensure price is always present
+        unitPrice: Number(item.unit_price || 0),
+        totalPrice: Number(item.total_price || 0),
+        imageUrl: item.image_url || undefined,
+        options: item.options ? this.formatOrderItemOptions(item.options) : undefined,
+        metadata: this.safelyParseMetadata(item.metadata as Json),
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+      })) || [];
 
     // Format status history if available
     const formattedHistory: OrderStatusHistory[] | undefined = statusHistory

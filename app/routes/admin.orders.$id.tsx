@@ -4,7 +4,11 @@ import { useActionData, useLoaderData, useNavigation } from '@remix-run/react';
 import { requireAdmin } from '~/server/middleware/auth.server';
 import { OrderDetail } from '~/features/orders/components/admin/OrderDetail';
 import { getOrderById } from '~/features/orders/api/queries.server';
-import { updateOrderStatus, updatePaymentStatus } from '~/features/orders/api/actions.server';
+// Import the API actions with renamed imports to avoid conflicts
+import {
+  updateOrderStatus as updateOrderStatusAction,
+  updatePaymentStatus as updatePaymentStatusAction,
+} from '~/features/orders/api/actions.server';
 import type { Order, OrderStatus, PaymentStatus } from '~/features/orders/types';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { Toaster } from '~/components/ui/toaster';
@@ -100,7 +104,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       }
 
       // Update order status
-      const order = await updateOrderStatus(orderId, statusValue as OrderStatus, notesValue);
+      const order = await updateOrderStatusAction(orderId, statusValue as OrderStatus, notesValue);
 
       return json({ order, success: true });
     } else if (intentValue === 'updatePaymentStatus') {
@@ -116,7 +120,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       }
 
       // Update payment status
-      const order = await updatePaymentStatus(
+      const order = await updatePaymentStatusAction(
         orderId,
         paymentStatusValue as PaymentStatus,
         undefined,
@@ -192,13 +196,16 @@ export default function OrderDetailRoute() {
     // Execute the API request with loading state management
     return await executeAsync(
       async () => {
-        const response = await fetch(`/api/orders/${orderId}/status`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status,
-            notes: 'Status updated via admin panel',
-          }),
+        // Create a FormData object to submit
+        const formData = new FormData();
+        formData.append('intent', 'updateStatus');
+        formData.append('status', status);
+        formData.append('notes', 'Status updated via admin panel');
+
+        // Submit directly to the action endpoint
+        const response = await fetch(`/admin/orders/${orderId}`, {
+          method: 'POST',
+          body: formData,
         });
 
         if (!response.ok) {
@@ -274,13 +281,16 @@ export default function OrderDetailRoute() {
     // Execute the API request with loading state management
     return await executeAsync(
       async () => {
-        const response = await fetch(`/api/orders/${orderId}/update-payment-status`, {
+        // Create a FormData object to submit
+        const formData = new FormData();
+        formData.append('intent', 'updatePaymentStatus');
+        formData.append('paymentStatus', status);
+        formData.append('notes', 'Payment status updated via admin panel');
+
+        // Submit directly to the action endpoint
+        const response = await fetch(`/admin/orders/${orderId}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            paymentStatus: status,
-            notes: 'Payment status updated via admin panel',
-          }),
+          body: formData,
         });
 
         if (!response.ok) {

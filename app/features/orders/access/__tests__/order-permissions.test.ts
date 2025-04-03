@@ -324,7 +324,7 @@ describe('Order Permissions', () => {
       expect(filteredOrder.shippingAddress).toBeDefined();
       expect(filteredOrder.shippingAddress?.address1).toBe('***');
       expect(filteredOrder.shippingAddress?.postalCode).toBe('***');
-      expect(filteredOrder.shippingAddress?.phone).toBeUndefined();
+      expect(filteredOrder.shippingAddress?.phone).toBe('***');
 
       // Verify non-sensitive data is preserved
       expect(filteredOrder.id).toBe(mockOrder.id);

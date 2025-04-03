@@ -3,9 +3,10 @@ import { OrderService } from '../orderService';
 import { OrderStatus, PaymentStatus } from '../../types';
 import { mockDeep } from 'vitest-mock-extended';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { createMockSupabaseClient } from './mocks/supabaseMock';
 
 // Mock Supabase client
-const mockSupabaseClient = mockDeep<SupabaseClient>();
+let mockSupabaseClient: SupabaseClient;
 
 // Mock order data
 const mockOrder = {
@@ -139,10 +140,10 @@ describe('OrderService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    orderService = new OrderService(mockSupabaseClient);
 
-    // Reset the chain mocks
-    mockSupabaseClient.from.mockClear();
+    // Create a properly mocked Supabase client for each test
+    mockSupabaseClient = createMockSupabaseClient();
+    orderService = new OrderService(mockSupabaseClient);
 
     // Setup UUID mock for predictable test results
     vi.spyOn(global.Math, 'random').mockReturnValue(0.5);
@@ -190,21 +191,21 @@ describe('OrderService', () => {
         totalAmount: 115,
       };
 
-      // Setup mock responses
+      // Setup mock responses with proper chaining
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
           return {
             insert: vi.fn().mockReturnThis(),
             select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
             delete: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
           } as any;
         } else if (table === 'order_items') {
           return {
             insert: vi.fn().mockResolvedValue({ data: null, error: null }),
             select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: mockOrderItems, error: null }),
           } as any;
         } else if (table === 'carts') {
           return {
@@ -390,7 +391,7 @@ describe('OrderService', () => {
         if (table === 'orders') {
           return {
             update: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+            eq: vi.fn().mockReturnThis(),
             select: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({ data: updatedOrder, error: null }),
           } as any;
@@ -408,6 +409,9 @@ describe('OrderService', () => {
         }
         return mockSupabaseClient;
       });
+
+      // Mock RPC calls
+      mockSupabaseClient.rpc = vi.fn().mockResolvedValue({ data: {}, error: null });
 
       // Act
       const result = await orderService.updateOrderStatus(
@@ -432,13 +436,24 @@ describe('OrderService', () => {
         updated_at: '2025-03-15T13:00:00Z',
       };
 
-      mockSupabaseClient.from.mockImplementation(table => {
+      // Ensure the initial order has 'pending' payment status, not 'paid'
+      // This way we can transition from 'pending' to 'paid' which is allowed
+      mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
           return {
             update: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+            eq: vi.fn().mockReturnThis(),
             select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: updatedOrder, error: null }),
+            single: vi.fn().mockImplementation(() => {
+              // For the first call (get current order), return pending status
+              // For the second call (get updated order), return paid status
+              const isFirstCall = mockSupabaseClient.from.mock.calls.length <= 2;
+              const orderData = isFirstCall
+                ? { ...mockOrder, payment_status: 'pending' }
+                : updatedOrder;
+
+              return Promise.resolve({ data: orderData, error: null });
+            }),
           } as any;
         } else if (table === 'order_items') {
           return {
@@ -489,14 +504,56 @@ describe('OrderService', () => {
         paymentMethodId: 'pm_123',
       };
 
-      mockSupabaseClient.from.mockImplementation(table => {
+      // This test needs to properly simulate the two-step update process
+      // that is now used in updateOrderFromPayment to avoid validation errors
+
+      // Use a counter to simulate different responses for each call
+      let callCounter = 0;
+
+      mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
-          return {
-            update: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-            select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: updatedOrder, error: null }),
-          } as any;
+          callCounter++;
+
+          // Return behavior for getOrderById (first call)
+          if (callCounter === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  ...mockOrder,
+                  status: 'pending',
+                  payment_status: 'pending',
+                },
+                error: null,
+              }),
+            } as any;
+          }
+          // Return behavior for first update (payment status update)
+          else if (callCounter === 2) {
+            return {
+              update: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+              select: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  ...mockOrder,
+                  payment_status: 'paid',
+                  payment_intent_id: 'pi_123456',
+                },
+                error: null,
+              }),
+            } as any;
+          }
+          // Return behavior for second update (order status update) and final getOrderById
+          else {
+            return {
+              update: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              select: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({ data: updatedOrder, error: null }),
+            } as any;
+          }
         } else if (table === 'order_items') {
           return {
             select: vi.fn().mockReturnThis(),
@@ -536,14 +593,52 @@ describe('OrderService', () => {
         error: 'Payment declined',
       };
 
-      mockSupabaseClient.from.mockImplementation(table => {
+      // Similar to the successful test, we need to handle the sequence of calls
+      let callCounter = 0;
+
+      mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
-          return {
-            update: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-            select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: updatedOrder, error: null }),
-          } as any;
+          callCounter++;
+
+          // Initial getOrderById
+          if (callCounter === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  ...mockOrder,
+                  status: 'pending',
+                  payment_status: 'pending',
+                },
+                error: null,
+              }),
+            } as any;
+          }
+          // First update (payment status)
+          else if (callCounter === 2) {
+            return {
+              update: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+              select: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  ...mockOrder,
+                  payment_status: 'failed',
+                },
+                error: null,
+              }),
+            } as any;
+          }
+          // Second update (order status) and final getOrderById
+          else {
+            return {
+              update: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              select: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({ data: updatedOrder, error: null }),
+            } as any;
+          }
         } else if (table === 'order_items') {
           return {
             select: vi.fn().mockReturnThis(),

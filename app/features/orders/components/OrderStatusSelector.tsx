@@ -154,6 +154,10 @@ export const OrderStatusSelector: React.FC<OrderStatusSelectorProps> = ({
 
   // Handle undo action
   const handleUndo = async () => {
+    // Set a flag to indicate this is an undo operation
+    // This will be used to prevent showing redundant status change toasts
+    window.__isUndoOperation = true;
+
     if (debug) {
       console.log('OrderStatusSelector: handleUndo called', {
         undoInfo,
@@ -165,12 +169,16 @@ export const OrderStatusSelector: React.FC<OrderStatusSelectorProps> = ({
 
     if (!undoInfo.canUndo || !undoInfo.undo) {
       console.log('OrderStatusSelector: Cannot undo - missing undo function or canUndo is false');
+      // Reset the flag before returning
+      window.__isUndoOperation = false;
       return;
     }
 
     // If already processing, don't try to undo
     if (isUpdatingActive() || externalIsLoading) {
       console.log('OrderStatusSelector: Cannot undo - operation already in progress');
+      // Reset the flag before returning
+      window.__isUndoOperation = false;
       return;
     }
 
@@ -211,6 +219,9 @@ export const OrderStatusSelector: React.FC<OrderStatusSelectorProps> = ({
         // Show error toast
         toastManager.showErrorToast('Error', 'Failed to undo status change');
       }
+    } finally {
+      // Always reset the undo operation flag, even if there's an error
+      window.__isUndoOperation = false;
     }
   };
 

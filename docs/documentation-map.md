@@ -46,7 +46,8 @@ docs/
 │   ├── payment-security.md           # Payment security and PCI compliance
 │   ├── product-detail.md              # Product detail page feature
 │   ├── product-management.md          # Product management feature
-│   └── shipping-tax-calculations.md    # Shipping and tax calculation system
+│   ├── shipping-tax-calculations.md    # Shipping and tax calculation system
+│   └── order-toast-system.md          # Order toast notification system
 │
 ├── user/                              # User documentation (new)
 │   ├── README.md                      # User guide overview

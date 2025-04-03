@@ -207,6 +207,8 @@ describe('Order API - Queries', () => {
         total: 0,
         limit: 10,
         offset: 0,
+        page: 1,
+        pageSize: 10,
       });
     });
   });

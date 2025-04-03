@@ -185,7 +185,20 @@ describe('Checkout Integration', () => {
           userId: mockCheckoutSession.userId,
           email: mockCheckoutSession.shippingAddress?.email,
           cartId: mockCheckoutSession.cartId,
-          items: mockCartItems,
+          items: expect.arrayContaining([
+            expect.objectContaining({
+              productId: 'product-1',
+              name: 'Product 1',
+              quantity: 2,
+              price: 25,
+            }),
+            expect.objectContaining({
+              productId: 'product-2',
+              name: 'Product 2',
+              quantity: 1,
+              price: 50,
+            }),
+          ]),
           shippingAddress: mockCheckoutSession.shippingAddress,
           billingAddress: mockCheckoutSession.billingAddress,
           shippingMethod: mockCheckoutSession.shippingMethod,
@@ -197,6 +210,14 @@ describe('Checkout Integration', () => {
           paymentMethodId,
           paymentProvider,
           checkoutSessionId: mockCheckoutSession.id,
+          metadata: expect.objectContaining({
+            checkoutShippingOption: expect.any(String),
+            tracking: expect.objectContaining({
+              carrier: 'default',
+              trackingNumber: 'default',
+              paymentId: '',
+            }),
+          }),
         })
       );
 

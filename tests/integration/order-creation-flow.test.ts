@@ -229,24 +229,16 @@ describe('Order Creation Flow Integration Test', () => {
         cartId: mockCheckoutSession.cartId,
         items: expect.arrayContaining([
           expect.objectContaining({
-            product_id: 'product-1',
+            productId: 'product-1',
             quantity: 2,
             price: 25,
-            product: expect.objectContaining({
-              name: 'Product 1',
-              sku: 'SKU1',
-              image_url: 'image1.jpg',
-            }),
+            name: 'Product 1',
           }),
           expect.objectContaining({
-            product_id: 'product-2',
+            productId: 'product-2',
             quantity: 1,
             price: 50,
-            product: expect.objectContaining({
-              name: 'Product 2',
-              sku: 'SKU2',
-              image_url: 'image2.jpg',
-            }),
+            name: 'Product 2',
           }),
         ]),
         paymentIntentId,

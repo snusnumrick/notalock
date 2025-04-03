@@ -1,7 +1,8 @@
 import { Outlet } from '@remix-run/react';
 import { requireAdmin } from '~/server/middleware/auth.server';
 import { type LoaderFunctionArgs, type MetaFunction, json } from '@remix-run/node';
-import { getOrderById } from '~/features/orders/api/queries.server';
+import { getOrderById, getOrders } from '~/features/orders/api/queries.server';
+import { OrderStatus, PaymentStatus } from '~/features/orders';
 
 export const meta: MetaFunction = () => {
   return [
@@ -33,7 +34,31 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   // Check if we're directly on /admin/orders without a child route
   if (url.pathname === '/admin/orders') {
-    return json(null); // Let the index route handle data fetching
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const limit = parseInt(url.searchParams.get('limit') || '10');
+    const offset = (page - 1) * limit;
+    const status = url.searchParams.get('status') || undefined;
+    const paymentStatus = url.searchParams.get('paymentStatus') || undefined;
+    const searchQuery = url.searchParams.get('search') || undefined;
+
+    // Get orders with filters
+    const ordersResult = await getOrders({
+      status: status as OrderStatus,
+      paymentStatus: paymentStatus as PaymentStatus,
+      searchQuery,
+      limit,
+      offset,
+      sortBy: 'createdAt',
+      sortDirection: 'desc',
+    });
+
+    return json({
+      orders: ordersResult.orders,
+      total: ordersResult.total,
+      page,
+      limit,
+      totalPages: Math.ceil(ordersResult.total / limit),
+    });
   }
 
   return null;

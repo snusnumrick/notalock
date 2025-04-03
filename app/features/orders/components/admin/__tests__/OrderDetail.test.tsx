@@ -486,8 +486,8 @@ describe('Admin OrderDetail', () => {
     const selectElements = screen.getAllByTestId('select-mock');
     expect(selectElements.length).toBeGreaterThanOrEqual(2);
 
-    // Check if update buttons exist
-    expect(screen.getByText('Update Status')).toBeInTheDocument();
+    // The OrderStatusSelector component replaces the Update Status button
+    expect(screen.getByTestId('order-status-container')).toBeInTheDocument();
     expect(screen.getByText('Update Payment Status')).toBeInTheDocument();
   });
 
@@ -502,18 +502,15 @@ describe('Admin OrderDetail', () => {
       />
     );
 
-    // Act - First find the Update Status button to locate the right section
-    const updateButton = screen.getByText('Update Status');
-    // Find the container that contains both the button and select options
-    const container = screen.getByTestId('order-status-container'); // Add this data-testid to your component
+    // Act - Find the order status selector container
+    const container = screen.getByTestId('order-status-container');
     expect(container).toBeInTheDocument();
 
     // Now find the button within this specific container
     const completedOption = within(container).getByText('Set Completed');
     fireEvent.click(completedOption);
 
-    // Click the update button
-    fireEvent.click(updateButton);
+    // Click option triggers the status change immediately in the test mock
 
     // Assert
     expect(mockOnStatusChange).toHaveBeenCalledWith('completed', mockOrder.id);
