@@ -213,20 +213,15 @@ describe('Order Data Validation', () => {
 
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
-          // Mock single() sequentially:
-          // 1st call (after insert): returns minimal data { id }
-          // 2nd call (from getOrderById): returns full createdOrderData
-          const singleMock = vi
-            .fn()
-            .mockResolvedValueOnce({ data: { id: createdOrderData.id }, error: null }) // Result of insert().select().single()
-            .mockResolvedValueOnce({ data: createdOrderData, error: null }); // Result of select().eq().single()
-
+          // Simplify: Always return the full createdOrderData when single() is called
+          // This assumes the final step in createOrder fetches and returns the full object.
           return {
             insert: vi.fn().mockReturnThis(),
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
-            single: singleMock, // Use the sequential mock for single()
-            update: vi.fn().mockReturnThis(), // Keep other methods available if needed
+            // Any call to single() on the orders table in this test returns the full data
+            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
+            update: vi.fn().mockReturnThis(),
           } as any;
         } else if (table === 'order_items') {
           return {
