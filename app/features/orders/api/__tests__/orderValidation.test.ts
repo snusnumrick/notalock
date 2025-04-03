@@ -225,30 +225,42 @@ describe('Order Data Validation', () => {
       };
 
       // Mock implementation specifically for the 'accepts valid order input' test
-      // Revert to direct assignment, consistent with beforeEach
       mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
-          const finalOrderDataWithEmail = { data: mockOrderWithEmail, error: null };
-          const initialInsertResult = { data: createdOrderData, error: null };
+          // Data for the initial insert response (using mocked UUID)
+          const initialInsertData = { ...createdOrderData, id: 'mocked-uuid' };
+          // Data for the final getOrderById response (using mocked UUID and ensuring email)
+          const finalOrderData = { ...mockOrderWithEmail, id: 'mocked-uuid' };
 
-          // Define chain mocks ONCE
-          const selectByIdChain = {
-            eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue(finalOrderDataWithEmail), // Resolves with email
-          };
           const insertChain = {
             select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue(initialInsertResult), // Initial insert result
+            single: vi.fn().mockResolvedValue({ data: initialInsertData, error: null }),
           };
+
+          // This mock handles the select().eq('id', 'mocked-uuid').single() call
+          const selectByIdChain = {
+             // Crucially, mock eq to check the ID and return the final step
+            eq: vi.fn((column, value) => {
+              if (column === 'id' && value === 'mocked-uuid') {
+                // This is the getOrderById call we need to return the full data for
+                return { single: vi.fn().mockResolvedValue({ data: finalOrderData, error: null }) };
+              }
+              // If eq is called with something else, return an empty/error state
+              return { single: vi.fn().mockResolvedValue({ data: null, error: { message: 'Order not found by ID in mock' } }) };
+            }),
+             // Fallback single if eq wasn't called
+            single: vi.fn().mockResolvedValue({ data: null, error: { message: 'Direct single() call not expected here' } })
+          };
+
           const updateChain = { // For cart update
             eq: vi.fn().mockResolvedValue({ data: null, error: null }),
           };
 
-          // Return an object containing the mocks directly
           return {
-            select: vi.fn().mockReturnValue(selectByIdChain), // Ensure select() returns the chain resolving WITH email
             insert: vi.fn().mockReturnValue(insertChain),
+            select: vi.fn().mockReturnValue(selectByIdChain), // Handles getOrderById
             update: vi.fn().mockReturnValue(updateChain),
+            // Add a basic eq mock for potential update().eq() chaining if needed
             eq: vi.fn().mockReturnThis(),
           } as any;
         } else if (table === 'order_items') {
