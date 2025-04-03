@@ -164,6 +164,7 @@ describe('Order Data Validation', () => {
     it('accepts valid order input', async () => {
       // Arrange
       const validInput = {
+        userId: 'user-123', // Add the missing userId
         email: 'test@example.com',
         items: [
           {
