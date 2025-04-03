@@ -510,43 +510,52 @@ describe('OrderService', () => {
       // Mock implementation to handle different call chains
       mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
-          // Mock for getOrderById (select -> eq -> single)
-          const selectEqSingleChain = {
-            single: vi.fn().mockResolvedValue({
-              data: { ...mockOrder, status: 'pending', payment_status: 'pending' }, // Initial state
-              error: null,
-            }),
+          // Mock implementation to handle the sequence:
+          // 1. Initial getOrderById (select -> eq -> single) -> returns initial state
+          // 2. First update (payment) (update -> eq -> select -> single) -> returns intermediate state
+          // 3. Second update (status) (update -> eq -> select -> single) -> returns intermediate state (status updated)
+          // 4. Final getOrderById (select -> eq -> single) -> returns FINAL state (updatedOrder)
+
+          const initialOrderState = { data: { ...mockOrder, status: 'pending', payment_status: 'pending' }, error: null };
+          const afterPaymentUpdateState = { data: { ...mockOrder, payment_status: 'paid', payment_intent_id: 'pi_123456' }, error: null };
+          // The second update (status) might internally fetch again, let's assume it gets the payment-updated state
+          const afterStatusUpdateState = { data: { ...mockOrder, status: 'paid', payment_status: 'paid', payment_intent_id: 'pi_123456' }, error: null };
+          const finalOrderState = { data: updatedOrder, error: null }; // This should have status: 'paid'
+
+          let selectCallCount = 0;
+          const selectMock = vi.fn().mockImplementation(() => ({
             eq: vi.fn().mockReturnThis(),
-          };
-
-          // Mock for the first update (payment status) (update -> eq -> select -> single)
-          const updateEqSelectSingleChain1 = {
-            single: vi.fn().mockResolvedValue({
-              data: { ...mockOrder, payment_status: 'paid', payment_intent_id: 'pi_123456' }, // After payment update
-              error: null,
+            single: vi.fn().mockImplementation(() => {
+              selectCallCount++;
+              if (selectCallCount === 1) return Promise.resolve(initialOrderState); // First getOrderById
+              // The subsequent single() calls happen *after* updates
+              // The very last one should return the final state
+              if (selectCallCount >= 4) return Promise.resolve(finalOrderState); // Final getOrderById
+              // Intermediate single() calls after updates
+              if (selectCallCount === 2) return Promise.resolve(afterPaymentUpdateState);
+              if (selectCallCount === 3) return Promise.resolve(afterStatusUpdateState);
+              return Promise.resolve(initialOrderState); // Fallback
             }),
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(), // eq after update needs to return the select chain part
-          };
+          }));
 
-           // Mock for the second update (order status) (update -> eq -> select -> single)
-           const updateEqSelectSingleChain2 = {
-            single: vi.fn().mockResolvedValue({ data: updatedOrder, error: null }), // Final state
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-          };
 
-          // Use a counter to determine which update chain to return
           let updateCallCount = 0;
-          const updateMock = vi.fn().mockImplementation(() => {
-            updateCallCount++;
-            return updateCallCount === 1 ? updateEqSelectSingleChain1 : updateEqSelectSingleChain2;
-          });
-
+          const updateMock = vi.fn().mockImplementation(() => ({
+              eq: vi.fn().mockReturnThis(),
+              select: vi.fn().mockReturnThis(),
+              single: vi.fn().mockImplementation(() => {
+                  updateCallCount++;
+                  // After first update (payment)
+                  if (updateCallCount === 1) return Promise.resolve(afterPaymentUpdateState);
+                  // After second update (status)
+                  if (updateCallCount === 2) return Promise.resolve(afterStatusUpdateState);
+                  return Promise.resolve(finalOrderState); // Fallback
+              })
+          }));
 
           return {
-            select: vi.fn().mockReturnValue(selectEqSingleChain), // Handles getOrderById
-            update: updateMock, // Handles both update calls sequentially
+            select: selectMock,
+            update: updateMock,
           } as any;
         } else if (table === 'order_items') {
           return {
@@ -587,45 +596,42 @@ describe('OrderService', () => {
         error: 'Payment declined',
       };
 
-      // Mock implementation similar to the successful payment test
+      // Mock implementation similar to the successful payment test, adjusting for failed status
       mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
-           // Mock for getOrderById (select -> eq -> single)
-           const selectEqSingleChain = {
-            single: vi.fn().mockResolvedValue({
-              data: { ...mockOrder, status: 'pending', payment_status: 'pending' }, // Initial state
-              error: null,
+          const initialOrderState = { data: { ...mockOrder, status: 'pending', payment_status: 'pending' }, error: null };
+          const afterPaymentUpdateState = { data: { ...mockOrder, payment_status: 'failed' }, error: null };
+          const afterStatusUpdateState = { data: { ...mockOrder, status: 'failed', payment_status: 'failed' }, error: null };
+          const finalOrderState = { data: updatedOrder, error: null }; // This should have status: 'failed'
+
+          let selectCallCount = 0;
+          const selectMock = vi.fn().mockImplementation(() => ({
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockImplementation(() => {
+              selectCallCount++;
+              if (selectCallCount === 1) return Promise.resolve(initialOrderState);
+              if (selectCallCount >= 4) return Promise.resolve(finalOrderState); // Final getOrderById
+              if (selectCallCount === 2) return Promise.resolve(afterPaymentUpdateState);
+              if (selectCallCount === 3) return Promise.resolve(afterStatusUpdateState);
+              return Promise.resolve(initialOrderState);
             }),
-            eq: vi.fn().mockReturnThis(),
-          };
+          }));
 
-          // Mock for the first update (payment status) (update -> eq -> select -> single)
-          const updateEqSelectSingleChain1 = {
-            single: vi.fn().mockResolvedValue({
-              data: { ...mockOrder, payment_status: 'failed' }, // After payment update
-              error: null,
-            }),
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-          };
-
-           // Mock for the second update (order status) (update -> eq -> select -> single)
-           const updateEqSelectSingleChain2 = {
-            single: vi.fn().mockResolvedValue({ data: updatedOrder, error: null }), // Final state
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-          };
-
-          // Use a counter to determine which update chain to return
           let updateCallCount = 0;
-          const updateMock = vi.fn().mockImplementation(() => {
-            updateCallCount++;
-            return updateCallCount === 1 ? updateEqSelectSingleChain1 : updateEqSelectSingleChain2;
-          });
+           const updateMock = vi.fn().mockImplementation(() => ({
+              eq: vi.fn().mockReturnThis(),
+              select: vi.fn().mockReturnThis(),
+              single: vi.fn().mockImplementation(() => {
+                  updateCallCount++;
+                  if (updateCallCount === 1) return Promise.resolve(afterPaymentUpdateState);
+                  if (updateCallCount === 2) return Promise.resolve(afterStatusUpdateState);
+                  return Promise.resolve(finalOrderState);
+              })
+          }));
 
           return {
-            select: vi.fn().mockReturnValue(selectEqSingleChain), // Handles getOrderById
-            update: updateMock, // Handles both update calls sequentially
+            select: selectMock,
+            update: updateMock,
           } as any;
         } else if (table === 'order_items') {
           return {

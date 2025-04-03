@@ -217,29 +217,27 @@ describe('Order Data Validation', () => {
         email: 'test@example.com',
       };
 
-      // Simplified mock for the 'orders' table
+      // Mock implementation to handle the sequence within createOrder
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
-          const mockData = { data: mockOrderWithEmail, error: null };
-
-          // Chain for insert().select().single()
-          const insertSelectSingleChain = {
-            single: vi.fn().mockResolvedValue(mockData),
+          // Mock for the insert().select().single() part
+          const insertChain = {
+            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
             select: vi.fn().mockReturnThis(),
           };
-
-          // Chain for select().eq().single()
-          const selectEqSingleChain = {
-            single: vi.fn().mockResolvedValue(mockData),
+          // Mock for the final getOrderById (select().eq().single())
+          const selectChain = {
+             // Ensure this returns the data WITH the email
+            single: vi.fn().mockResolvedValue({ data: mockOrderWithEmail, error: null }),
             eq: vi.fn().mockReturnThis(),
           };
 
           return {
-            insert: vi.fn().mockReturnValue(insertSelectSingleChain),
-            select: vi.fn().mockReturnValue(selectEqSingleChain),
-            // Add other methods if needed by the test, but keep it minimal
-            update: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(), // Basic fallback if needed elsewhere
+            insert: vi.fn().mockReturnValue(insertChain),
+            // Ensure select() returns the chain that resolves with the email
+            select: vi.fn().mockReturnValue(selectChain),
+            update: vi.fn().mockReturnThis(), // For cart update if needed
+            eq: vi.fn().mockReturnThis(), // For cart update if needed
           } as any;
         } else if (table === 'order_items') {
           return {
@@ -411,7 +409,6 @@ describe('Order Data Validation', () => {
             single: vi.fn().mockResolvedValue({
               data: {
                 id: 'order-123',
-                status: 'completed', // Already completed
                 payment_status: 'paid', // Current payment status
                 status: 'completed', // Current order status
                 created_at: '2025-03-15T12:00:00Z',
