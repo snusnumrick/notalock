@@ -473,7 +473,7 @@ describe('Order Data Validation', () => {
 
     it('validates allowed payment status transitions', async () => {
       // Arrange - Mock the order with current payment status
-      mockSupabaseClient.from.mockImplementation(table => {
+      vi.mocked(mockSupabaseClient.from).mockImplementation(table => {
         if (table === 'orders') {
           return {
             select: vi.fn().mockReturnThis(),
