@@ -239,10 +239,13 @@ describe('Order Data Validation', () => {
 
           const insertChain = {
             select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: initialInsertData, error: null }),
+            // Hypothesis: createOrder returns the result of this insert call.
+            // Make it return the data WITH the email.
+            single: vi.fn().mockResolvedValue({ data: finalOrderData, error: null }),
           };
 
           // Mock for select().eq('id', 'mocked-uuid').single()
+          // Keep this returning the final data too, just in case getOrderById is called.
           const selectByIdChain = {
             eq: vi.fn((column, value) => {
               // Check if eq is called with 'id' and the mocked UUID
