@@ -219,7 +219,7 @@ describe('Order Data Validation', () => {
       };
 
       // Mock implementation specifically for the 'accepts valid order input' test
-      // Use .mockImplementation() on the existing mock function from beforeEach
+      // Use .mockImplementation() on the existing mock function from beforeEach, wrapped with vi.mocked()
       vi.mocked(mockSupabaseClient.from).mockImplementation(table => {
         if (table === 'orders') {
           // Define the data we expect getOrderById to retrieve
