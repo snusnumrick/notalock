@@ -219,8 +219,8 @@ describe('Order Data Validation', () => {
       };
 
       // Mock implementation specifically for the 'accepts valid order input' test
-      // Cast 'from' to vi.Mock to satisfy TypeScript
-      (mockSupabaseClient.from as vi.Mock).mockImplementation(table => {
+      // Assign the mock implementation directly, relying on TS inference
+      mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
           // Define the data we expect getOrderById to retrieve
           const finalOrderDataWithEmail = { data: mockOrderWithEmail, error: null };
