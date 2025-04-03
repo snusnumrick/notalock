@@ -219,8 +219,8 @@ describe('Order Data Validation', () => {
       };
 
       // Mock implementation specifically for the 'accepts valid order input' test
-      // Use .mockImplementation() on the existing mock function from beforeEach, wrapped with vi.mocked()
-      vi.mocked(mockSupabaseClient.from).mockImplementation(table => {
+      // Revert to direct assignment, consistent with beforeEach
+      mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
           const finalOrderDataWithEmail = { data: mockOrderWithEmail, error: null };
           const initialInsertResult = { data: createdOrderData, error: null };
