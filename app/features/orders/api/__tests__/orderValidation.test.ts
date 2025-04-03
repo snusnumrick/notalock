@@ -213,13 +213,22 @@ describe('Order Data Validation', () => {
 
       mockSupabaseClient.from.mockImplementation(table => {
         if (table === 'orders') {
-          // Simplify: Always return the full createdOrderData when single() is called
-          // This assumes the final step in createOrder fetches and returns the full object.
-          return {
-            insert: vi.fn().mockReturnThis(),
+          // Mock for the insert chain: insert().select().single() -> returns { id }
+          const insertChain = {
             select: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { id: createdOrderData.id }, error: null }),
+          };
+          // Mock for the select chain (getOrderById): select().eq().single() -> returns full data
+          const selectChain = {
             eq: vi.fn().mockReturnThis(),
-            // Any call to single() on the orders table in this test returns the full data
+            single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
+          };
+
+          return {
+            insert: vi.fn().mockReturnValue(insertChain), // insert() returns the object for the insert chain
+            select: vi.fn().mockReturnValue(selectChain), // select() returns the object for the select chain
+            // Add fallbacks just in case the chaining isn't perfectly captured
+            eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({ data: createdOrderData, error: null }),
             update: vi.fn().mockReturnThis(),
           } as any;
