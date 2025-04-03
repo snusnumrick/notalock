@@ -171,10 +171,10 @@ describe('Order Data Validation', () => {
             product_id: 'product-1',
             quantity: 2,
             price: 50,
-            product: {
-              name: 'Test Product',
-              sku: 'TP1',
-            },
+            // Flatten the structure to match OrderItemInput
+            name: 'Test Product',
+            sku: 'TP1',
+            // Remove the nested product object
           },
         ],
         shippingCost: 10,
