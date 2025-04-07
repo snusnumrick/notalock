@@ -7,3 +7,5 @@ node_modules/
 
 # Cache
 .cache/
+
+scripts/

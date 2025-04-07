@@ -5,6 +5,7 @@ This directory contains documentation about the Notalock database structure and 
 ## Contents
 
 - [Database Schema](./schema.md) - Complete information about database tables, relationships, and indexes
+- [Schema Validation](./schema-validation.md) - Tools and procedures for validating database schema consistency
 
 ## Purpose
 

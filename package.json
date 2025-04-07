@@ -3,6 +3,11 @@
   "private": true,
   "sideEffects": false,
   "scripts": {
+    "db:validate": "node scripts/validate-schema.js",
+    "db:types:cli": "chmod +x ./scripts/generate-types.sh && ./scripts/generate-types.sh",
+    "db:types:auto": "npx supabase gen types typescript --local > app/features/supabase/types/Database.types.ts || npm run db:types:prod",
+    "supabase:init": "npx supabase init",
+    "db:types:setup": "npm run supabase:init && npm run db:types:auto",
     "build": "node check-vercel-env.js && remix build",
     "dev": "NODE_NO_WARNINGS=1 remix dev --manual",
     "start": "remix-serve ./build/index.js",
@@ -15,7 +20,9 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:e2e": "playwright test",
-    "test:integration": "vitest tests/integration"
+    "test:integration": "vitest tests/integration",
+    "db:types": "npx supabase gen types typescript --local > app/features/supabase/types/Database.types.ts",
+    "db:types:prod": "npx supabase gen types typescript --project-id $(grep SUPABASE_PROJECT_ID .env | cut -d '=' -f2) --schema public > app/features/supabase/types/Database.types.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -83,6 +90,8 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "ts-node": "^10.9.1",
+    "supabase": "^1.142.2",
     "@remix-run/dev": "^2.16.0",
     "@shadcn/ui": "^0.0.4",
     "@testing-library/jest-dom": "^6.6.3",

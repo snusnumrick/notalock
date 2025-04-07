@@ -1,5 +1,7 @@
 # Database Schema
 
+> **Note:** For validating consistency between this schema definition and TypeScript types, see [Schema Validation](./schema-validation.md).
+
 ## Overview
 The Notalock e-commerce platform uses a Supabase PostgreSQL database. This document outlines the database schema, relationships, and security policies.
 
