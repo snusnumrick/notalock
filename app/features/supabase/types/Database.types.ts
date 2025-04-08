@@ -1,3 +1,11 @@
+// Export enums for use throughout the application
+export type UserRole = Database['public']['Enums']['user_role'];
+export type PaymentStatus = Database['public']['Enums']['payment_status'];
+export type CartStatus = Database['public']['Enums']['cart_status'];
+export type OrderStatus = Database['public']['Enums']['order_status'];
+export type CheckoutStep = Database['public']['Enums']['checkout_step'];
+export type PaymentMethodType = Database['public']['Enums']['payment_method_type'];
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {

@@ -5,7 +5,7 @@ import type { LoaderFunctionArgs } from '@remix-run/node';
  * Debug API route for diagnosing environment issues
  * Only returns non-sensitive information
  */
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader(_args: LoaderFunctionArgs) {
   // Gather debug information
   const debugInfo = {
     // Only include the presence of environment variables, not their values

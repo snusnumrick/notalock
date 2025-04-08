@@ -25,7 +25,7 @@ export interface ProductVariant {
   stock?: number | null;
   is_active?: boolean;
   created_at?: string;
-  updated_at?: string;
+  updated_at?: string | null;
 }
 
 export interface Product {
@@ -38,7 +38,7 @@ export interface Product {
   business_price: number | null;
   stock: number | null;
   is_active: boolean | null;
-  created_at: string;
+  created_at: string | null;
   image_url: string | null;
   alt_text?: string | null;
   manufacturer?: string | null;
@@ -61,7 +61,7 @@ export interface TransformedProduct {
   sku: string | null;
   stock: number;
   featured: boolean;
-  created_at: string;
+  created_at: string | null;
   hasVariants: boolean;
   categories: Array<{
     id: string;
@@ -91,12 +91,12 @@ export interface ProductImage {
   url: string;
   storage_path: string;
   file_name: string;
-  is_primary: boolean;
-  sort_order: number;
+  is_primary: boolean | null;
+  sort_order: number | null;
   alt_text?: string | null;
   updated_by?: string | null;
-  created_at: string;
-  updated_at?: string;
+  created_at: string | null;
+  updated_at?: string | null;
 }
 
 export interface TempImage {

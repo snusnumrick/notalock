@@ -103,7 +103,7 @@ export default function OrdersIndexRoute() {
     if (orders && (!Array.isArray(orders) || !orders.map)) {
       console.error('Invalid orders data format:', typeof orders, orders);
       return (
-        <div className="container py-8">
+        <div className="px-8 py-8 mx-auto max-w-7xl">
           <h1 className="text-2xl font-bold mb-6">Orders</h1>
           <div className="bg-yellow-100 p-4 rounded-md border border-yellow-300 mb-6">
             <p className="text-yellow-700">
@@ -163,11 +163,11 @@ export default function OrdersIndexRoute() {
         const errorElement = document.createElement('div');
         errorElement.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
         errorElement.innerHTML = `
-          <div class="bg-white p-6 rounded-lg max-w-md w-full shadow-lg">
-            <h3 class="text-lg font-bold text-red-600 mb-2">Error Updating Order Status</h3>
-            <p class="mb-4">${errorMessage}</p>
+          <div class="bg-product-card p-6 rounded-lg max-w-md w-full shadow-lg border border-border">
+            <h3 class="text-lg font-bold text-destructive mb-2">Error Updating Order Status</h3>
+            <p class="mb-4 text-text-primary">${errorMessage}</p>
             <div class="flex justify-end">
-              <button class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300" id="close-error">Close</button>
+              <button class="px-4 py-2 bg-input-bg text-text-primary rounded hover:bg-accent/50 border border-border" id="close-error">Close</button>
             </div>
           </div>
         `;
@@ -229,26 +229,26 @@ export default function OrdersIndexRoute() {
   };
 
   return (
-    <div className="container py-8">
+    <div className="px-8 py-8 mx-auto max-w-7xl">
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold mb-2">Orders</h1>
-          <p className="text-gray-500">Manage and track customer orders</p>
+          <h1 className="text-2xl font-bold mb-2 text-text-primary">Orders</h1>
+          <p className="text-text-secondary">Manage and track customer orders</p>
         </div>
         <Link
           to="/admin/orders/analytics"
-          className="bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600 transition-colors"
+          className="bg-btn-primary text-btn-primary-text px-4 py-2 rounded-md hover:bg-btn-primary-hover transition-colors"
         >
           View Analytics
         </Link>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-        <h2 className="text-lg font-medium mb-4">Filter Orders</h2>
+      <div className="bg-product-card border border-border p-6 rounded-lg shadow-sm mb-6">
+        <h2 className="text-lg font-medium mb-4 text-text-primary">Filter Orders</h2>
         <form onSubmit={handleFilterSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label htmlFor="search" className="block text-sm font-medium mb-1">
+              <label htmlFor="search" className="block text-sm font-medium mb-1 text-text-primary">
                 Search
               </label>
               <Input
@@ -260,7 +260,7 @@ export default function OrdersIndexRoute() {
               />
             </div>
             <div>
-              <label htmlFor="status" className="block text-sm font-medium mb-1">
+              <label htmlFor="status" className="block text-sm font-medium mb-1 text-text-primary">
                 Status
               </label>
               <Select value={status} onValueChange={setStatus}>
@@ -280,7 +280,10 @@ export default function OrdersIndexRoute() {
               </Select>
             </div>
             <div>
-              <label htmlFor="dateFrom" className="block text-sm font-medium mb-1">
+              <label
+                htmlFor="dateFrom"
+                className="block text-sm font-medium mb-1 text-text-primary"
+              >
                 Date From
               </label>
               <Input
@@ -292,7 +295,7 @@ export default function OrdersIndexRoute() {
               />
             </div>
             <div>
-              <label htmlFor="dateTo" className="block text-sm font-medium mb-1">
+              <label htmlFor="dateTo" className="block text-sm font-medium mb-1 text-text-primary">
                 Date To
               </label>
               <Input
@@ -313,10 +316,10 @@ export default function OrdersIndexRoute() {
         </form>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm mb-6">
-        <div className="p-4 border-b">
+      <div className="bg-product-card border border-border rounded-lg shadow-sm mb-6">
+        <div className="p-4 border-b border-border">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-medium">
+            <h2 className="text-lg font-medium text-text-primary">
               {total} {total === 1 ? 'Order' : 'Orders'}
             </h2>
           </div>
@@ -324,8 +327,8 @@ export default function OrdersIndexRoute() {
 
         {error ? (
           <div className="p-8 text-center">
-            <p className="text-lg text-red-500 mb-2">Error loading orders</p>
-            <p className="text-sm text-gray-700">{error}</p>
+            <p className="text-lg text-destructive mb-2">Error loading orders</p>
+            <p className="text-sm text-text-secondary">{error}</p>
           </div>
         ) : (
           <OrdersTable orders={orders as Order[]} onStatusChange={handleStatusChange} />
@@ -333,8 +336,8 @@ export default function OrdersIndexRoute() {
 
         {/* Pagination controls */}
         {totalPages > 1 && (
-          <div className="p-4 border-t flex justify-between items-center">
-            <div className="text-sm text-gray-500">
+          <div className="p-4 border-t border-border flex justify-between items-center">
+            <div className="text-sm text-text-secondary">
               Showing {(currentPage - 1) * limit + 1} to {Math.min(currentPage * limit, total)} of{' '}
               {total} orders
             </div>

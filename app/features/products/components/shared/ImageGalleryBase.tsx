@@ -320,7 +320,7 @@ export function ImageGalleryBase<T extends GalleryImage>({
               images={images.map(img => ({
                 id: img.id,
                 url: img.url,
-                is_primary: img.isPrimary,
+                is_primary: img.isPrimary === null ? false : img.isPrimary,
               }))}
             />
           </div>

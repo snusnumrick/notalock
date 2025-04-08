@@ -44,7 +44,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 export default function Layout() {
   const { categories } = useLoaderData<LoaderData>();
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-page-bg">
       <Header categories={categories} />
       <div className="flex-grow pt-16">
         <Outlet />

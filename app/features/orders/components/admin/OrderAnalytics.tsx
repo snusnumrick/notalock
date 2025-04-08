@@ -126,15 +126,15 @@ export const OrderAnalytics: React.FC<OrderAnalyticsProps> = ({
 
   // Show loading state
   if (loading) {
-    return <div className="text-center py-10">Loading analytics...</div>;
+    return <div className="text-center py-10 text-text-secondary">Loading analytics...</div>;
   }
 
   // Show empty state
   if (filteredOrders.length === 0) {
     return (
       <div className="text-center py-10">
-        <h3 className="text-xl font-semibold mb-2">No order data available</h3>
-        <p className="text-gray-500">
+        <h3 className="text-xl font-semibold mb-2 text-text-primary">No order data available</h3>
+        <p className="text-text-secondary">
           Once orders start coming in, you&apos;ll see analytics here.
         </p>
       </div>

@@ -7,7 +7,7 @@ interface ProductGalleryProps {
   images: {
     id: string;
     url: string;
-    is_primary: boolean;
+    is_primary: boolean | null;
     alt_text?: string | null;
   }[];
 }

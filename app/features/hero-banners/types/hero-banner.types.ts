@@ -12,8 +12,8 @@ export interface HeroBanner {
   background_color?: string | null;
   text_color?: string | null;
   created_by?: string | null;
-  created_at: string;
-  updated_at: string;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface HeroBannerFormData {

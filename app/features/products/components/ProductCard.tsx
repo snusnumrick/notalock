@@ -81,8 +81,8 @@ const ProductCardComponent = React.memo(
         <Card
           className={`h-full ${
             isFeatured
-              ? 'transition-all duration-300 hover:scale-105 hover:shadow-lg border border-gray-200 overflow-hidden'
-              : 'hover:shadow-lg transition-shadow'
+              ? 'transition-all duration-300 hover:scale-105 hover:shadow-lg border border-border overflow-hidden bg-product-card'
+              : 'hover:shadow-lg transition-shadow bg-product-card'
           } ${cardClassName}`}
         >
           <div className="p-0">
@@ -104,8 +104,8 @@ const ProductCardComponent = React.memo(
                   loading={index < 8 ? 'eager' : 'lazy'}
                 />
               ) : (
-                <div className="h-full w-full bg-gray-100 flex items-center justify-center">
-                  <ImageIcon className="w-12 h-12 text-gray-300" data-testid="image-icon" />
+                <div className="h-full w-full bg-product-hover flex items-center justify-center">
+                  <ImageIcon className="w-12 h-12 text-text-secondary" data-testid="image-icon" />
                 </div>
               )}
             </div>
@@ -122,7 +122,7 @@ const ProductCardComponent = React.memo(
                 </Link>
               </CardHeader>
               <CardContent className="p-4 pt-2">
-                <p className="text-sm text-gray-500 line-clamp-2 mb-3">
+                <p className="text-sm text-text-secondary line-clamp-2 mb-3">
                   {product.description || ''}
                 </p>
                 {product.categories && product.categories.length > 0 && (
@@ -135,15 +135,18 @@ const ProductCardComponent = React.memo(
                   </div>
                 )}
                 {showAddedDate && (
-                  <div className="mt-3 text-xs text-gray-400">
-                    Added {new Date(product.created_at).toLocaleDateString()}
+                  <div className="mt-3 text-xs text-text-secondary opacity-70">
+                    Added{' '}
+                    {product.created_at ? new Date(product.created_at).toLocaleDateString() : 'N/A'}
                   </div>
                 )}
               </CardContent>
               <CardFooter className="p-4 pt-1 flex justify-between items-center">
                 <div className="flex flex-col">
-                  <span className="text-xs text-gray-500 uppercase">Price</span>
-                  <p className="text-xl font-bold text-blue-700">{formattedPrice(product.price)}</p>
+                  <span className="text-xs text-text-secondary uppercase">Price</span>
+                  <p className="text-xl font-bold text-btn-primary">
+                    {formattedPrice(product.price)}
+                  </p>
                 </div>
                 {showAddToCartButton && (
                   <TooltipProvider>
@@ -182,7 +185,9 @@ const ProductCardComponent = React.memo(
               <Link to={`/products/${product.slug}`}>
                 <CardContent className="p-4">
                   <h3 className="font-semibold text-lg line-clamp-1">{product.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">{product.description}</p>
+                  <p className="text-sm text-text-secondary mt-1 line-clamp-2">
+                    {product.description}
+                  </p>
                   {product.categories && product.categories.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {product.categories.map(category => (
@@ -193,8 +198,11 @@ const ProductCardComponent = React.memo(
                     </div>
                   )}
                   {showAddedDate && (
-                    <div className="mt-3 text-xs text-gray-400">
-                      Added {new Date(product.created_at).toLocaleDateString()}
+                    <div className="mt-3 text-xs text-text-secondary opacity-70">
+                      Added{' '}
+                      {product.created_at
+                        ? new Date(product.created_at).toLocaleDateString()
+                        : 'N/A'}
                     </div>
                   )}
                 </CardContent>

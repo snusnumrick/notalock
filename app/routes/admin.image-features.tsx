@@ -557,7 +557,13 @@ export default function TestImageFeatures() {
       product_id: img.product_id || productId, // Use productId as fallback
     }));
   }, [initialImages, productId]);
-  const [images, setImages] = React.useState<ProductImage[]>(transformedImages);
+  const [images, setImages] = React.useState<ProductImage[]>(
+    transformedImages.map(img => ({
+      ...img,
+      is_primary: img.is_primary === null ? false : img.is_primary,
+      sort_order: img.sort_order === null ? 0 : img.sort_order,
+    }))
+  );
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
   const [results, setResults] = React.useState<{ [key: string]: ProductImage }>({});

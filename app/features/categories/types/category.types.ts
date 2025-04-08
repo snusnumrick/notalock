@@ -9,8 +9,8 @@ export interface Category {
   sortOrder: number;
   isVisible: boolean;
   status: string;
-  isHighlighted: boolean;
-  highlightPriority: number;
+  isHighlighted: boolean | null;
+  highlightPriority: number | null;
   children?: Category[];
   path?: string; // Full path for nested categories, used in breadcrumbs
 }

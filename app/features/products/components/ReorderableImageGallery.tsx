@@ -17,7 +17,7 @@ interface ReorderableImageGalleryProps {
 const mapToGalleryImage = (image: ProductImage) => ({
   id: image.id,
   url: image.url,
-  isPrimary: image.is_primary,
+  isPrimary: image.is_primary === null ? false : image.is_primary,
 });
 
 // Helper function to preserve database fields while updating from gallery format

@@ -84,25 +84,25 @@ export default function Index() {
   const { categories, banners, newArrivals, featuredProducts } = useLoaderData<LoaderData>();
 
   return (
-    <div className="bg-white flex-grow">
+    <div className="bg-page-bg text-text-primary flex-grow">
       <main className="pt-24 relative">
         {/* Hero Slider */}
         <Suspense fallback={<HeroSliderSkeleton />}>
           {banners && banners.length > 0 ? (
             <HeroSlider banners={banners} />
           ) : (
-            <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+            <div className="relative bg-gradient-to-br from-page-bg to-product-hover overflow-hidden">
               <div className="max-w-7xl mx-auto">
                 <div className="relative z-10 pb-8 sm:pb-16 md:pb-20 lg:pb-28 xl:pb-32">
                   <div className="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
                     <div className="text-center relative z-10">
-                      <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
+                      <h1 className="text-4xl tracking-tight font-extrabold text-text-primary sm:text-5xl md:text-6xl">
                         <span className="block">Elevate Your Space with</span>
                         <span className="block text-blue-600 drop-shadow-sm">
                           European Craftsmanship
                         </span>
                       </h1>
-                      <p className="mt-3 text-base text-gray-600 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl leading-relaxed">
+                      <p className="mt-3 text-base text-text-secondary sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl leading-relaxed">
                         Discover our curated collection of sophisticated door hardware. From
                         contemporary handles to innovative locking systems, each piece combines
                         elegance with precision engineering.
@@ -110,13 +110,13 @@ export default function Index() {
                       <div className="mt-8 flex justify-center gap-4">
                         <Link
                           to="/products"
-                          className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                          className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-btn-primary-text bg-btn-primary hover:bg-btn-primary-hover transition-colors"
                         >
                           Browse Products
                         </Link>
                         <Link
                           to="/about"
-                          className="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                          className="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md shadow-sm text-text-primary bg-product-card hover:bg-product-hover transition-colors"
                         >
                           About Us
                         </Link>
@@ -148,7 +148,7 @@ export default function Index() {
               {/* Scroll Indicator */}
               <div className="absolute bottom-8 left-0 right-0 flex justify-center animate-bounce opacity-70">
                 <svg
-                  className="w-6 h-6 text-gray-600"
+                  className="w-6 h-6 text-text-secondary"
                   fill="none"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -164,20 +164,20 @@ export default function Index() {
         </Suspense>
 
         {/* Featured Products Section */}
-        <div className="bg-white pb-8">
+        <div className="bg-page-bg pb-8">
           <FeaturedProducts products={featuredProducts} />
         </div>
 
         {/* New Arrivals Section */}
-        <div className="bg-white py-8">
+        <div className="bg-page-bg py-8">
           <NewArrivals products={newArrivals} limit={8} />
         </div>
 
         {/* Featured Categories */}
-        <div className="bg-gradient-to-b from-white to-gray-50 py-8">
+        <div className="bg-gradient-to-b from-page-bg to-product-hover py-8">
           <div className="max-w-7xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:px-8 relative">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-30"></div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 relative inline-block mb-6">
+            <h2 className="text-3xl font-bold tracking-tight text-text-primary relative inline-block mb-6">
               <span className="relative z-10">Featured Categories</span>
               <span className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 z-0"></span>
             </h2>

@@ -5,6 +5,7 @@ import { UserIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
 import CategoryMenu from './Navigation/CategoryMenu';
 import { CategoryBreadcrumbs } from '~/features/categories/components/Breadcrumbs/CategoryBreadcrumbs';
 import { HeaderCartIndicator } from './HeaderCartIndicator';
+import { ThemeToggle } from '~/components/theme/theme-toggle';
 
 interface HeaderProps {
   categories: Category[];
@@ -30,14 +31,14 @@ export const Header: React.FC<HeaderProps> = ({ categories }) => {
   };
 
   return (
-    <header className="bg-gray-100 border-b border-gray-300 shadow-sm fixed w-full top-0 z-50">
+    <header className="bg-product-card border-b border-border shadow-sm fixed w-full top-0 z-50">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
             <Link to="/" className="flex-shrink-0 flex items-center">
               {!isMounted ? (
                 // Server-side rendering (simpler version)
-                <div className="h-8 w-auto flex items-center justify-center text-lg font-bold">
+                <div className="h-8 w-auto flex items-center justify-center text-lg font-bold text-text-primary">
                   Notalock
                 </div>
               ) : (
@@ -46,18 +47,18 @@ export const Header: React.FC<HeaderProps> = ({ categories }) => {
                   <path
                     d="M40 25 A10 10 0 1 1 40 24.9L55 25"
                     fill="none"
-                    stroke="#1a1a1a"
+                    stroke="currentColor"
                     strokeWidth="3"
                     strokeLinecap="round"
                   />
-                  <circle cx="30" cy="25" r="5" fill="#1a1a1a" />
+                  <circle cx="30" cy="25" r="5" fill="currentColor" />
                   <text
                     x="65"
                     y="35"
                     fontFamily="Arial"
                     fontWeight="bold"
                     fontSize="24"
-                    fill="#1a1a1a"
+                    fill="currentColor"
                   >
                     Notalock
                   </text>
@@ -69,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({ categories }) => {
             <div className="hidden md:block">
               <Link
                 to="/products"
-                className="text-gray-700 hover:text-blue-600 transition-colors duration-200 px-3 py-2 text-sm font-medium"
+                className="text-text-primary hover:text-btn-primary transition-colors duration-200 px-3 py-2 text-sm font-medium"
               >
                 Products
               </Link>
@@ -77,17 +78,22 @@ export const Header: React.FC<HeaderProps> = ({ categories }) => {
             <div className="hidden md:flex items-center">
               <Link
                 to="/account"
-                className="text-gray-700 hover:text-blue-600 transition-colors duration-200 px-3 py-2 text-sm font-medium flex items-center"
+                className="text-text-primary hover:text-btn-primary transition-colors duration-200 px-3 py-2 text-sm font-medium flex items-center"
               >
                 <UserIcon className="w-4 h-4 mr-1" /> Account
               </Link>
 
               {/* Use our new cart indicator component */}
               <HeaderCartIndicator />
+
+              {/* Theme Toggle */}
+              <div className="ml-3">
+                <ThemeToggle />
+              </div>
             </div>
 
             <button
-              className="md:hidden text-gray-700 hover:text-blue-600 transition-colors duration-200"
+              className="md:hidden text-text-primary hover:text-btn-primary transition-colors duration-200"
               onClick={toggleMenu}
             >
               <svg
@@ -109,7 +115,7 @@ export const Header: React.FC<HeaderProps> = ({ categories }) => {
         </div>
 
         {isProductPage && (
-          <div className="hidden md:block py-2 border-t border-gray-200">
+          <div className="hidden md:block py-2 border-t border-border">
             <CategoryMenu categories={categories} />
             {/* Debug: {categories.length} categories loaded */}
           </div>
@@ -117,17 +123,17 @@ export const Header: React.FC<HeaderProps> = ({ categories }) => {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200">
+          <div className="md:hidden py-4 border-t border-border">
             <Link
               to="/products"
-              className="block py-2 text-gray-700 hover:text-blue-600 transition-colors duration-200"
+              className="block py-2 text-text-primary hover:text-btn-primary transition-colors duration-200"
               onClick={() => setIsMenuOpen(false)}
             >
               Products
             </Link>
             <Link
               to="/account"
-              className="block py-2 text-gray-700 hover:text-blue-600 transition-colors duration-200 flex items-center"
+              className="block py-2 text-text-primary hover:text-btn-primary transition-colors duration-200 flex items-center"
               onClick={() => setIsMenuOpen(false)}
             >
               <UserIcon className="w-4 h-4 mr-2" /> Account
@@ -135,7 +141,7 @@ export const Header: React.FC<HeaderProps> = ({ categories }) => {
             <div className="relative">
               <Link
                 to="/cart"
-                className="block py-2 text-gray-700 hover:text-blue-600 transition-colors duration-200 flex items-center"
+                className="block py-2 text-text-primary hover:text-btn-primary transition-colors duration-200 flex items-center"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <ShoppingCartIcon className="w-4 h-4 mr-2" /> Cart
@@ -143,6 +149,12 @@ export const Header: React.FC<HeaderProps> = ({ categories }) => {
               <div className="absolute top-2 left-16">
                 <HeaderCartIndicator testId="mobile-cart-indicator" mobileStyle={true} />
               </div>
+            </div>
+
+            {/* Theme Toggle in mobile menu */}
+            <div className="py-2 flex items-center">
+              <span className="text-text-primary mr-2">Theme</span>
+              <ThemeToggle />
             </div>
 
             {isProductPage && <CategoryMenu categories={categories} className="mt-2" />}

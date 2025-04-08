@@ -114,14 +114,14 @@ export default function SimpleSearch({
         className="pl-10 pr-8"
         ref={inputRef}
       />
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary h-4 w-4" />
 
       {/* Clear button that appears when there's text */}
       {searchTerm && (
         <button
           type="button"
           onClick={handleClear}
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-text-primary"
           aria-label="Clear search"
         >
           <svg

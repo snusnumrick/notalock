@@ -40,7 +40,7 @@ export default function ProductsLayout() {
     typeof window !== 'undefined' ? window.location.pathname : 'server-side'
   );
   return (
-    <div className="bg-white flex-grow">
+    <div className="bg-page-bg flex-grow">
       <Header categories={categories} />
       <main className="pt-28">
         <Outlet />

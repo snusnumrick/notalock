@@ -1,7 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { OrderService } from '../orderService';
 import { OrderStatus, PaymentStatus } from '../../types';
-import { mockDeep } from 'vitest-mock-extended';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { createMockSupabaseClient } from './mocks/supabaseMock';
 
@@ -513,16 +512,32 @@ describe('OrderService', () => {
       let updateCallCount_success = 0;
       mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
-          const initialOrderState = { data: { ...mockOrder, status: 'pending', payment_status: 'pending' }, error: null };
-          const afterPaymentUpdateState = { data: { ...mockOrder, status: 'pending', payment_status: 'paid', payment_intent_id: 'pi_123456', metadata: { /* updated metadata */ } }, error: null };
+          const initialOrderState = {
+            data: { ...mockOrder, status: 'pending', payment_status: 'pending' },
+            error: null,
+          };
+          const afterPaymentUpdateState = {
+            data: {
+              ...mockOrder,
+              status: 'pending',
+              payment_status: 'paid',
+              payment_intent_id: 'pi_123456',
+              metadata: {
+                /* updated metadata */
+              },
+            },
+            error: null,
+          };
           const finalOrderState = { data: updatedOrder, error: null }; // Should be status: 'paid', payment_status: 'paid'
 
           const selectEqSingleMock = vi.fn().mockImplementation(() => {
             getOrderByIdCallCount_success++;
             // console.log(`DEBUG: Success getOrderById call ${getOrderByIdCallCount_success}`);
             if (getOrderByIdCallCount_success === 1) return Promise.resolve(initialOrderState);
-            if (getOrderByIdCallCount_success === 2) return Promise.resolve(afterPaymentUpdateState);
-            if (getOrderByIdCallCount_success === 3) return Promise.resolve(afterPaymentUpdateState);
+            if (getOrderByIdCallCount_success === 2)
+              return Promise.resolve(afterPaymentUpdateState);
+            if (getOrderByIdCallCount_success === 3)
+              return Promise.resolve(afterPaymentUpdateState);
             if (getOrderByIdCallCount_success === 4) return Promise.resolve(finalOrderState);
             if (getOrderByIdCallCount_success === 5) return Promise.resolve(finalOrderState); // Ensure 5th call returns final state
             return Promise.resolve(finalOrderState); // Default
@@ -537,11 +552,13 @@ describe('OrderService', () => {
           });
 
           return {
-            select: vi.fn().mockReturnValue({ // For getOrderById calls
+            select: vi.fn().mockReturnValue({
+              // For getOrderById calls
               eq: vi.fn().mockReturnThis(),
               single: selectEqSingleMock,
             }),
-            update: vi.fn().mockReturnValue({ // For update calls
+            update: vi.fn().mockReturnValue({
+              // For update calls
               eq: vi.fn().mockReturnThis(),
               select: vi.fn().mockReturnThis(),
               single: updateEqSelectSingleMock,
@@ -592,8 +609,21 @@ describe('OrderService', () => {
       let updateCallCount_fail = 0;
       mockSupabaseClient.from = vi.fn().mockImplementation(table => {
         if (table === 'orders') {
-          const initialOrderState = { data: { ...mockOrder, status: 'pending', payment_status: 'pending' }, error: null };
-          const afterPaymentUpdateState = { data: { ...mockOrder, status: 'pending', payment_status: 'failed', metadata: { /* updated metadata */ } }, error: null };
+          const initialOrderState = {
+            data: { ...mockOrder, status: 'pending', payment_status: 'pending' },
+            error: null,
+          };
+          const afterPaymentUpdateState = {
+            data: {
+              ...mockOrder,
+              status: 'pending',
+              payment_status: 'failed',
+              metadata: {
+                /* updated metadata */
+              },
+            },
+            error: null,
+          };
           const finalOrderState = { data: updatedOrder, error: null }; // Should be status: 'failed', payment_status: 'failed'
 
           const selectEqSingleMock = vi.fn().mockImplementation(() => {
@@ -616,11 +646,13 @@ describe('OrderService', () => {
           });
 
           return {
-             select: vi.fn().mockReturnValue({ // For getOrderById calls
+            select: vi.fn().mockReturnValue({
+              // For getOrderById calls
               eq: vi.fn().mockReturnThis(),
               single: selectEqSingleMock,
             }),
-            update: vi.fn().mockReturnValue({ // For update calls
+            update: vi.fn().mockReturnValue({
+              // For update calls
               eq: vi.fn().mockReturnThis(),
               select: vi.fn().mockReturnThis(),
               single: updateEqSelectSingleMock,

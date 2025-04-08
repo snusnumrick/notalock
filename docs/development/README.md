@@ -14,6 +14,7 @@ This directory contains detailed documentation for developers working on the Not
 ## Frontend Architecture
 
 - [Remix v2 Routing Patterns](./remix-v2-routing.md) - Best practices for Remix v2 route handling
+- [Theming Guidelines](./theming-guidelines.md) - Comprehensive guide to theme implementation
 
 ## Checkout System
 

@@ -179,10 +179,10 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   if (isInitialLoad && products.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">No products found</p>
+        <p className="text-text-secondary">No products found</p>
         <button
           onClick={() => setSearchParams(new URLSearchParams())}
-          className="mt-4 text-blue-600 hover:text-blue-800"
+          className="mt-4 text-btn-primary hover:text-btn-primary-hover"
         >
           Clear all filters
         </button>
@@ -243,7 +243,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
       )}
 
       {/* Status message */}
-      <div className="text-center text-gray-500 text-sm py-4">
+      <div className="text-center text-text-secondary text-sm py-4">
         {products.length === total
           ? `Showing all ${products.length} products`
           : `Showing ${products.length} of ${total} products`}

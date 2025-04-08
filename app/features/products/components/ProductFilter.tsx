@@ -524,7 +524,7 @@ export default function ProductFilter({
               {getActiveFilterCount() > 0 && (
                 <span
                   data-testid="filter-count-badge"
-                  className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
+                  className="absolute -top-2 -right-2 bg-btn-primary text-btn-primary-text rounded-full w-5 h-5 text-xs flex items-center justify-center"
                 >
                   {getActiveFilterCount()}
                 </span>
@@ -561,7 +561,7 @@ export default function ProductFilter({
   }
 
   return (
-    <Card className="p-4 space-y-6">
+    <Card className="p-4 space-y-6 bg-product-card border-border">
       <div className="flex justify-between items-center">
         <h3 className="font-semibold">Filters</h3>
         {/* Removed duplicate reset button from header */}

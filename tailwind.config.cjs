@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: ["class"],
+  darkMode: ["class", '[data-theme="dark"]'],
   content: ["./app/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
@@ -42,6 +42,30 @@ module.exports = {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        // New theme-aware colors
+        page: {
+          bg: "hsl(var(--page-bg))",
+        },
+        product: {
+          card: "hsl(var(--card-bg))",
+          hover: "hsl(var(--card-hover))",
+        },
+        text: {
+          primary: "hsl(var(--text-primary))",
+          secondary: "hsl(var(--text-secondary))",
+        },
+        btn: {
+          primary: "hsl(var(--button-primary))",
+          "primary-hover": "hsl(var(--button-primary-hover))",
+          "primary-text": "hsl(var(--button-primary-text))",
+        },
+        input: {
+          bg: "hsl(var(--input-bg))",
+        },
+        footer: {
+          bg: "hsl(var(--footer-bg))",
+          text: "hsl(var(--footer-text))",
         },
       },
     },

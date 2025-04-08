@@ -21,7 +21,7 @@ interface CursorData {
   id: string;
   retail_price: number;
   name: string;
-  created_at: string;
+  created_at: string | null;
   featured: boolean;
 }
 

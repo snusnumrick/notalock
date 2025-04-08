@@ -105,7 +105,10 @@ export function ErrorBoundary() {
             message="Please log in to access product management."
             action={
               <div className="mt-4">
-                <a href="/login" className="text-sm font-medium text-white hover:text-white/90">
+                <a
+                  href="/app/routes/_layout.login"
+                  className="text-sm font-medium text-white hover:text-white/90"
+                >
                   Go to Login
                 </a>
               </div>
@@ -156,8 +159,8 @@ export default function Products() {
   const loaderData = useLoaderData<typeof loader>();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-page-bg">
+      <div className="px-8 py-8 mx-auto max-w-7xl">
         <ProductManagement
           supabaseUrl={loaderData.supabase.url}
           supabaseAnonKey={loaderData.supabase.anonKey}

@@ -207,7 +207,7 @@ export function ErrorBoundary() {
                 <p>Please log in to continue with checkout.</p>
                 <div className="mt-4 flex justify-center">
                   <a
-                    href="/login"
+                    href="/app/routes/_layout.login"
                     className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded transition duration-200"
                   >
                     Log In

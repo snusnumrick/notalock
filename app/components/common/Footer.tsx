@@ -38,7 +38,7 @@ export const Footer: React.FC = () => {
   };
 
   return (
-    <footer className="bg-gray-100 border-t border-gray-300 mt-auto shadow-inner">
+    <footer className="bg-footer-bg text-footer-text border-t border-border mt-auto shadow-inner">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-8">
           {/* Company Information */}
@@ -52,24 +52,24 @@ export const Footer: React.FC = () => {
                 <path
                   d="M40 25 A10 10 0 1 1 40 24.9L55 25"
                   fill="none"
-                  stroke="#1a1a1a"
+                  stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
                 />
-                <circle cx="30" cy="25" r="5" fill="#1a1a1a" />
+                <circle cx="30" cy="25" r="5" fill="currentColor" />
                 <text
                   x="65"
                   y="35"
                   fontFamily="Arial"
                   fontWeight="bold"
                   fontSize="24"
-                  fill="#1a1a1a"
+                  fill="currentColor"
                 >
                   Notalock
                 </text>
               </svg>
             </Link>
-            <p className="text-gray-600 text-sm">
+            <p className="text-footer-text/80 text-sm">
               Premium European door hardware solutions for homes and businesses. Quality
               craftsmanship with modern design and functionality.
             </p>
@@ -79,7 +79,7 @@ export const Footer: React.FC = () => {
           {/* Shop links - collapsible on mobile */}
           <div>
             <div
-              className="flex items-center justify-between border-b border-gray-200 pb-2 mb-3 md:mb-4 cursor-pointer md:cursor-default"
+              className="flex items-center justify-between border-b border-border pb-2 mb-3 md:mb-4 cursor-pointer md:cursor-default"
               onClick={() => toggleSection('shop')}
               onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -91,10 +91,10 @@ export const Footer: React.FC = () => {
               aria-expanded={expandedSections.shop}
               aria-controls="shop-links"
             >
-              <h3 className="text-sm font-bold text-gray-900 tracking-wider uppercase">Shop</h3>
+              <h3 className="text-sm font-bold text-footer-text tracking-wider uppercase">Shop</h3>
               {isMobile && (
                 <ChevronDownIcon
-                  className={`h-5 w-5 text-gray-500 transition-transform ${expandedSections.shop ? 'rotate-180' : ''}`}
+                  className={`h-5 w-5 text-footer-text/70 transition-transform ${expandedSections.shop ? 'rotate-180' : ''}`}
                 />
               )}
             </div>
@@ -105,7 +105,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link
                   to="/products"
-                  className="text-gray-600 hover:text-blue-600 transition-colors duration-200 text-sm flex items-center"
+                  className="text-footer-text/80 hover:text-btn-primary transition-colors duration-200 text-sm flex items-center"
                 >
                   <span className="mr-1">›</span>
                   All Products
@@ -114,7 +114,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link
                   to="/categories"
-                  className="text-gray-600 hover:text-blue-600 transition-colors duration-200 text-sm flex items-center"
+                  className="text-footer-text/80 hover:text-btn-primary transition-colors duration-200 text-sm flex items-center"
                 >
                   <span className="mr-1">›</span>
                   Categories
@@ -123,7 +123,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link
                   to="/new-arrivals"
-                  className="text-gray-600 hover:text-blue-600 transition-colors duration-200 text-sm flex items-center"
+                  className="text-footer-text/80 hover:text-btn-primary transition-colors duration-200 text-sm flex items-center"
                 >
                   <span className="mr-1">›</span>
                   New Arrivals
@@ -132,7 +132,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link
                   to="/featured"
-                  className="text-gray-600 hover:text-blue-600 transition-colors duration-200 text-sm flex items-center"
+                  className="text-footer-text/80 hover:text-btn-primary transition-colors duration-200 text-sm flex items-center"
                 >
                   <span className="mr-1">›</span>
                   Featured Products
@@ -145,7 +145,7 @@ export const Footer: React.FC = () => {
           {/* Company links - collapsible on mobile */}
           <div>
             <div
-              className="flex items-center justify-between border-b border-gray-200 pb-2 mb-3 md:mb-4 cursor-pointer md:cursor-default"
+              className="flex items-center justify-between border-b border-border pb-2 mb-3 md:mb-4 cursor-pointer md:cursor-default"
               onClick={() => toggleSection('company')}
               onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -157,12 +157,12 @@ export const Footer: React.FC = () => {
               aria-expanded={expandedSections.company}
               aria-controls="company-links"
             >
-              <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase">
+              <h3 className="text-sm font-semibold text-footer-text tracking-wider uppercase">
                 Company
               </h3>
               {isMobile && (
                 <ChevronDownIcon
-                  className={`h-5 w-5 text-gray-500 transition-transform ${expandedSections.company ? 'rotate-180' : ''}`}
+                  className={`h-5 w-5 text-footer-text/70 transition-transform ${expandedSections.company ? 'rotate-180' : ''}`}
                 />
               )}
             </div>
@@ -173,7 +173,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link
                   to="/about"
-                  className="text-gray-600 hover:text-blue-600 transition-colors duration-200 text-sm flex items-center"
+                  className="text-footer-text/80 hover:text-btn-primary transition-colors duration-200 text-sm flex items-center"
                 >
                   <span className="mr-1">›</span>
                   About Us
@@ -182,7 +182,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link
                   to="/privacy"
-                  className="text-gray-600 hover:text-blue-600 transition-colors duration-200 text-sm flex items-center"
+                  className="text-footer-text/80 hover:text-btn-primary transition-colors duration-200 text-sm flex items-center"
                 >
                   <span className="mr-1">›</span>
                   Privacy Policy
@@ -191,7 +191,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link
                   to="/terms"
-                  className="text-gray-600 hover:text-blue-600 transition-colors duration-200 text-sm flex items-center"
+                  className="text-footer-text/80 hover:text-btn-primary transition-colors duration-200 text-sm flex items-center"
                 >
                   <span className="mr-1">›</span>
                   Terms & Conditions
@@ -200,7 +200,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link
                   to="/shipping"
-                  className="text-gray-600 hover:text-blue-600 transition-colors duration-200 text-sm flex items-center"
+                  className="text-footer-text/80 hover:text-btn-primary transition-colors duration-200 text-sm flex items-center"
                 >
                   <span className="mr-1">›</span>
                   Shipping Policy
@@ -213,7 +213,7 @@ export const Footer: React.FC = () => {
           {/* Contact information - collapsible on mobile */}
           <div>
             <div
-              className="flex items-center justify-between border-b border-gray-200 pb-2 mb-3 md:mb-4 cursor-pointer md:cursor-default"
+              className="flex items-center justify-between border-b border-border pb-2 mb-3 md:mb-4 cursor-pointer md:cursor-default"
               onClick={() => toggleSection('contact')}
               onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -225,12 +225,12 @@ export const Footer: React.FC = () => {
               aria-expanded={expandedSections.contact}
               aria-controls="contact-links"
             >
-              <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase">
+              <h3 className="text-sm font-semibold text-footer-text tracking-wider uppercase">
                 Contact
               </h3>
               {isMobile && (
                 <ChevronDownIcon
-                  className={`h-5 w-5 text-gray-500 transition-transform ${expandedSections.contact ? 'rotate-180' : ''}`}
+                  className={`h-5 w-5 text-footer-text/70 transition-transform ${expandedSections.contact ? 'rotate-180' : ''}`}
                 />
               )}
             </div>
@@ -238,26 +238,26 @@ export const Footer: React.FC = () => {
               className={`space-y-3 ${isMobile && !expandedSections.contact ? 'hidden' : 'block'}`}
               data-testid="contact-links"
             >
-              <li className="text-gray-600 text-sm flex items-center space-x-2">
-                <EnvelopeIcon className="h-4 w-4 text-blue-500" />
+              <li className="text-footer-text/80 text-sm flex items-center space-x-2">
+                <EnvelopeIcon className="h-4 w-4 text-btn-primary" />
                 <a
                   href="mailto:support@notalock.com"
-                  className="hover:text-blue-600 transition-colors duration-200"
+                  className="hover:text-btn-primary transition-colors duration-200"
                 >
                   support@notalock.com
                 </a>
               </li>
-              <li className="text-gray-600 text-sm flex items-center space-x-2">
-                <PhoneIcon className="h-4 w-4 text-blue-500" />
+              <li className="text-footer-text/80 text-sm flex items-center space-x-2">
+                <PhoneIcon className="h-4 w-4 text-btn-primary" />
                 <a
                   href="tel:+1-555-123-4567"
-                  className="hover:text-blue-600 transition-colors duration-200"
+                  className="hover:text-btn-primary transition-colors duration-200"
                 >
                   (555) 123-4567
                 </a>
               </li>
-              <li className="text-gray-600 text-sm flex items-start space-x-2">
-                <MapPinIcon className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+              <li className="text-footer-text/80 text-sm flex items-start space-x-2">
+                <MapPinIcon className="h-4 w-4 text-btn-primary mt-0.5 flex-shrink-0" />
                 <span>123 Commerce St, Suite 100, Business City, BC 12345</span>
               </li>
             </ul>
@@ -268,7 +268,7 @@ export const Footer: React.FC = () => {
         <div className="flex items-center justify-center space-x-6 mt-6 md:mt-8">
           <a
             href="https://twitter.com/notalock"
-            className="text-gray-500 hover:text-blue-600 transition-colors duration-200 transform hover:scale-110"
+            className="text-footer-text/70 hover:text-btn-primary transition-colors duration-200 transform hover:scale-110"
           >
             <span className="sr-only">Twitter</span>
             <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -277,7 +277,7 @@ export const Footer: React.FC = () => {
           </a>
           <a
             href="https://facebook.com/notalock"
-            className="text-gray-500 hover:text-blue-600 transition-colors duration-200 transform hover:scale-110"
+            className="text-footer-text/70 hover:text-btn-primary transition-colors duration-200 transform hover:scale-110"
           >
             <span className="sr-only">Facebook</span>
             <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -290,7 +290,7 @@ export const Footer: React.FC = () => {
           </a>
           <a
             href="https://instagram.com/notalock"
-            className="text-gray-500 hover:text-blue-600 transition-colors duration-200 transform hover:scale-110"
+            className="text-footer-text/70 hover:text-btn-primary transition-colors duration-200 transform hover:scale-110"
           >
             <span className="sr-only">Instagram</span>
             <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -303,7 +303,7 @@ export const Footer: React.FC = () => {
           </a>
           <a
             href="https://github.com/notalock"
-            className="text-gray-500 hover:text-blue-600 transition-colors duration-200 transform hover:scale-110"
+            className="text-footer-text/70 hover:text-btn-primary transition-colors duration-200 transform hover:scale-110"
           >
             <span className="sr-only">GitHub</span>
             <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -317,8 +317,8 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Copyright */}
-        <div className="mt-6 md:mt-8 border-t border-gray-300 pt-4 md:pt-6 text-center">
-          <p className="text-gray-600 text-sm font-medium">
+        <div className="mt-6 md:mt-8 border-t border-border pt-4 md:pt-6 text-center">
+          <p className="text-footer-text/80 text-sm font-medium">
             &copy; {currentYear} Notalock. All rights reserved.
           </p>
         </div>

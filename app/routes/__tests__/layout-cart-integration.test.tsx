@@ -7,6 +7,12 @@ import type { CartItem } from '~/features/cart/types/cart.types';
 import { MemoryRouter } from 'react-router-dom';
 import { CART_COUNT_EVENT_NAME, CART_INDICATOR_EVENT_NAME } from '../../features/cart/constants';
 
+// Mock theme provider
+vi.mock('~/components/theme/theme-provider', () => ({
+  ThemeProvider: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+  useTheme: () => ({ theme: 'light', setTheme: vi.fn() }),
+}));
+
 // Mock CategoryBreadcrumbs component
 vi.mock('~/features/categories/components/Breadcrumbs/CategoryBreadcrumbs', () => ({
   __esModule: true,
@@ -52,6 +58,27 @@ vi.mock('@heroicons/react/24/outline', () => ({
 // Mock lucide components
 vi.mock('lucide-react', () => ({
   ChevronRight: () => <div>→</div>,
+  Sun: () => <div data-testid="sun-icon"></div>,
+  Moon: () => <div data-testid="moon-icon"></div>,
+  Laptop: () => <div data-testid="laptop-icon"></div>,
+  CheckIcon: () => <div data-testid="check-icon"></div>,
+}));
+
+// Mock dropdown menu components
+vi.mock('~/components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+  DropdownMenuItem: ({ children, onClick }: React.PropsWithChildren<{ onClick?: () => void }>) => (
+    <div
+      onClick={onClick}
+      onKeyDown={e => e.key === 'Enter' && onClick?.()}
+      role="button"
+      tabIndex={0}
+    >
+      {children}
+    </div>
+  ),
 }));
 
 // Define a mock function for useLocation

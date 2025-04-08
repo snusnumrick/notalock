@@ -201,7 +201,12 @@ export default function ProductPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
             <div className="w-full">
               {product.images && product.images.length > 0 ? (
-                <ProductGallery images={product.images} />
+                <ProductGallery
+                  images={product.images.map(img => ({
+                    ...img,
+                    is_primary: img.is_primary === null ? false : img.is_primary,
+                  }))}
+                />
               ) : product.image_url ? (
                 <div
                   className="w-full space-y-4"

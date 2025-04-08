@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation, useRouteError, isRouteErrorResponse } from '@remix-run/react';
 import { type LoaderFunction, redirect } from '@remix-run/node';
 import { requireAdmin } from '~/server/middleware/auth.server';
+import { ThemeToggle } from '~/components/theme/theme-toggle';
 
 export const loader: LoaderFunction = async ({ request }) => {
   // console.log('Starting admin permissions check');
@@ -34,18 +35,18 @@ export function ErrorBoundary() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-16 sm:px-6 sm:py-24 md:grid md:place-items-center lg:px-8">
+    <div className="min-h-screen bg-page-bg px-4 py-16 sm:px-6 sm:py-24 md:grid md:place-items-center lg:px-8">
       <div className="max-w-max mx-auto text-center">
         <main>
-          <p className="text-4xl font-bold text-blue-600 sm:text-5xl mb-4">{errorStatus}</p>
-          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight sm:text-3xl mb-2">
+          <p className="text-4xl font-bold text-btn-primary sm:text-5xl mb-4">{errorStatus}</p>
+          <h1 className="text-2xl font-semibold text-text-primary tracking-tight sm:text-3xl mb-2">
             Admin Error
           </h1>
-          <p className="mt-2 text-base text-gray-500 mb-6">{errorMessage}</p>
+          <p className="mt-2 text-base text-text-secondary mb-6">{errorMessage}</p>
           <div className="mt-6 flex items-center justify-center gap-4">
             <Link
               to="/admin"
-              className="rounded-md bg-blue-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              className="rounded-md bg-btn-primary px-3.5 py-2.5 text-sm font-semibold text-btn-primary-text shadow-sm hover:bg-btn-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-btn-primary"
             >
               Return to Admin Dashboard
             </Link>
@@ -67,19 +68,19 @@ export default function AdminLayout() {
 
     return `${baseClasses} ${
       isActive
-        ? 'border-blue-500 text-gray-900'
-        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+        ? 'border-btn-primary text-text-primary'
+        : 'border-transparent text-text-secondary hover:border-border hover:text-text-primary'
     }`;
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow">
+    <div className="min-h-screen bg-page-bg text-text-primary">
+      <div className="bg-product-card shadow border-b border-border">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 justify-between">
             <div className="flex">
               <div className="flex flex-shrink-0 items-center">
-                <Link to="/admin" className="text-xl font-bold hover:text-gray-700">
+                <Link to="/admin" className="text-xl font-bold hover:text-text-secondary">
                   Notalock Admin
                 </Link>
               </div>
@@ -103,6 +104,9 @@ export default function AdminLayout() {
                   Hero Banners
                 </Link>
               </nav>
+            </div>
+            <div className="flex items-center">
+              <ThemeToggle />
             </div>
           </div>
         </div>

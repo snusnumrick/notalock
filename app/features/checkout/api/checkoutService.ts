@@ -11,6 +11,7 @@ import {
   OrderStatus,
   DbCheckoutSession,
   OrderDbItem,
+  CheckoutStep,
 } from '../types/checkout.types';
 import type { CartItem } from '~/features/cart/types/cart.types';
 import { CartService } from '~/features/cart/api/cartService';
@@ -795,7 +796,11 @@ export class CheckoutService {
       }
 
       // Return the created order
-      return this.formatOrderResponse(order, orderItems);
+      const mappedOrderItems = orderItems.map(item => ({
+        ...item,
+        price: item.unit_price, // Map unit_price to price for compatibility
+      }));
+      return this.formatOrderResponse(order, mappedOrderItems);
     } catch (error) {
       console.error('Error in createOrder:', error);
       throw error;
@@ -942,7 +947,7 @@ export class CheckoutService {
       tax: data.tax || 0,
       total: data.total || 0,
       shippingCost: data.shipping_cost || 0,
-      currentStep: data.current_step || 'information',
+      currentStep: (data.current_step as CheckoutStep) || 'information',
     };
 
     // Add non-undefined fields in camelCase format
@@ -1067,7 +1072,7 @@ export class CheckoutService {
         name: item.name,
         sku: item.sku,
         quantity: item.quantity,
-        price: item.unit_price,
+        price: item.price, // Use price field, not unit_price
         imageUrl: item.image_url || undefined,
         options: this.transformOrderItemOptions(item.options),
       })),

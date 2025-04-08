@@ -73,7 +73,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
    * Create a Square payment intent/order
    */
   async createPayment(
-    amount: PaymentAmount,
+    _amount: PaymentAmount,
     _options?: PaymentOptions
   ): Promise<{ clientSecret?: string; paymentIntentId?: string; error?: string }> {
     if (!this.squareClient || !this.locationId) {
@@ -81,7 +81,7 @@ export class SquarePaymentProvider implements PaymentProviderInterface {
     }
 
     try {
-      const { currency, value, items } = amount;
+      // Unused: const { currency, value, items } = amount;
 
       // For testing, we'll bypass the actual Square API call and return a dummy order ID
       const orderId = 'test_order_id';

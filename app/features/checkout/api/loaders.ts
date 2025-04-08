@@ -32,8 +32,8 @@ export function dbCartItem2CartItem(dbCartItem: DbCartItemWithProduct): CartItem
     product_id: dbCartItem.product_id,
     quantity: dbCartItem.quantity,
     price: dbCartItem.price,
-    created_at: dbCartItem.created_at,
-    updated_at: dbCartItem.updated_at,
+    created_at: dbCartItem.created_at || new Date().toISOString(),
+    updated_at: dbCartItem.updated_at || new Date().toISOString(),
     product: dbCartItem.product
       ? {
           name: dbCartItem.product.name ?? '',

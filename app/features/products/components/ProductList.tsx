@@ -130,10 +130,10 @@ export const ProductList: React.FC<ProductListProps> = ({
   if (isInitialLoad && products.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">No products found</p>
+        <p className="text-text-secondary">No products found</p>
         <button
           onClick={() => setSearchParams(new URLSearchParams())}
-          className="mt-4 text-blue-600 hover:text-blue-800"
+          className="mt-4 text-btn-primary hover:text-btn-primary-hover"
         >
           Clear all filters
         </button>
@@ -163,14 +163,14 @@ export const ProductList: React.FC<ProductListProps> = ({
             <div className="w-full animate-in fade-in duration-300">
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
-                  <Card key={i} className="w-full h-40 animate-pulse bg-gray-100">
+                  <Card key={i} className="w-full h-40 animate-pulse bg-product-hover">
                     <CardContent className="p-4">
                       <div className="flex gap-4 h-full">
-                        <div className="w-40 h-32 bg-gray-200 rounded-lg" />
+                        <div className="w-40 h-32 bg-product-hover/70 rounded-lg" />
                         <div className="flex-grow space-y-4">
-                          <div className="h-6 w-1/3 bg-gray-200 rounded" />
-                          <div className="h-4 w-2/3 bg-gray-200 rounded" />
-                          <div className="h-4 w-1/2 bg-gray-200 rounded" />
+                          <div className="h-6 w-1/3 bg-product-hover/70 rounded" />
+                          <div className="h-4 w-2/3 bg-product-hover/70 rounded" />
+                          <div className="h-4 w-1/2 bg-product-hover/70 rounded" />
                         </div>
                       </div>
                     </CardContent>
@@ -183,7 +183,7 @@ export const ProductList: React.FC<ProductListProps> = ({
       )}
 
       {/* Status message */}
-      <div className="text-center text-gray-500 text-sm py-4">
+      <div className="text-center text-text-secondary text-sm py-4">
         {products.length === total
           ? `Showing all ${products.length} products`
           : `Showing ${products.length} of ${total} products`}

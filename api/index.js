@@ -1,9 +1,6 @@
 // api/index.js - Vercel serverless function
-import path from 'path';
 import { createRequestHandler, broadcastDevReady } from '@remix-run/node';
 import * as build from '@remix-run/dev/server-build';
-
-const BUILD_DIR = path.join(process.cwd(), 'build');
 
 // This is used by Vercel for its serverless function
 export default async function handler(request) {

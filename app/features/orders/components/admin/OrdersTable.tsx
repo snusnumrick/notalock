@@ -74,48 +74,48 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
   const getStatusBadgeColor = (status: OrderStatus) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300';
       case 'processing':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
       case 'paid':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300';
       case 'completed':
-        return 'bg-green-500 text-white';
+        return 'bg-green-500 text-white dark:bg-green-700';
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
       case 'refunded':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300';
       case 'failed':
-        return 'bg-red-500 text-white';
+        return 'bg-red-500 text-white dark:bg-red-700';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
   const getPaymentStatusBadgeColor = (status: PaymentStatus) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300';
       case 'paid':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300';
       case 'failed':
-        return 'bg-red-500 text-white';
+        return 'bg-red-500 text-white dark:bg-red-700';
       case 'refunded':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
   if (loading) {
-    return <p className="text-center py-4">Loading orders...</p>;
+    return <p className="text-center py-4 text-text-secondary">Loading orders...</p>;
   }
 
   if (!orders || !Array.isArray(orders) || orders.length === 0) {
     console.log('Rendering no orders found message');
     return (
       <div className="p-8 text-center">
-        <p className="text-lg text-gray-500 mb-2">No orders found</p>
-        <p className="text-sm text-gray-400">
+        <p className="text-lg text-text-secondary mb-2">No orders found</p>
+        <p className="text-sm text-text-secondary/70">
           Orders will appear here once customers make purchases
         </p>
       </div>
@@ -128,7 +128,7 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
       console.error('orders does not have map function:', orders);
       return (
         <div className="p-8 text-center">
-          <p className="text-lg text-red-500 mb-2">Error: Invalid orders data format</p>
+          <p className="text-lg text-destructive mb-2">Error: Invalid orders data format</p>
         </div>
       );
     }
@@ -136,13 +136,13 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
     console.error('Error checking orders:', err);
     return (
       <div className="p-8 text-center">
-        <p className="text-lg text-red-500 mb-2">Error processing orders data</p>
+        <p className="text-lg text-destructive mb-2">Error processing orders data</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border border-border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -224,9 +224,9 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
               </TableRow>
               {expandedOrder === order.id && (
                 <TableRow key={`${order.id}-details`}>
-                  <TableCell colSpan={7} className="bg-gray-50">
+                  <TableCell colSpan={7} className="bg-accent/30">
                     <div className="p-4">
-                      <h4 className="font-semibold mb-2">Order Items</h4>
+                      <h4 className="font-semibold mb-2 text-text-primary">Order Items</h4>
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -252,9 +252,9 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
 
                       <div className="mt-4 grid grid-cols-2 gap-4">
                         <div>
-                          <h4 className="font-semibold mb-2">Shipping Address</h4>
+                          <h4 className="font-semibold mb-2 text-text-primary">Shipping Address</h4>
                           {order.shippingAddress ? (
-                            <div className="text-sm">
+                            <div className="text-sm text-text-primary">
                               <p>
                                 {order.shippingAddress.firstName} {order.shippingAddress.lastName}
                               </p>
@@ -270,13 +270,15 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
                               <p>{order.shippingAddress.phone}</p>
                             </div>
                           ) : (
-                            <p className="text-sm text-gray-500">No shipping address provided</p>
+                            <p className="text-sm text-text-secondary">
+                              No shipping address provided
+                            </p>
                           )}
                         </div>
 
                         <div>
-                          <h4 className="font-semibold mb-2">Order Summary</h4>
-                          <div className="text-sm">
+                          <h4 className="font-semibold mb-2 text-text-primary">Order Summary</h4>
+                          <div className="text-sm text-text-primary">
                             <div className="flex justify-between">
                               <span>Subtotal:</span>
                               <span>${(order.subtotalAmount || 0).toFixed(2)}</span>
@@ -299,8 +301,8 @@ export function OrdersTable({ orders, loading = false, onStatusChange }: OrdersT
 
                       {order.notes && (
                         <div className="mt-4">
-                          <h4 className="font-semibold mb-2">Notes</h4>
-                          <p className="text-sm">{order.notes}</p>
+                          <h4 className="font-semibold mb-2 text-text-primary">Notes</h4>
+                          <p className="text-sm text-text-primary">{order.notes}</p>
                         </div>
                       )}
                     </div>

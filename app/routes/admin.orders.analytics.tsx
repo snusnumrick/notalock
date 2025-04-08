@@ -88,10 +88,10 @@ export default function OrderAnalyticsRoute() {
   };
 
   return (
-    <div className="container py-8 bg-indigo-100 border-4 border-indigo-500 rounded-lg">
+    <div className="px-8 py-8 mx-auto max-w-7xl bg-page-bg">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2 text-indigo-700">ORDER ANALYTICS DASHBOARD</h1>
-        <p className="text-gray-500">Track and analyze your store&apos;s order data</p>
+        <h1 className="text-3xl font-bold mb-2 text-text-primary">Order Analytics</h1>
+        <p className="text-text-secondary">Track and analyze your store&apos;s order data</p>
       </div>
 
       <Card className="mb-6">
@@ -102,7 +102,10 @@ export default function OrderAnalyticsRoute() {
           <form onSubmit={handleFilterSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="dateFrom" className="block text-sm font-medium mb-1">
+                <label
+                  htmlFor="dateFrom"
+                  className="block text-sm font-medium mb-1 text-text-primary"
+                >
                   Start Date
                 </label>
                 <Input
@@ -115,7 +118,10 @@ export default function OrderAnalyticsRoute() {
                 />
               </div>
               <div>
-                <label htmlFor="dateTo" className="block text-sm font-medium mb-1">
+                <label
+                  htmlFor="dateTo"
+                  className="block text-sm font-medium mb-1 text-text-primary"
+                >
                   End Date
                 </label>
                 <Input

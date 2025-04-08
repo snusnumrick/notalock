@@ -188,14 +188,14 @@ export default function Products() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-page-bg">
       <div className="container mx-auto px-4 relative pb-20">
         <div className="flex flex-col md:flex-row gap-8 relative z-10 mt-3">
           {/* Sidebar spacer */}
           {!isMobile && <div className="hidden md:block w-64 shrink-0"></div>}
           {/* Mobile view components */}
           {isMobile && (
-            <div className="fixed z-30 bg-white bottom-4 left-0 right-0  m-0 p-0 pl-2 pr-2 border border-gray-300 shadow">
+            <div className="fixed z-30 bg-product-card bottom-4 left-0 right-0 m-0 p-0 pl-2 pr-2 border border-border shadow">
               <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
                   <div className={`transition-all duration-300 ease-in-out overflow-hidden w-full`}>
@@ -226,13 +226,13 @@ export default function Products() {
 
           {/* Desktop sidebar - fixed position */}
           {!isMobile && (
-            <div className="fixed top-16 bottom-0 overflow-auto hidden md:block w-64 bg-white">
+            <div className="fixed top-16 bottom-0 overflow-auto hidden md:block w-64 bg-product-card border-r border-border">
               <div className="pt-3 px-2">
                 {/* Products title */}
-                <h1 className="text-2xl font-bold mb-4">Products</h1>
+                <h1 className="text-2xl font-bold mb-4 text-text-primary">Products</h1>
 
                 {/* View toggle row */}
-                <div className="flex justify-between items-center mb-4 border rounded-md p-2 bg-gray-50">
+                <div className="flex justify-between items-center mb-4 border rounded-md p-2 bg-product-hover border-border">
                   <span className="text-sm font-medium">View:</span>
                   <div className="flex gap-2">
                     <Button

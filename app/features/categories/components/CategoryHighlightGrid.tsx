@@ -45,7 +45,7 @@ const EmptyState = () => (
       <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
         <Info className="w-6 h-6 text-muted-foreground" />
       </div>
-      <h3 className="text-xl font-semibold mb-2">No Highlighted Categories</h3>
+      <h3 className="text-xl font-semibold mb-2 text-text-primary">No Highlighted Categories</h3>
       <p className="text-muted-foreground mb-6">
         There are no highlighted categories to display at the moment. Highlighted categories will
         appear here once they are added.
@@ -89,31 +89,31 @@ const CategoryCard = ({ category, view }: { category: Category; view: 'grid' | '
       className="group block hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
     >
       <Card
-        className={`overflow-hidden h-full bg-white hover:shadow-md transition-all ${
+        className={`overflow-hidden h-full bg-product-card hover:shadow-md transition-all ${
           !isGrid && isMounted ? 'flex' : ''
-        } group-hover:border-blue-200 border border-gray-200`}
+        } group-hover:border-blue-200 border border-border`}
       >
         <div
           className={`${
             !isGrid && isMounted
-              ? 'hidden md:flex w-16 bg-gradient-to-r from-blue-50 to-blue-100 items-center justify-center'
-              : 'h-16 bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-center'
+              ? 'hidden md:flex w-16 bg-gradient-to-r from-product-hover to-product-hover/70 items-center justify-center'
+              : 'h-16 bg-gradient-to-r from-product-hover to-product-hover/70 flex items-center justify-center'
           }`}
         >
-          <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-blue-600">
+          <div className="w-10 h-10 rounded-full bg-product-card shadow-sm flex items-center justify-center text-btn-primary">
             <LayoutPanelTop className="w-5 h-5" />
           </div>
         </div>
         <CardContent className={`p-6 ${!isGrid && isMounted ? 'flex-1' : ''}`}>
-          <h3 className="text-xl font-semibold mb-3 group-hover:text-blue-600 transition-colors flex items-center justify-between">
+          <h3 className="text-xl font-semibold mb-3 text-text-primary group-hover:text-btn-primary transition-colors flex items-center justify-between">
             {category.name}
-            <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity ml-2 text-blue-600" />
+            <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity ml-2 text-btn-primary" />
           </h3>
           {category.description && (
-            <p className="text-gray-600 line-clamp-2 mb-4">{category.description}</p>
+            <p className="text-text-secondary line-clamp-2 mb-4">{category.description}</p>
           )}
           <div className="mt-2">
-            <span className="text-sm text-blue-600 font-medium group-hover:underline">
+            <span className="text-sm text-btn-primary font-medium group-hover:underline">
               Browse Products
             </span>
           </div>
@@ -130,7 +130,13 @@ export const CategoryHighlightGrid: React.FC<CategoryHighlightProps> = ({
 }) => {
   const visibleHighlightedCategories = categories
     .filter(category => category.isVisible)
-    .sort((a, b) => a.highlightPriority - b.highlightPriority);
+    .sort((a, b) => {
+      // Handle null values by placing them at the end
+      if (a.highlightPriority === null && b.highlightPriority === null) return 0;
+      if (a.highlightPriority === null) return 1;
+      if (b.highlightPriority === null) return -1;
+      return a.highlightPriority - b.highlightPriority;
+    });
 
   if (isLoading) {
     return <LoadingGrid view={view} />;
@@ -153,7 +159,11 @@ export const CategoryHighlightGrid: React.FC<CategoryHighlightProps> = ({
         ))}
       </div>
       <div className="mt-8 text-center">
-        <Button asChild className="px-6 transition-all hover:scale-105 hover:shadow-md">
+        <Button
+          asChild
+          variant="default"
+          className="px-6 transition-all hover:scale-105 hover:shadow-md bg-btn-primary hover:bg-btn-primary-hover text-btn-primary-text"
+        >
           <Link to="/products">
             View All Categories <ArrowRight className="ml-2 w-4 h-4" />
           </Link>

@@ -25,6 +25,7 @@ import { getAnonymousCartId, setAnonymousCartId } from '~/features/cart/utils/se
 import { CART_COUNT_EVENT_NAME, CART_DATA_STORAGE_KEY } from '~/features/cart/constants';
 import { Toaster } from '~/components/ui/toaster';
 import { ToastManagerProvider } from '~/components/ui/toast-manager';
+import { ThemeProvider } from '~/components/theme/theme-provider';
 
 export const links = () => [{ rel: 'stylesheet', href: stylesheet }];
 
@@ -226,12 +227,14 @@ export default function App() {
         <Links />
       </head>
       <body className="flex flex-col min-h-screen">
-        <CartProvider initialCartItems={cartItems}>
-          <ToastManagerProvider>
-            <Outlet />
-            <Toaster />
-          </ToastManagerProvider>
-        </CartProvider>
+        <ThemeProvider defaultTheme="system">
+          <CartProvider initialCartItems={cartItems}>
+            <ToastManagerProvider>
+              <Outlet />
+              <Toaster />
+            </ToastManagerProvider>
+          </CartProvider>
+        </ThemeProvider>
         <ScrollRestoration />
         <script
           dangerouslySetInnerHTML={{

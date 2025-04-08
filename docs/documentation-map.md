@@ -19,7 +19,8 @@ docs/
 │   ├── image-optimization-guide.md    # Guide for image optimization
 │   ├── anonymous-carts.md             # Anonymous shopping carts
 │   ├── cart-removal.md               # Cart item removal implementation
-│   └── fixing-failing-tests-guide.md  # Guide for fixing tests
+│   ├── fixing-failing-tests-guide.md  # Guide for fixing tests
+│   └── theming-guidelines.md         # Theme implementation guidelines
 │
 ├── api/                               # API documentation
 │   ├── README.md                      # API overview

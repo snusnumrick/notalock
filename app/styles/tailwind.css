@@ -31,11 +31,24 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
- 
+
+    /* New colors */
+    --page-bg: 0 0% 98%;
+    --card-bg: 0 0% 100%;
+    --card-hover: 210 40% 96.1%;
+    --text-primary: 222.2 84% 4.9%;
+    --text-secondary: 215.4 16.3% 46.9%;
+    --button-primary: 221.2 83.2% 53.3%;
+    --button-primary-hover: 221.2 83.2% 47.3%;
+    --button-primary-text: 0 0% 100%;
+    --input-bg: 214 92% 95%;
+    --footer-bg: 215 27.9% 16.9%;
+    --footer-text: 210 40% 98%;
+    
     --radius: 0.5rem;
   }
  
-  .dark {
+  .dark, [data-theme="dark"] {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
  
@@ -63,6 +76,19 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+
+    /* New dark mode colors */
+    --page-bg: 222.2 84% 4.9%;
+    --card-bg: 223 47% 11%;
+    --card-hover: 215 28% 17%;
+    --text-primary: 210 40% 98%;
+    --text-secondary: 215 20.2% 65.1%;
+    --button-primary: 221.2 83.2% 53.3%;
+    --button-primary-hover: 221.2 83.2% 60%;
+    --button-primary-text: 0 0% 100%;
+    --input-bg: 223 47% 15%;
+    --footer-bg: 223 47% 8%;
+    --footer-text: 210 40% 98%;
   }
 }
  

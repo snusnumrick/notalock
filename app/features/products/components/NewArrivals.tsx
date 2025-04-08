@@ -22,7 +22,7 @@ export function NewArrivals({
     return (
       <section className="py-12 px-4 md:px-6 lg:px-8" data-testid="empty-state">
         <div className="max-w-7xl mx-auto text-center">
-          <p className="text-gray-500 mb-4" role="status">
+          <p className="text-text-secondary mb-4" role="status">
             No new arrivals available.
           </p>
         </div>
@@ -34,11 +34,11 @@ export function NewArrivals({
     <section className="py-12 px-4 md:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 relative inline-block">
+          <h2 className="text-3xl font-bold tracking-tight text-text-primary relative inline-block">
             <span className="relative z-10">{title}</span>
             <span className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 z-0"></span>
           </h2>
-          <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">{description}</p>
+          <p className="mt-4 text-lg text-text-secondary max-w-2xl mx-auto">{description}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {products.slice(0, limit).map((product, index) => (
@@ -58,7 +58,7 @@ export function NewArrivals({
               <Button
                 variant="outline"
                 size="lg"
-                className="border-blue-600 text-blue-700 hover:bg-blue-50"
+                className="border-btn-primary text-btn-primary hover:bg-product-hover"
                 data-testid="view-all-button"
               >
                 View All New Arrivals
